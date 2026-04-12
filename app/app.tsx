@@ -1190,11 +1190,13 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
             onMouseDown={e=>{e.preventDefault();handleMouseDown(day);}}
             onMouseEnter={()=>handleMouseEnter(day)}
             title={isHol?holName(key):""}
-            style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:5,cursor:we||!activeId?"default":"pointer",
-              background:isA&&ac?ac.b:isHol?th.hc:we?th.sh:"transparent",
-              border:isTd?`2px solid ${th.ac}`:"2px solid transparent",transition:"background .1s",opacity:past&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none"}}>
-            <span style={{fontSize:compact?11:12,fontWeight:isTd?700:isA?600:isHol?600:400,color:isA&&ac?ac.t:isHol?th.ht:we?th.t3:isTd?th.ac:th.tx,fontFamily:F,lineHeight:1}}>{day}</span>
-            {mh.length>0&&!isA&&<div style={{display:"flex",gap:1,position:"absolute",bottom:compact?1:2}}>{mh.slice(0,4).map(m=> <div key={m.id} style={{width:4,height:4,borderRadius:"50%",background:MC[members.indexOf(m)%MC.length].d}}/>)}</div>}
+            style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:we||!activeId?"default":"pointer",
+              background:isA&&ac?ac.d:isHol?th.hc:we?th.sh:"transparent",
+              border:isTd?`2px solid ${th.ac}`:isA&&ac?`2px solid ${ac.d}`:"2px solid transparent",
+              transition:"background .1s",opacity:past&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
+              boxShadow:isA&&ac?`0 2px 8px ${ac.d}40`:"none"}}>
+            <span style={{fontSize:compact?11:12,fontWeight:isTd?700:isA?800:isHol?700:400,color:isA?"#fff":isHol?th.ht:we?th.t3:isTd?th.ac:th.tx,fontFamily:F,lineHeight:1}}>{day}</span>
+            {mh.length>0&&!isA&&<div style={{display:"flex",gap:1,position:"absolute",bottom:compact?1:2}}>{mh.slice(0,4).map(m=> <div key={m.id} style={{width:5,height:5,borderRadius:"50%",background:MC[members.indexOf(m)%MC.length].d,border:"1px solid #fff"}}/>)}</div>}
           </div>;
         })}
       </div>
@@ -1818,6 +1820,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
         </div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:3}}>
+        <ThPk theme={theme} set={setTheme} th={th}/>
         <div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 7px",background:th.al,borderRadius:16,cursor:"pointer",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} onClick={()=>{try{navigator.clipboard.writeText(team.id)}catch(e){};flash(t.cp);}}><Ic n="copy" s={10} c={th.ac}/><span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{team.id.slice(0,8)}</span></div>
         <button onClick={()=>setSettings(!settings)} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
         <Btn th={th} v="secondary" sz="sm" icon="share" onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
@@ -1848,10 +1851,12 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
     <div style={{display:"flex",flex:1,overflow:"hidden"}}>
       {sb&&<aside style={{width:mob?"100%":240,minWidth:mob?"100%":240,background:th.gbg,borderRight:mob?"none":`1px solid ${th.gbd}`,display:"flex",flexDirection:"column",position:mob?"fixed":"relative",backdropFilter:G.blur,WebkitBackdropFilter:G.blur,top:mob?56:0,left:0,bottom:0,zIndex:mob?90:1,boxShadow:mob?"4px 0 24px rgba(0,0,0,.1)":"none"}}>
         <div style={{padding:"12px 12px 4px",display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,fontWeight:700,color:th.t3,textTransform:"uppercase",letterSpacing:1}}>{t.tm}</span><span style={{fontSize:10,color:th.t3,fontFamily:FM}}>{team.members.length}/25</span></div>
+        {/* Add Member button — TOP of sidebar */}
+        <div style={{padding:"4px 8px 6px"}}>
+          {!locked&&!adding&&<Btn th={th} sz="sm" icon="plus" onClick={startAdd} disabled={team.members.length>=25} style={{width:"100%",justifyContent:"center"}}>{t.am}</Btn>}
+        </div>
         <div style={{flex:1,overflowY:"auto",padding:"2px 8px 8px",display:"flex",flexDirection:"column",gap:1}}>
-          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)}/>)}
-          {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
-          {adding&&<div style={{padding:"6px 2px",display:"flex",flexDirection:"column",gap:5}}>
+          {adding&&<div style={{padding:"6px 2px",display:"flex",flexDirection:"column",gap:5,marginBottom:6}}>
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:th.al,borderRadius:8,border:`1.5px solid ${th.ac}`}}>
               <div style={{width:28,height:28,borderRadius:"50%",background:MC[team.members.length%MC.length].d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{nn.trim()?nn.trim()[0].toUpperCase():"?"}</div>
               <input autoFocus value={nn} onChange={e=>setNn(e.target.value)} placeholder={t.en2} onKeyDown={e=>{if(e.key==="Enter"&&nn.trim()&&nc)confirmAdd();if(e.key==="Escape"){setAdding(false);}}} maxLength={30} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:600,fontFamily:F,color:th.tx,outline:"none",padding:"2px 0"}}/>
@@ -1859,9 +1864,10 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
             <CountrySelect value={nc} onChange={setNc} th={th} t={t}/>
             <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>setAdding(false)}>{t.can}</Btn></div>
           </div>}
+          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)}/>)}
+          {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
         <div style={{padding:"8px 12px",borderTop:`1px solid ${th.bl}`,display:"flex",flexDirection:"column",gap:3}}>
-          {!locked&&<Btn th={th} v="secondary" sz="sm" icon="plus" onClick={startAdd} disabled={team.members.length>=25||adding} style={{width:"100%",justifyContent:"center"}}>{t.am}</Btn>}
           <Btn th={th} v="ghost" sz="sm" onClick={()=>{setHolBr(true);if(mob)setSb(false);}} style={{width:"100%",justifyContent:"center",fontSize:11}}><Ic n="flag" s={11}/> {t.ch}</Btn>
         </div>
       </aside>}
