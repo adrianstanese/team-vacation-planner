@@ -847,10 +847,13 @@ function VisitCounter({ th }) {
   useEffect(() => {
     (async () => {
       try {
-        // Load visit stats from shared storage
+        // Load visit stats — try window.storage (artifact sandbox) then localStorage (production)
         let stats = null;
         if (window.storage) {
           try { const r = await window.storage.get("visit-stats", true); stats = r ? JSON.parse(r.value) : null; } catch(e) { stats = null; }
+        }
+        if (!stats) {
+          try { const ls = localStorage.getItem("tvp-visit-stats"); stats = ls ? JSON.parse(ls) : null; } catch(e) { stats = null; }
         }
         if (!stats) stats = { total: 0, countries: {} };
 
@@ -941,7 +944,8 @@ function VisitCounter({ th }) {
           counted.current = true;
           stats.total = (stats.total || 0) + 1;
           stats.countries[cc] = (stats.countries[cc] || 0) + 1;
-          if (window.storage) await window.storage.set("visit-stats", JSON.stringify(stats), true);
+          if (window.storage) { try { await window.storage.set("visit-stats", JSON.stringify(stats), true); } catch(e) {} }
+          try { localStorage.setItem("tvp-visit-stats", JSON.stringify(stats)); } catch(e) {}
         }
         setVisits(stats);
       } catch(e) { setVisits({ total: 1, countries: { OTHER: 1 } }); }
