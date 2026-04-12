@@ -2470,11 +2470,8 @@ export default function App(){
       const detected=tzLang[tz];
       if(detected&&TX[detected]){setLang(detected);db.sv("drift-lang",detected);}
     }
-    // Dark mode auto-detection: respect OS preference on first visit
-    if(st){setTheme(st);}else{
-      const prefersDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
-      if(prefersDark){setTheme("dark");db.sv("drift-theme","dark");}
-    }
+    // Theme: use stored preference, otherwise always default to light
+    if(st){setTheme(st);}
 
     // 24-month TTL cleanup
     const sv=await db.ld("my-teams");
