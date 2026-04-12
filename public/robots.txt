@@ -19,4 +19,4 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
-Sitemap: https://teamvacationplanner.com/sitemap.xml
+Sitemap: https://www.vacationplanner.team/sitemap.xml
