@@ -2341,6 +2341,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
               </div>;})}</div>;
           })()}
         </Fragment>}
+        <VisitCounter th={th}/>
       </main>
     </div>
 
