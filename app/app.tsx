@@ -444,48 +444,178 @@ function downloadICS(member, teamName) {
 
 // ─── PDF Report ──────────────────────────────────────────────────
 function generatePDFReport(team, t) {
-  const yr = team.year || CY;
-  let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${team.name} - ${yr}</title>
-<style>body{font-family:${F};margin:40px;color:#1a1a1a}h1{font-size:24px;margin-bottom:4px}
-h2{font-size:16px;color:#6b6b6b;font-weight:400;margin-top:0}
-table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13px}
-th,td{padding:8px 12px;border:1px solid #e8e6e1;text-align:left}
-th{background:#f5f5f3;font-weight:600}
-.chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;margin:1px}
-.wk{background:#D1FAE5;color:#065F46}.we{background:#FEF3C7;color:#92400E}
-.ol{background:#FEE2E2;color:#991B1B}
-</style></head><body>`;
-  html += `<h1>${team.name}</h1><h2>${yr} · ${team.members.length} ${team.members.length !== 1 ? t.mbs : t.mb}</h2>`;
+  var yr = team.year || CY;
+  var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var dayL = ["Mo","Tu","We","Th","Fr","Sa","Su"];
 
-  // Member summary table
-  html += `<table><tr><th>${t.tm}</th><th>${t.co}</th><th>${t.dys}</th><th>Details</th></tr>`;
-  team.members.forEach(m => {
-    const co = m.country ? EU_C.find(c => c.c === m.country) : null;
-    const days = (m.days || []).sort();
-    html += `<tr><td><strong>${m.name}</strong></td><td>${co ? co.f + " " + co.n : "—"}</td><td>${days.length}</td><td>${days.map(d => {
-      const p = pk(d); const dt = new Date(p.y, p.m, p.d); const we = dt.getDay()===0||dt.getDay()===6;
-      return `<span class="chip ${we?'we':'wk'}">${d.slice(5)}</span>`;
-    }).join(" ")}</td></tr>`;
-  });
-  html += `</table>`;
+  // Collect all holidays
+  var allHols = {};
+  team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){allHols[h]=true;}); });
 
   // Overlap analysis
-  const allDays = {};
-  team.members.forEach(m => (m.days||[]).forEach(d => { if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }));
-  const overlaps = Object.entries(allDays).filter(([,v]) => v.length >= 2).sort(([a],[b]) => a.localeCompare(b));
-  if (overlaps.length) {
-    html += `<h3>${t.ol}</h3><table><tr><th>Date</th><th>Members Out</th></tr>`;
-    overlaps.forEach(([d, members]) => {
-      html += `<tr><td><span class="chip ol">${d}</span></td><td>${members.join(", ")}</td></tr>`;
+  var allDays = {};
+  team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
+  var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
+  var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+team.name+' - '+yr+'</title>';
+  html += '<style>';
+  html += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;margin:30px 40px;color:#1f2937;font-size:12px}';
+  html += 'h1{font-size:22px;margin:0 0 2px;color:#1f2937}';
+  html += '.sub{font-size:12px;color:#6b7280;margin:0 0 16px}';
+  html += '.hdr{border-bottom:3px solid #7C3AED;padding-bottom:10px;margin-bottom:16px}';
+  html += '.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}';
+  html += '.leg-item{display:flex;align-items:center;gap:4px;font-size:11px}';
+  html += '.dot{width:10px;height:10px;border-radius:3px;display:inline-block}';
+  // Timeline styles
+  html += '.tl-title{font-size:13px;font-weight:700;margin:16px 0 8px;color:#374151}';
+  html += '.tl-row{display:flex;align-items:center;margin-bottom:3px}';
+  html += '.tl-name{width:90px;font-size:11px;font-weight:600;color:#374151;flex-shrink:0}';
+  html += '.tl-bar{display:flex;gap:0}';
+  html += '.tl-day{width:14px;height:14px;border-radius:2px;margin:0 0.5px}';
+  html += '.tl-hdr{display:flex;margin-left:90px;margin-bottom:2px}';
+  html += '.tl-hdr-d{width:14px;font-size:7px;text-align:center;color:#9ca3af;margin:0 0.5px}';
+  // Calendar grid
+  html += '.cal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}';
+  html += '.cal-month{border:1px solid #e5e7eb;border-radius:8px;padding:10px}';
+  html += '.cal-title{font-size:12px;font-weight:700;color:#1f2937;margin-bottom:6px}';
+  html += '.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}';
+  html += '.cal-lbl{font-size:8px;font-weight:700;color:#9ca3af;text-align:center;padding:2px}';
+  html += '.cal-d{font-size:9px;text-align:center;border-radius:3px;padding:3px 0;font-weight:400;color:#374151}';
+  html += '.cal-we{color:#d1d5db}';
+  html += '.cal-hol{background:#fee2e2;color:#dc2626;font-weight:700}';
+  html += '.cal-v1{color:#fff;font-weight:700;border-radius:3px}';
+  // Stats & table
+  html += '.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}';
+  html += '.stat{border:1px solid #e5e7eb;border-radius:8px;padding:10px;text-align:center}';
+  html += '.stat-val{font-size:20px;font-weight:800;color:#374151}';
+  html += '.stat-lbl{font-size:10px;color:#6b7280;margin-top:2px}';
+  html += 'table{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}';
+  html += 'th,td{padding:6px 10px;border:1px solid #e5e7eb;text-align:left}';
+  html += 'th{background:#f9fafb;font-weight:700;color:#374151}';
+  html += '.footer{margin-top:24px;font-size:9px;color:#d1d5db;text-align:right}';
+  html += '@media print{body{margin:20px}}';
+  html += '</style></head><body>';
+
+  // Header
+  html += '<div class="hdr"><h1>'+team.name+'</h1>';
+  html += '<div class="sub">'+yr+' &middot; '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' &middot; Generated '+new Date().toLocaleDateString()+'</div></div>';
+
+  // Legend
+  html += '<div class="legend">';
+  team.members.forEach(function(m,i){
+    var c=MC[i%MC.length];
+    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+m.name+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
+  });
+  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">Holiday</span></div>';
+  html += '</div>';
+
+  // Stats boxes
+  var avgCov = team.members.length > 0 ? Math.round((1 - totalDays / (team.members.length * 260)) * 100) : 100;
+  html += '<div class="stats">';
+  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">Total vacation days</div></div>';
+  html += '<div class="stat"><div class="stat-val" style="color:#EF4444">'+overlaps.length+'</div><div class="stat-lbl">Overlap days</div></div>';
+  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">Team members</div></div>';
+  html += '<div class="stat"><div class="stat-val" style="color:#10B981">'+avgCov+'%</div><div class="stat-lbl">Avg coverage</div></div>';
+  html += '</div>';
+
+  // Timeline per month (only months with activity)
+  for (var mo = 0; mo < 12; mo++) {
+    var daysInMonth = dim(yr, mo);
+    var hasActivity = false;
+    team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ var p=pk(d); if(p.m===mo) hasActivity=true; }); });
+    if (!hasActivity) continue;
+
+    html += '<div class="tl-title">'+months[mo]+' '+yr+' &mdash; Timeline</div>';
+    // Day headers
+    html += '<div class="tl-hdr">';
+    for(var d=1;d<=daysInMonth;d++) html += '<div class="tl-hdr-d">'+d+'</div>';
+    html += '</div>';
+    // Member bars
+    team.members.forEach(function(m,i){
+      var c = MC[i%MC.length];
+      html += '<div class="tl-row"><div class="tl-name">'+m.name+'</div><div class="tl-bar">';
+      for(var d=1;d<=daysInMonth;d++){
+        var key = dk(yr,mo,d);
+        var has = (m.days||[]).indexOf(key) >= 0;
+        html += '<div class="tl-day" style="background:'+(has?c.d:'#f3f4f6')+'"></div>';
+      }
+      html += '</div></div>';
     });
-    html += `</table>`;
   }
 
-  html += `<p style="margin-top:40px;font-size:11px;color:#9b9b9b">Generated by Team Vacation Planner · ${new Date().toLocaleDateString()}</p></body></html>`;
+  // Calendar grid — 12 months, 3 per row
+  html += '<div class="tl-title">Year Calendar</div>';
+  html += '<div class="cal-grid">';
+  for (var mo2 = 0; mo2 < 12; mo2++) {
+    html += '<div class="cal-month"><div class="cal-title">'+months[mo2]+'</div><div class="cal-days">';
+    for(var dl=0;dl<7;dl++) html += '<div class="cal-lbl">'+dayL[dl]+'</div>';
+    var firstDay = fdm(yr,mo2);
+    var daysInMo = dim(yr,mo2);
+    for(var bl=0;bl<firstDay;bl++) html += '<div></div>';
+    for(var d2=1;d2<=daysInMo;d2++){
+      var key2=dk(yr,mo2,d2);
+      var dow=(firstDay+d2-1)%7;
+      var isWe2=dow>=5;
+      var isHol2=!!allHols[key2];
+      var who=[];
+      team.members.forEach(function(m,i){if((m.days||[]).indexOf(key2)>=0)who.push(i);});
+      var cls='cal-d';
+      var sty='';
+      if(isWe2) cls+=' cal-we';
+      if(isHol2) cls+=' cal-hol';
+      if(who.length===1) { cls+=' cal-v1'; sty='background:'+MC[who[0]%MC.length].d; }
+      else if(who.length===2) { cls+=' cal-v1'; sty='background:linear-gradient(135deg,'+MC[who[0]%MC.length].d+' 50%,'+MC[who[1]%MC.length].d+' 50%)'; }
+      else if(who.length>=3) { cls+=' cal-v1'; sty='background:#EF4444'; }
+      html += '<div class="'+cls+'"'+(sty?' style="'+sty+'"':'')+'>'+d2+'</div>';
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
 
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = `${team.name.replace(/\s+/g,"_")}_${yr}_report.html`; a.click();
+  // Summary table
+  html += '<div class="tl-title">Member Summary</div>';
+  html += '<table><tr><th>Member</th><th>Country</th><th>Days</th><th>Vacation Periods</th></tr>';
+  team.members.forEach(function(m,i){
+    var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
+    var sorted = (m.days||[]).slice().sort();
+    // Group into ranges
+    var ranges = [];
+    var ri = 0;
+    while(ri < sorted.length){
+      var start = sorted[ri]; var end = start;
+      while(ri+1 < sorted.length){
+        var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);
+        var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;
+        if(diff<=3){ri++;end=sorted[ri];}else break;
+      }
+      if(start===end) ranges.push(start.slice(5));
+      else ranges.push(start.slice(5)+' to '+end.slice(5));
+      ri++;
+    }
+    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+m.name+'</td>';
+    html += '<td>'+(co?co.f+' '+co.n:'—')+'</td>';
+    html += '<td style="text-align:center;font-weight:700">'+sorted.length+'</td>';
+    html += '<td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
+  });
+  html += '</table>';
+
+  // Overlaps
+  if(overlaps.length){
+    html += '<div class="tl-title">Overlap Days ('+overlaps.length+')</div>';
+    html += '<table><tr><th>Date</th><th>Members Out</th></tr>';
+    overlaps.forEach(function(e){
+      html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+e[1].join(', ')+'</td></tr>';
+    });
+    html += '</table>';
+  }
+
+  html += '<div class="footer">Generated by Team Vacation Planner &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString()+'</div>';
+  html += '</body></html>';
+
+  var blob = new Blob([html], { type: "text/html" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a"); a.href = url; a.download = team.name.replace(/\s+/g,"_")+"_"+yr+"_report.html"; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -871,110 +1001,56 @@ function VisitCounter({ th }) {
   const [visits, setVisits] = useState(null);
   const counted = useRef(false);
   useEffect(() => {
-    (async () => {
-      try {
-        // Load visit stats — try window.storage (artifact sandbox) then localStorage (production)
-        let stats = null;
-        if (window.storage) {
-          try { const r = await window.storage.get("visit-stats", true); stats = r ? JSON.parse(r.value) : null; } catch(e) { stats = null; }
-        }
-        if (!stats) {
-          try { const ls = localStorage.getItem("tvp-visit-stats"); stats = ls ? JSON.parse(ls) : null; } catch(e) { stats = null; }
-        }
-        if (!stats) stats = { total: 0, countries: {} };
+    (function(){
+      // === COUNTRY DETECTION (3 layers) ===
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      var tzCountry = {
+        "Europe/Bucharest": "RO", "Europe/London": "GB", "Europe/Berlin": "DE", "Europe/Paris": "FR",
+        "Europe/Madrid": "ES", "Europe/Rome": "IT", "Europe/Amsterdam": "NL", "Europe/Brussels": "BE",
+        "Europe/Vienna": "AT", "Europe/Zurich": "CH", "Europe/Stockholm": "SE", "Europe/Oslo": "NO",
+        "Europe/Copenhagen": "DK", "Europe/Helsinki": "FI", "Europe/Warsaw": "PL", "Europe/Prague": "CZ",
+        "Europe/Budapest": "HU", "Europe/Sofia": "BG", "Europe/Athens": "GR", "Europe/Lisbon": "PT",
+        "Europe/Dublin": "IE", "Europe/Zagreb": "HR", "Europe/Belgrade": "RS", "Europe/Ljubljana": "SI",
+        "Europe/Bratislava": "SK", "Europe/Tallinn": "EE", "Europe/Riga": "LV", "Europe/Vilnius": "LT",
+        "Europe/Luxembourg": "LU", "Europe/Sarajevo": "BA", "Europe/Skopje": "MK", "Europe/Podgorica": "ME",
+        "Europe/Chisinau": "MD", "Europe/Kiev": "UA", "Europe/Kyiv": "UA", "Europe/Minsk": "BY",
+        "Europe/Istanbul": "TR", "Europe/Tirane": "AL",
+        "America/New_York": "US", "America/Chicago": "US", "America/Los_Angeles": "US", "America/Denver": "US",
+        "America/Toronto": "CA", "America/Vancouver": "CA",
+        "Asia/Dubai": "AE", "Asia/Riyadh": "SA", "Asia/Bahrain": "BH",
+        "Asia/Kolkata": "IN", "Asia/Tokyo": "JP", "Asia/Shanghai": "CN", "Asia/Almaty": "KZ",
+        "America/Santiago": "CL", "America/Sao_Paulo": "BR", "Africa/Casablanca": "MA",
+        "Australia/Sydney": "AU", "Australia/Melbourne": "AU", "Australia/Perth": "AU",
+        "Pacific/Auckland": "NZ",
+      };
+      var cc = tzCountry[tz] || null;
+      if (!cc) {
+        var navLang = (navigator.language || "").toLowerCase();
+        var langCountry = {"ro":"RO","bg":"BG","sv":"SE","it":"IT","fr":"FR","de":"DE","es":"ES","pt":"PT","hu":"HU","pl":"PL","cs":"CZ","sk":"SK","el":"GR","nl":"NL","da":"DK","fi":"FI","en-gb":"GB","en-au":"AU","en-ca":"CA","en":"US","en-us":"US"};
+        cc = langCountry[navLang] || langCountry[navLang.split("-")[0]] || null;
+      }
+      if (!cc) cc = "OTHER";
 
-        // === COUNTRY DETECTION (3 layers) ===
+      // Check if already counted this session
+      var sessionKey = "tvp-counted";
+      var alreadyCounted = false;
+      try { alreadyCounted = sessionStorage.getItem(sessionKey) === "1"; } catch(e) {}
 
-        // Layer 1: Timezone
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-        const tzCountry = {
-          "Europe/Bucharest": "RO", "Europe/London": "GB", "Europe/Berlin": "DE", "Europe/Paris": "FR",
-          "Europe/Madrid": "ES", "Europe/Rome": "IT", "Europe/Amsterdam": "NL", "Europe/Brussels": "BE",
-          "Europe/Vienna": "AT", "Europe/Zurich": "CH", "Europe/Stockholm": "SE", "Europe/Oslo": "NO",
-          "Europe/Copenhagen": "DK", "Europe/Helsinki": "FI", "Europe/Warsaw": "PL", "Europe/Prague": "CZ",
-          "Europe/Budapest": "HU", "Europe/Sofia": "BG", "Europe/Athens": "GR", "Europe/Lisbon": "PT",
-          "Europe/Dublin": "IE", "Europe/Zagreb": "HR", "Europe/Belgrade": "RS", "Europe/Ljubljana": "SI",
-          "Europe/Bratislava": "SK", "Europe/Tallinn": "EE", "Europe/Riga": "LV", "Europe/Vilnius": "LT",
-          "Europe/Luxembourg": "LU", "Europe/Sarajevo": "BA", "Europe/Skopje": "MK", "Europe/Podgorica": "ME",
-          "Europe/Chisinau": "MD", "Europe/Kiev": "UA", "Europe/Kyiv": "UA", "Europe/Minsk": "BY",
-          "Europe/Istanbul": "TR", "Europe/Tirane": "AL",
-          "America/New_York": "US", "America/Chicago": "US", "America/Los_Angeles": "US", "America/Denver": "US",
-          "America/Toronto": "CA", "America/Vancouver": "CA",
-          "Asia/Dubai": "AE", "Asia/Riyadh": "SA", "Asia/Bahrain": "BH",
-          "Asia/Kolkata": "IN", "Asia/Tokyo": "JP", "Asia/Shanghai": "CN", "Asia/Almaty": "KZ",
-          "America/Santiago": "CL", "America/Sao_Paulo": "BR", "Africa/Casablanca": "MA",
-          "Australia/Sydney": "AU", "Australia/Melbourne": "AU", "Australia/Perth": "AU",
-          "Pacific/Auckland": "NZ",
-        };
-        let cc = tzCountry[tz] || null;
-
-        // Layer 2: navigator.language
-        if (!cc) {
-          const navLang = (navigator.language || navigator.userLanguage || "").toLowerCase();
-          const langCountry = {
-            "ro":"RO","ro-ro":"RO","bg":"BG","bg-bg":"BG","sv":"SE","sv-se":"SE",
-            "it":"IT","it-it":"IT","fr":"FR","fr-fr":"FR","de":"DE","de-de":"DE","de-at":"AT","de-ch":"CH",
-            "es":"ES","es-es":"ES","es-cl":"CL","pt":"PT","pt-pt":"PT","pt-br":"BR",
-            "hu":"HU","hu-hu":"HU","pl":"PL","pl-pl":"PL","cs":"CZ","cs-cz":"CZ","sk":"SK","sk-sk":"SK",
-            "el":"GR","el-gr":"GR","nl":"NL","nl-nl":"NL","nl-be":"BE","da":"DK","da-dk":"DK",
-            "fi":"FI","fi-fi":"FI","nb":"NO","nn":"NO","no":"NO","et":"EE","et-ee":"EE",
-            "lv":"LV","lv-lv":"LV","lt":"LT","lt-lt":"LT","hr":"HR","hr-hr":"HR","sr":"RS","sr-rs":"RS",
-            "sl":"SI","sl-si":"SI","uk":"UA","uk-ua":"UA","tr":"TR","tr-tr":"TR","sq":"AL","sq-al":"AL",
-            "is":"IS","is-is":"IS","ga":"IE","en-ie":"IE","en-gb":"GB","en-au":"AU","en-ca":"CA",
-            "ar-sa":"SA","ar-ae":"AE","ar-bh":"BH","ar-ma":"MA","kk":"KZ","kk-kz":"KZ",
-            "en":"US","en-us":"US",
-          };
-          cc = langCountry[navLang] || langCountry[navLang.split("-")[0]] || null;
-        }
-
-        // Layer 3: Intl locale + navigator.languages array
-        if (!cc) {
-          try {
-            // Try Intl.DateTimeFormat().resolvedOptions().locale
-            const intlLocale = Intl.DateTimeFormat().resolvedOptions().locale || "";
-            const localeLang = intlLocale.split("-")[0].toLowerCase();
-            const localeRegion = (intlLocale.split("-")[1] || "").toUpperCase();
-            const langToCountry = {ro:"RO",bg:"BG",sv:"SE",it:"IT",fr:"FR",de:"DE",es:"ES",pt:"PT",hu:"HU",pl:"PL",cs:"CZ",sk:"SK",el:"GR",nl:"NL",da:"DK",fi:"FI",nb:"NO",et:"EE",lv:"LV",lt:"LT",hr:"HR",sr:"RS",sl:"SI",uk:"UA",tr:"TR",sq:"AL",is:"IS",ar:"SA",kk:"KZ"};
-            // If region part matches a known country code, use it directly
-            if (localeRegion && EU_C.find(c => c.c === localeRegion)) cc = localeRegion;
-            else if (localeLang && langToCountry[localeLang]) cc = langToCountry[localeLang];
-          } catch(e) {}
-        }
-        if (!cc) {
-          try {
-            // navigator.languages is an array like ["ro-RO", "en-US", "en"]
-            const langs = navigator.languages || [navigator.language || ""];
-            for (var _li = 0; _li < langs.length; _li++) { var l = langs[_li];
-              var parts = l.split("-");
-              var region = (parts[1] || "").toUpperCase();
-              if (region && EU_C.find(function(c){return c.c === region})) { cc = region; break; }
-            }
-          } catch(e) {}
-        }
-
-        // Layer 4: saved app language preference → infer country
-        if (!cc || cc === "OTHER") {
-          try {
-            let savedLang = null;
-            if (window.storage) { try { const r = await window.storage.get("drift-lang"); savedLang = r ? JSON.parse(r.value) : null; } catch(e) {} }
-            if (!savedLang) { try { savedLang = localStorage.getItem("drift-lang"); if (savedLang) savedLang = JSON.parse(savedLang); } catch(e) {} }
-            const appLangCountry = { ro:"RO", bg:"BG", sv:"SE", it:"IT", fr:"FR", de:"DE", es:"ES", pt:"PT", hu:"HU" };
-            if (savedLang && appLangCountry[savedLang]) cc = appLangCountry[savedLang];
-          } catch(e) {}
-        }
-
-        if (!cc) cc = "OTHER";
-
-        // Count once per mount
-        if (!counted.current) {
-          counted.current = true;
-          stats.total = (stats.total || 0) + 1;
-          stats.countries[cc] = (stats.countries[cc] || 0) + 1;
-          if (window.storage) { try { await window.storage.set("visit-stats", JSON.stringify(stats), true); } catch(e) {} }
-          try { localStorage.setItem("tvp-visit-stats", JSON.stringify(stats)); } catch(e) {}
-        }
-        setVisits(stats);
-      } catch(e) { setVisits({ total: 1, countries: { OTHER: 1 } }); }
+      if (!alreadyCounted && !counted.current) {
+        counted.current = true;
+        try { sessionStorage.setItem(sessionKey, "1"); } catch(e) {}
+        // POST to global counter
+        fetch("/api/visits", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({country:cc})})
+          .then(function(r){return r.json()})
+          .then(function(data){setVisits(data)})
+          .catch(function(){
+            // Fallback: just GET
+            fetch("/api/visits").then(function(r){return r.json()}).then(function(data){setVisits(data)}).catch(function(){});
+          });
+      } else {
+        // Already counted, just load stats
+        fetch("/api/visits").then(function(r){return r.json()}).then(function(data){setVisits(data)}).catch(function(){});
+      }
     })();
   }, []);
 
