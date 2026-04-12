@@ -619,7 +619,173 @@ function generatePDFReport(team, t) {
   URL.revokeObjectURL(url);
 }
 
-// ─── Embed Code Generator ───────────────────────────────────────
+// ─── Print Report (opens formatted view in new window with print dialog) ──
+function printReport(team, t) {
+  var yr = team.year || CY;
+  var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var dayL = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+
+  var allHols = {};
+  team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){allHols[h]=true;}); });
+
+  var allDays = {};
+  team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
+  var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
+  var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+team.name+' - '+yr+'</title>';
+  html += '<style>';
+  html += '*{box-sizing:border-box;margin:0;padding:0}';
+  html += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;margin:0;padding:24px 32px;color:#1f2937;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
+  html += '@page{margin:15mm;size:A4 landscape}';
+  html += 'h1{font-size:20px;margin:0 0 2px;color:#1f2937}';
+  html += '.sub{font-size:11px;color:#6b7280;margin:0 0 14px}';
+  html += '.hdr{border-bottom:3px solid #7C3AED;padding-bottom:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-end}';
+  html += '.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}';
+  html += '.leg-item{display:flex;align-items:center;gap:3px;font-size:10px}';
+  html += '.dot{width:8px;height:8px;border-radius:2px;display:inline-block}';
+  // Stats
+  html += '.stats{display:flex;gap:8px;margin-bottom:14px}';
+  html += '.stat{flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center}';
+  html += '.stat-val{font-size:18px;font-weight:800;color:#374151}';
+  html += '.stat-red{font-size:18px;font-weight:800;color:#EF4444}';
+  html += '.stat-grn{font-size:18px;font-weight:800;color:#10B981}';
+  html += '.stat-lbl{font-size:9px;color:#6b7280;margin-top:1px}';
+  // Timeline
+  html += '.tl-title{font-size:12px;font-weight:700;margin:14px 0 6px;color:#374151;border-bottom:2px solid #7C3AED;padding-bottom:3px}';
+  html += '.tl-row{display:flex;align-items:center;margin-bottom:2px}';
+  html += '.tl-name{width:80px;font-size:10px;font-weight:600;color:#374151;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
+  html += '.tl-bar{display:flex}';
+  html += '.tl-day{width:12px;height:12px;border-radius:2px;margin:0 0.5px}';
+  html += '.tl-hdr{display:flex;margin-left:80px;margin-bottom:1px}';
+  html += '.tl-hdr-d{width:12px;font-size:7px;text-align:center;color:#9ca3af;margin:0 0.5px}';
+  // Calendar
+  html += '.cal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}';
+  html += '.cal-month{border:1px solid #e5e7eb;border-radius:6px;padding:6px}';
+  html += '.cal-title{font-size:10px;font-weight:700;color:#1f2937;margin-bottom:4px}';
+  html += '.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}';
+  html += '.cal-lbl{font-size:7px;font-weight:700;color:#9ca3af;text-align:center;padding:1px}';
+  html += '.cal-d{font-size:8px;text-align:center;border-radius:2px;padding:2px 0;color:#374151}';
+  html += '.cal-we{color:#d1d5db}';
+  html += '.cal-hol{background:#fee2e2;color:#dc2626;font-weight:700}';
+  html += '.cal-v1{color:#fff;font-weight:700}';
+  // Table
+  html += 'table{width:100%;border-collapse:collapse;margin:8px 0;font-size:10px}';
+  html += 'th,td{padding:4px 8px;border:1px solid #e5e7eb;text-align:left}';
+  html += 'th{background:#f9fafb;font-weight:700;color:#374151}';
+  html += '.footer{margin-top:16px;font-size:8px;color:#d1d5db;text-align:right}';
+  html += '@media print{.no-print{display:none!important}}';
+  html += '</style></head><body>';
+
+  // Print button
+  html += '<div class="no-print" style="position:fixed;top:10px;right:10px;z-index:100"><button onclick="window.print()" style="padding:8px 20px;border-radius:8px;border:none;background:#7C3AED;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Print / Save as PDF</button></div>';
+
+  // Header
+  html += '<div class="hdr"><div><h1>'+team.name+'</h1><div class="sub">'+yr+' &middot; '+team.members.length+' members &middot; Generated '+new Date().toLocaleDateString()+'</div></div><div style="font-size:9px;color:#9ca3af">vacationplanner.team</div></div>';
+
+  // Legend
+  html += '<div class="legend">';
+  team.members.forEach(function(m,i){
+    var c=MC[i%MC.length];
+    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+m.name+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
+  });
+  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">Holiday</span></div>';
+  html += '</div>';
+
+  // Stats
+  var avgCov = team.members.length > 0 ? Math.round((1 - totalDays / (team.members.length * 260)) * 100) : 100;
+  html += '<div class="stats">';
+  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">Total vacation days</div></div>';
+  html += '<div class="stat"><div class="stat-red">'+overlaps.length+'</div><div class="stat-lbl">Overlap days</div></div>';
+  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">Team members</div></div>';
+  html += '<div class="stat"><div class="stat-grn">'+avgCov+'%</div><div class="stat-lbl">Avg coverage</div></div>';
+  html += '</div>';
+
+  // Timeline per active month
+  for(var mo=0;mo<12;mo++){
+    var daysInMonth = dim(yr,mo);
+    var hasActivity = false;
+    team.members.forEach(function(m){(m.days||[]).forEach(function(d){var p=pk(d);if(p.m===mo)hasActivity=true;});});
+    if(!hasActivity) continue;
+    html += '<div class="tl-title">'+months[mo]+' '+yr+'</div>';
+    html += '<div class="tl-hdr">';
+    for(var d=1;d<=daysInMonth;d++) html += '<div class="tl-hdr-d">'+d+'</div>';
+    html += '</div>';
+    team.members.forEach(function(m,i){
+      var c=MC[i%MC.length];
+      html += '<div class="tl-row"><div class="tl-name">'+m.name+'</div><div class="tl-bar">';
+      for(var d2=1;d2<=daysInMonth;d2++){
+        var key=dk(yr,mo,d2);
+        var has=(m.days||[]).indexOf(key)>=0;
+        var isHol2=!!allHols[key];
+        var isWe2=isWe(yr,mo,d2);
+        html += '<div class="tl-day" style="background:'+(has?c.d:isHol2?'#fecaca':isWe2?'#f3f4f6':'#f9fafb')+'"></div>';
+      }
+      html += '</div></div>';
+    });
+  }
+
+  // Calendar grid — 4 per row for landscape
+  html += '<div class="tl-title">Year Calendar '+yr+'</div>';
+  html += '<div class="cal-grid">';
+  for(var mo3=0;mo3<12;mo3++){
+    html += '<div class="cal-month"><div class="cal-title">'+months[mo3]+'</div><div class="cal-days">';
+    for(var dl=0;dl<7;dl++) html += '<div class="cal-lbl">'+dayL[dl]+'</div>';
+    var firstDay=fdm(yr,mo3);
+    var daysInMo=dim(yr,mo3);
+    for(var bl=0;bl<firstDay;bl++) html += '<div></div>';
+    for(var d3=1;d3<=daysInMo;d3++){
+      var key3=dk(yr,mo3,d3);
+      var dow2=(firstDay+d3-1)%7;
+      var isWe3=dow2>=5;
+      var isHol3=!!allHols[key3];
+      var who2=[];
+      team.members.forEach(function(m,i){if((m.days||[]).indexOf(key3)>=0)who2.push(i);});
+      var cls2='cal-d';
+      var sty2='';
+      if(isWe3) cls2+=' cal-we';
+      if(isHol3) cls2+=' cal-hol';
+      if(who2.length===1){cls2+=' cal-v1';sty2='background:'+MC[who2[0]%MC.length].d;}
+      else if(who2.length===2){cls2+=' cal-v1';sty2='background:linear-gradient(135deg,'+MC[who2[0]%MC.length].d+' 50%,'+MC[who2[1]%MC.length].d+' 50%)';}
+      else if(who2.length>=3){cls2+=' cal-v1';sty2='background:#EF4444';}
+      html += '<div class="'+cls2+'"'+(sty2?' style="'+sty2+'"':'')+'>'+d3+'</div>';
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
+
+  // Summary table
+  html += '<div class="tl-title">Member Summary</div>';
+  html += '<table><tr><th>Member</th><th>Country</th><th>Days</th><th>Vacation Periods</th></tr>';
+  team.members.forEach(function(m,i){
+    var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
+    var sorted=(m.days||[]).slice().sort();
+    var ranges=[]; var ri=0;
+    while(ri<sorted.length){
+      var start=sorted[ri],end=start;
+      while(ri+1<sorted.length){var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;if(diff<=3){ri++;end=sorted[ri];}else break;}
+      if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
+    }
+    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+m.name+'</td><td>'+(co?co.f+' '+co.n:'—')+'</td><td style="text-align:center;font-weight:700">'+sorted.length+'</td><td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
+  });
+  html += '</table>';
+
+  if(overlaps.length){
+    html += '<div class="tl-title">Overlap Days ('+overlaps.length+')</div>';
+    html += '<table><tr><th>Date</th><th>Members Out</th></tr>';
+    overlaps.forEach(function(e){html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+e[1].join(', ')+'</td></tr>';});
+    html += '</table>';
+  }
+
+  html += '<div class="footer">Generated by Team Vacation Planner &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString()+'</div>';
+  html += '</body></html>';
+
+  var win = window.open('','_blank','width=1100,height=800');
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(function(){win.print();},500);
+}
 function getEmbedCode(teamId) {
   const url = `${window.location.origin}${window.location.pathname}#team=${teamId}`;
   return `<iframe src="${url}" width="100%" height="800" frameborder="0" style="border:1px solid #e8e6e1;border-radius:12px;"></iframe>`;
@@ -791,11 +957,10 @@ function PrintView({ team, th, t }) {
 
     {/* Print button (hidden in print) */}
     <div style={{ marginTop: 24, textAlign: "center" }}>
-      <button onClick={() => window.print()} style={{
-        padding: "12px 32px", borderRadius: 10, border: "none", background: "#2563EB", color: "#fff",
+      <button onClick={() => printReport(team, t)} style={{
+        padding: "12px 32px", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff",
         fontSize: 15, fontWeight: 700, fontFamily: F, cursor: "pointer",
       }}>{t.printBtn}</button>
-      <style>{`@media print { button { display: none !important; } }`}</style>
     </div>
   </div>;
 }
@@ -2140,7 +2305,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
           <button onClick={function(){exportCSV(team)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>CSV</button>
           <button onClick={function(){var tsv=generateTSV(team);var blob=new Blob([tsv],{type:"text/tab-separated-values"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=team.name.replace(/\s/g,"_")+"_vacations.tsv";a.click();URL.revokeObjectURL(url);}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>TSV</button>
           <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>Share / QR</button>
-          <button onClick={function(){window.print()}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
+          <button onClick={function(){printReport(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
           <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Import</button>
         </div>}
 
