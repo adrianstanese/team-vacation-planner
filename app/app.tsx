@@ -2061,8 +2061,8 @@ function ContactModal({onClose, th, t}) {
   </div>;
 }
 
-function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,th,t,lang,setLang,theme,setTheme}){
-  const[name,setName]=useState("");const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);
+function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,lang,setLang,theme,setTheme}){
+  const[name,setName]=useState("");const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[confirmDel,setConfirmDel]=useState(null);
   const YRS=Array.from({length:10},(_,i)=>2026+i);
 
   if(about) return <AboutPage th={th} t={t} onBack={()=>setAbout(false)} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>;
@@ -2119,7 +2119,21 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,th,t,lang,setLang,t
       </div>}
 
       {myTeams.length>0&&<div style={{textAlign:"left",marginBottom:16}}><h3 style={{fontSize:12,fontWeight:600,color:th.t3,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{t.mt}</h3>
-        {myTeams.map(tm=> <button key={tm.id} onClick={()=>onOpenTeam(tm.id)} style={{width:"100%",background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rXs,padding:"12px 16px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:F,marginBottom:5,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,transition:"all .25s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=th.ac} onMouseLeave={e=>e.currentTarget.style.borderColor=th.bd}><div style={{textAlign:"left"}}><div style={{fontSize:14,fontWeight:600,color:th.tx}}>{tm.name}</div><div style={{fontSize:11,color:th.t3,marginTop:1}}>{tm.year||"—"} · {tm.mc||0} {(tm.mc||0)!==1?t.mbs:t.mb}</div></div><Ic n="chevR" s={16} c={th.t3}/></button>)}
+        {myTeams.map(tm=> <div key={tm.id} style={{width:"100%",background:th.gbg,border:`1px solid ${confirmDel===tm.id?'#EF4444':th.gbd}`,borderRadius:G.rXs,marginBottom:5,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,transition:"all .25s",overflow:"hidden"}}>
+          {confirmDel===tm.id?<div style={{padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+            <div style={{fontSize:13,fontWeight:600,color:"#EF4444",fontFamily:F}}>Remove <strong>{tm.name}</strong>?</div>
+            <div style={{display:"flex",gap:4,flexShrink:0}}>
+              <button onClick={function(){onDeleteTeam(tm.id);setConfirmDel(null);}} style={{padding:"6px 14px",borderRadius:8,border:"none",background:"#EF4444",color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer"}}>Remove</button>
+              <button onClick={function(){setConfirmDel(null);}} style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${th.bd}`,background:th.sf,color:th.t2,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer"}}>Cancel</button>
+            </div>
+          </div>:<div style={{display:"flex",alignItems:"center"}}>
+            <button onClick={function(){onOpenTeam(tm.id);}} style={{flex:1,background:"none",border:"none",padding:"12px 16px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:F}}>
+              <div style={{textAlign:"left"}}><div style={{fontSize:14,fontWeight:600,color:th.tx}}>{tm.name}</div><div style={{fontSize:11,color:th.t3,marginTop:1}}>{tm.year||"—"} · {tm.mc||0} {(tm.mc||0)!==1?t.mbs:t.mb}</div></div>
+              <Ic n="chevR" s={16} c={th.t3}/>
+            </button>
+            <button onClick={function(e){e.stopPropagation();setConfirmDel(tm.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:"8px 12px",display:"flex",alignItems:"center",flexShrink:0,opacity:0.4,transition:"opacity .2s"}} onMouseEnter={function(e){e.currentTarget.style.opacity="1";}} onMouseLeave={function(e){e.currentTarget.style.opacity="0.4";}}><Ic n="x" s={14} c="#EF4444"/></button>
+          </div>}
+        </div>)}
       </div>}
 
       {/* Country Holidays */}
@@ -2549,5 +2563,6 @@ export default function App(){
     }
     return <ErrorBoundary><WS team={team} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
   }
-  return <ErrorBoundary><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
+  const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);};
+  return <ErrorBoundary><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
 }
