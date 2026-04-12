@@ -1914,7 +1914,14 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
           </div>
         </div>}
 
-        {view==="cal"&&am&&<div style={{background:ac.b,borderRadius:8,padding:"8px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:8,border:`1px solid ${ac.d}30`,flexWrap:"wrap"}}><div style={{width:22,height:22,borderRadius:"50%",background:ac.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:700}}>{am.name[0].toUpperCase()}</div><span style={{fontSize:12,fontWeight:600,color:ac.t}}>{t.ed}: {am.name}</span><span style={{fontSize:11,color:ac.t,opacity:.7}}>{t.tap}</span></div>}
+        {view==="cal"&&am&&<div style={{background:ac.b,borderRadius:12,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:8,border:`1px solid ${ac.d}30`,flexWrap:"wrap",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:22,height:22,borderRadius:"50%",background:ac.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:700}}>{am.name[0].toUpperCase()}</div>
+            <span style={{fontSize:12,fontWeight:600,color:ac.t}}>{t.ed}: {am.name}</span>
+            <span style={{fontSize:11,color:ac.t,opacity:.7}}>{t.tap}</span>
+          </div>
+          <button onClick={()=>{setAId(null);flash(am.name+": "+(am.days||[]).length+" "+(((am.days||[]).length===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>Done · {(am.days||[]).length} {((am.days||[]).length===1)?t.dy:t.dys}</button>
+        </div>}
 
         {/* Holiday Clash Warning */}
         {view==="cal"&&am&&(()=>{const clashes=detectHolidayClashes(am,yr);if(!clashes.length) return null;
