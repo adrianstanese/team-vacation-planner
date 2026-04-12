@@ -388,10 +388,36 @@ const pk=k=>{const[y,m,d]=k.split("-").map(Number);return{y,m:m-1,d};};
 const isWe=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
 const N=new Date(),CY=N.getFullYear(),CM=N.getMonth(),CD=N.getDate();
 
-// ─── Storage ─────────────────────────────────────────────────────
+// ─── Storage (hybrid: API for teams, localStorage for prefs, window.storage for artifact sandbox) ───
+const API_BASE = "/api/team";
 const db={
-  async sv(k,d,s=false){try{if(window.storage)await window.storage.set(k,JSON.stringify(d),s);}catch(e){console.warn(e);}},
-  async ld(k,s=false){try{if(!window.storage)return null;const r=await window.storage.get(k,s);return r?JSON.parse(r.value):null;}catch(e){return null;}}
+  async sv(k,d,s=false){
+    try {
+      // Team data → API (production) or window.storage (artifact sandbox)
+      if(k.startsWith("team:")&&s){
+        var teamId=k.replace("team:","");
+        try{await fetch(API_BASE+"?id="+teamId,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:teamId,data:d})});}catch(e){}
+      }
+      // Also save to window.storage if available (artifact sandbox)
+      if(window.storage){try{await window.storage.set(k,JSON.stringify(d),s);}catch(e){}}
+      // Local prefs → localStorage
+      if(!s){try{localStorage.setItem(k,JSON.stringify(d));}catch(e){}}
+    }catch(e){console.warn(e);}
+  },
+  async ld(k,s=false){
+    try{
+      // Team data → try API first, then window.storage, then localStorage
+      if(k.startsWith("team:")&&s){
+        var teamId=k.replace("team:","");
+        try{var res=await fetch(API_BASE+"?id="+teamId);if(res.ok){var data=await res.json();if(data)return data;}}catch(e){}
+      }
+      // Try window.storage (artifact sandbox)
+      if(window.storage){try{var r=await window.storage.get(k,s);if(r)return JSON.parse(r.value);}catch(e){}}
+      // Try localStorage
+      try{var ls=localStorage.getItem(k);if(ls)return JSON.parse(ls);}catch(e){}
+      return null;
+    }catch(e){return null;}
+  }
 };
 
 // ─── ICS Export ──────────────────────────────────────────────────
