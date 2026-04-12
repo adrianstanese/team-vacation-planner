@@ -2256,6 +2256,21 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
       </aside>}
 
       <main style={{flex:1,overflow:"auto",padding:mob?"14px 10px":"20px 28px"}}>
+        {/* Mobile action strip — visible only on portrait mobile */}
+        {mob&&!sb&&<div style={{marginBottom:10,display:"flex",flexDirection:"column",gap:6}}>
+          <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
+            {!locked&&<button onClick={()=>{setSb(true);setTimeout(startAdd,150);}} style={{padding:"6px 12px",borderRadius:10,border:"none",background:`linear-gradient(135deg,${th.ac},#6366F1)`,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(124,58,237,0.25)",whiteSpace:"nowrap"}}><Ic n="plus" s={12} c="#fff"/>{t.am}</button>}
+            <button onClick={()=>setHolBr(true)} style={{padding:"6px 12px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #EF4444)",cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(245,158,11,0.25)",whiteSpace:"nowrap"}}><Ic n="flag" s={12} c="#fff"/>{t.ch}</button>
+            <button onClick={()=>setSb(true)} style={{padding:"6px 10px",borderRadius:10,border:`1px solid ${th.bd}`,background:th.sf,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:600,color:th.t2,whiteSpace:"nowrap"}}><Ic n="users" s={12} c={th.t2}/>{team.members.length}/25</button>
+          </div>
+          {team.members.length>0&&<div style={{display:"flex",gap:4,overflowX:"auto",paddingBottom:2}}>
+            {team.members.map((m,i)=>{const active=m.id===aId;return <button key={m.id} onClick={()=>setAId(active?null:m.id)} style={{padding:"4px 10px",borderRadius:20,border:active?`2px solid ${MC[i%MC.length].d}`:`1px solid ${th.bd}`,background:active?MC[i%MC.length].d+"18":th.sf,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:active?700:500,color:active?MC[i%MC.length].d:th.t2,whiteSpace:"nowrap",flexShrink:0}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:MC[i%MC.length].d,flexShrink:0}}/>
+              {m.name}
+              {(m.days||[]).length>0&&<span style={{fontSize:9,fontWeight:700,color:active?MC[i%MC.length].d:th.t3,fontFamily:FM}}>{(m.days||[]).length}d</span>}
+            </button>;})}
+          </div>}
+        </div>}
         {/* Conflict alerts */}
         {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
 
