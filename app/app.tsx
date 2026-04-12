@@ -1186,17 +1186,46 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           const past=new Date(year,month,day)<new Date(CY,CM,CD);
           const isHol=(holSet&&holSet.has(key));
 
+          // Team overview colors when no member is selected
+          var vacBg = "transparent", vacColor = th.tx, vacWeight = 400, vacBorder = "2px solid transparent", vacShadow = "none", showCount = 0;
+          if(isA && ac) {
+            // Selected member view — solid fill
+            vacBg = ac.d; vacColor = "#fff"; vacWeight = 800; vacBorder = "2px solid " + ac.d; vacShadow = "0 2px 8px " + ac.d + "40";
+          } else if(mh.length === 1 && !isA) {
+            // 1 member — solid color
+            var mc1 = MC[members.indexOf(mh[0])%MC.length];
+            vacBg = mc1.d; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 6px " + mc1.d + "35";
+          } else if(mh.length === 2 && !isA) {
+            // 2 members — two-color gradient
+            var mcA = MC[members.indexOf(mh[0])%MC.length];
+            var mcB = MC[members.indexOf(mh[1])%MC.length];
+            vacBg = "linear-gradient(135deg," + mcA.d + " 50%," + mcB.d + " 50%)"; vacColor = "#fff"; vacWeight = 800;
+          } else if(mh.length === 3 && !isA) {
+            // 3 members — three-color gradient
+            var mc3a = MC[members.indexOf(mh[0])%MC.length];
+            var mc3b = MC[members.indexOf(mh[1])%MC.length];
+            var mc3c = MC[members.indexOf(mh[2])%MC.length];
+            vacBg = "linear-gradient(135deg," + mc3a.d + " 33%," + mc3b.d + " 33% 66%," + mc3c.d + " 66%)"; vacColor = "#fff"; vacWeight = 800;
+          } else if(mh.length >= 4 && !isA) {
+            // 4+ members — red warning with count
+            vacBg = "#EF4444"; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 8px rgba(239,68,68,0.3)"; showCount = mh.length;
+          }
+
+          if(isHol && !isA && mh.length===0) { vacBg = th.hc; vacColor = th.ht; vacWeight = 700; }
+          if(we && mh.length===0 && !isA) { vacBg = th.sh; vacColor = th.t3; }
+          if(mh.length===0 && !isHol && !we && !isA) { vacBg = "transparent"; vacColor = th.tx; }
+          if(isTd) vacBorder = "2px solid " + th.ac;
+
           return <div key={day}
             onMouseDown={e=>{e.preventDefault();handleMouseDown(day);}}
             onMouseEnter={()=>handleMouseEnter(day)}
-            title={isHol?holName(key):""}
+            title={isHol?holName(key):mh.length>0?mh.map(function(m){return m.name}).join(", "):""}
             style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:we||!activeId?"default":"pointer",
-              background:isA&&ac?ac.d:isHol?th.hc:we?th.sh:"transparent",
-              border:isTd?`2px solid ${th.ac}`:isA&&ac?`2px solid ${ac.d}`:"2px solid transparent",
-              transition:"background .1s",opacity:past&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
-              boxShadow:isA&&ac?`0 2px 8px ${ac.d}40`:"none"}}>
-            <span style={{fontSize:compact?11:12,fontWeight:isTd?700:isA?800:isHol?700:400,color:isA?"#fff":isHol?th.ht:we?th.t3:isTd?th.ac:th.tx,fontFamily:F,lineHeight:1}}>{day}</span>
-            {mh.length>0&&!isA&&<div style={{display:"flex",gap:1,position:"absolute",bottom:compact?1:2}}>{mh.slice(0,4).map(m=> <div key={m.id} style={{width:5,height:5,borderRadius:"50%",background:MC[members.indexOf(m)%MC.length].d,border:"1px solid #fff"}}/>)}</div>}
+              background:vacBg, border:vacBorder, transition:"background .1s",
+              opacity:past&&mh.length===0&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
+              boxShadow:vacShadow}}>
+            <span style={{fontSize:compact?11:12,fontWeight:isTd?700:vacWeight,color:isTd&&mh.length===0?th.ac:vacColor,fontFamily:F,lineHeight:1}}>{day}</span>
+            {showCount>0&&<span style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:"#fff",color:"#EF4444",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #EF4444"}}>{showCount}</span>}
           </div>;
         })}
       </div>
