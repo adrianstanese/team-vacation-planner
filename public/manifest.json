@@ -1,0 +1,15 @@
+{
+  "name": "Team Vacation Planner",
+  "short_name": "VacationPlanner",
+  "description": "Free team vacation planner for teams up to 25. 55 countries, public holidays 2026-2035. No login required.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FEF7FF",
+  "theme_color": "#7C3AED",
+  "orientation": "any",
+  "categories": ["productivity", "business", "utilities"],
+  "lang": "en",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

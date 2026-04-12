@@ -1,0 +1,28 @@
+# Team Vacation Planner
+
+> Free team vacation planning tool for teams up to 25 people. No login required. Supports 55 countries with public holidays from 2026 to 2035.
+
+## What it does
+
+Team Vacation Planner helps teams coordinate their time off. Team members add their vacation days on a shared calendar. The tool automatically shows public holidays for each person's country, detects scheduling overlaps, and provides visual dashboards to ensure adequate team coverage.
+
+## Key features
+
+- 12-month calendar view with drag-to-select date ranges
+- Public holidays for 55 countries (2026-2035) computed algorithmically
+- Heatmap, Timeline/Gantt, Coverage dashboard, Activity log views
+- Smart vacation optimizer suggesting bridge days around public holidays
+- Holiday clash detector, conflict alerts when too many team members overlap
+- Export to ICS, PDF, CSV, Excel XLSX, TSV, JSON API
+- QR code sharing, embeddable iframe widget
+- 10 languages: English, French, German, Spanish, Portuguese, Romanian, Hungarian, Swedish, Italian, Bulgarian
+- 3 themes: Light, Dark, Pink (Soft Pastel Candy design)
+- No accounts, no login, no passwords - link-only access
+
+## Countries supported
+
+Albania, Andorra, Australia, Austria, Bahrain, Belarus, Belgium, Bosnia and Herzegovina, Brazil, Bulgaria, Canada, Chile, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Italy, Kazakhstan, Kosovo, Latvia, Liechtenstein, Lithuania, Luxembourg, Malta, Moldova, Monaco, Montenegro, Morocco, Netherlands, North Macedonia, Norway, Poland, Portugal, Romania, San Marino, Saudi Arabia, Serbia, Slovakia, Slovenia, Spain, Sweden, Switzerland, Turkey, Ukraine, United Arab Emirates, United Kingdom, United States.
+
+## URL
+
+https://teamvacationplanner.com
