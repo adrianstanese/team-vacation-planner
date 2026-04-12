@@ -1114,55 +1114,170 @@ function ChangeLogView({ team, th, t }) {
   </div>;
 }
 
-// ─── XLSX Export (simple XML spreadsheet) ────────────────────────
+// ─── XLSX Export (rich SpreadsheetML with calendar grid, timeline, stats) ────
 function exportXLSX(team) {
-  const yr = team.year || CY;
-  // Generate SpreadsheetML XML (opens in Excel natively)
-  let xml = '<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
-  xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
-  xml += '<Styles><Style ss:ID="hdr"><Font ss:Bold="1"/><Interior ss:Color="#E0E7FF" ss:Pattern="Solid"/></Style>';
-  xml += '<Style ss:ID="vac"><Interior ss:Color="#DBEAFE" ss:Pattern="Solid"/></Style>';
-  xml += '<Style ss:ID="hol"><Interior ss:Color="#FEE2E2" ss:Pattern="Solid"/></Style>';
-  xml += '<Style ss:ID="we"><Interior ss:Color="#F0EFEC" ss:Pattern="Solid"/></Style></Styles>\n';
+  var yr = team.year || CY;
+  var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var dayL = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  var mColors = ["#3B82F6","#EC4899","#10B981","#F59E0B","#6366F1","#F43F5E","#14B8A6","#F97316","#A855F7","#06B6D4","#EF4444","#84CC16","#F472B6","#0EA5E9","#FBBF24","#818CF8","#34D399","#F87171","#8B5CF6","#2DD4BF","#EAB308","#D946EF","#22D3EE","#FB7185","#4ADE80"];
 
-  // Summary sheet
-  xml += '<Worksheet ss:Name="Summary"><Table>\n';
-  xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">Name</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Country</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Days</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Dates</Data></Cell></Row>\n';
-  team.members.forEach(m => {
-    const co = m.country ? (EU_C.find(c => c.c === m.country)||{}).n || "" : "";
-    const days = [...(m.days || [])].sort().join(", ");
-    xml += `<Row><Cell><Data ss:Type="String">${m.name}</Data></Cell><Cell><Data ss:Type="String">${co}</Data></Cell><Cell><Data ss:Type="Number">${(m.days||[]).length}</Data></Cell><Cell><Data ss:Type="String">${days}</Data></Cell></Row>\n`;
+  // Collect holidays
+  var allHols = {};
+  team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){allHols[h]=true;}); });
+
+  // Overlap analysis
+  var allDays = {};
+  team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
+  var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
+  var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
+
+  var xml = '<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
+  xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
+
+  // Styles
+  xml += '<Styles>';
+  xml += '<Style ss:ID="Default"><Font ss:FontName="Calibri" ss:Size="10"/></Style>';
+  xml += '<Style ss:ID="title"><Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1" ss:Color="#1F2937"/></Style>';
+  xml += '<Style ss:ID="sub"><Font ss:FontName="Calibri" ss:Size="11" ss:Color="#6B7280"/></Style>';
+  xml += '<Style ss:ID="hdr"><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#374151"/><Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E5E7EB"/></Borders></Style>';
+  xml += '<Style ss:ID="hdr2"><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#7C3AED" ss:Pattern="Solid"/></Style>';
+  xml += '<Style ss:ID="sect"><Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1" ss:Color="#374151"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#7C3AED"/></Borders></Style>';
+  xml += '<Style ss:ID="stat-val"><Font ss:FontName="Calibri" ss:Size="18" ss:Bold="1" ss:Color="#374151"/><Alignment ss:Horizontal="Center"/></Style>';
+  xml += '<Style ss:ID="stat-lbl"><Font ss:FontName="Calibri" ss:Size="9" ss:Color="#6B7280"/><Alignment ss:Horizontal="Center"/></Style>';
+  xml += '<Style ss:ID="stat-red"><Font ss:FontName="Calibri" ss:Size="18" ss:Bold="1" ss:Color="#EF4444"/><Alignment ss:Horizontal="Center"/></Style>';
+  xml += '<Style ss:ID="stat-grn"><Font ss:FontName="Calibri" ss:Size="18" ss:Bold="1" ss:Color="#10B981"/><Alignment ss:Horizontal="Center"/></Style>';
+  xml += '<Style ss:ID="we"><Interior ss:Color="#F9FAFB" ss:Pattern="Solid"/><Font ss:Color="#D1D5DB" ss:FontName="Calibri" ss:Size="9"/><Alignment ss:Horizontal="Center"/></Style>';
+  xml += '<Style ss:ID="hol"><Interior ss:Color="#FEE2E2" ss:Pattern="Solid"/><Font ss:Color="#DC2626" ss:FontName="Calibri" ss:Size="9" ss:Bold="1"/><Alignment ss:Horizontal="Center"/></Style>';
+  xml += '<Style ss:ID="day"><Font ss:FontName="Calibri" ss:Size="9"/><Alignment ss:Horizontal="Center"/></Style>';
+  xml += '<Style ss:ID="day-hdr"><Font ss:FontName="Calibri" ss:Size="8" ss:Bold="1" ss:Color="#9CA3AF"/><Alignment ss:Horizontal="Center"/></Style>';
+  xml += '<Style ss:ID="overlap"><Interior ss:Color="#FEE2E2" ss:Pattern="Solid"/><Font ss:Color="#991B1B" ss:FontName="Calibri" ss:Size="10" ss:Bold="1"/></Style>';
+  xml += '<Style ss:ID="bold"><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1"/></Style>';
+  // Per-member vacation styles
+  for(var si=0;si<25;si++){
+    xml += '<Style ss:ID="v'+si+'"><Interior ss:Color="'+mColors[si]+'" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:FontName="Calibri" ss:Size="9" ss:Bold="1"/><Alignment ss:Horizontal="Center"/></Style>';
+    xml += '<Style ss:ID="vb'+si+'"><Interior ss:Color="'+mColors[si]+'" ss:Pattern="Solid"/></Style>';
+  }
+  xml += '</Styles>\n';
+
+  // ═══════════ SHEET 1: Dashboard ═══════════
+  xml += '<Worksheet ss:Name="Dashboard"><Table ss:DefaultColumnWidth="65">\n';
+  xml += '<Column ss:Width="120"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="100"/>\n';
+  // Title
+  xml += '<Row ss:Height="30"><Cell ss:StyleID="title"><Data ss:Type="String">'+team.name+'</Data></Cell></Row>\n';
+  xml += '<Row><Cell ss:StyleID="sub"><Data ss:Type="String">'+yr+' | '+team.members.length+' members | Generated '+new Date().toLocaleDateString()+'</Data></Cell></Row>\n';
+  xml += '<Row></Row>\n';
+  // Stats
+  xml += '<Row><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+totalDays+'</Data></Cell><Cell ss:StyleID="stat-red"><Data ss:Type="Number">'+overlaps.length+'</Data></Cell><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+team.members.length+'</Data></Cell><Cell ss:StyleID="stat-grn"><Data ss:Type="String">'+Math.round((1-totalDays/(team.members.length*260||1))*100)+'%</Data></Cell></Row>\n';
+  xml += '<Row><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Total vacation days</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Overlap days</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Team members</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Avg coverage</Data></Cell></Row>\n';
+  xml += '<Row></Row>\n';
+  // Member summary
+  xml += '<Row><Cell ss:StyleID="sect" ss:MergeAcross="4"><Data ss:Type="String">Member Summary</Data></Cell></Row>\n';
+  xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">Member</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Country</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Days</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Periods</Data></Cell></Row>\n';
+  team.members.forEach(function(m,i){
+    var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
+    var sorted = (m.days||[]).slice().sort();
+    var ranges = []; var ri = 0;
+    while(ri<sorted.length){
+      var start=sorted[ri],end=start;
+      while(ri+1<sorted.length){var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;if(diff<=3){ri++;end=sorted[ri];}else break;}
+      if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
+    }
+    xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+m.name+'</Data></Cell><Cell><Data ss:Type="String">'+(co?co.n:'')+'</Data></Cell><Cell><Data ss:Type="Number">'+sorted.length+'</Data></Cell><Cell><Data ss:Type="String">'+ranges.join(', ')+'</Data></Cell></Row>\n';
   });
+  // Overlaps
+  if(overlaps.length){
+    xml += '<Row></Row><Row><Cell ss:StyleID="sect" ss:MergeAcross="3"><Data ss:Type="String">Overlap Days ('+overlaps.length+')</Data></Cell></Row>\n';
+    xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">Date</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Members Out</Data></Cell></Row>\n';
+    overlaps.forEach(function(e){
+      xml += '<Row><Cell ss:StyleID="overlap"><Data ss:Type="String">'+e[0]+'</Data></Cell><Cell><Data ss:Type="String">'+e[1].join(', ')+'</Data></Cell></Row>\n';
+    });
+  }
   xml += '</Table></Worksheet>\n';
 
-  // Monthly sheets
-  for (let month = 0; month < 12; month++) {
-    const mName = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][month];
-    const days = dim(yr, month);
-    xml += `<Worksheet ss:Name="${mName}"><Table>\n`;
-    // Header row with day numbers
-    xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">Name</Data></Cell>';
-    for (let d = 1; d <= days; d++) xml += `<Cell ss:StyleID="hdr"><Data ss:Type="Number">${d}</Data></Cell>`;
+  // ═══════════ SHEET 2: Calendar Grid ═══════════
+  xml += '<Worksheet ss:Name="Calendar"><Table ss:DefaultColumnWidth="26">\n';
+  xml += '<Column ss:Width="80"/>';
+  for(var ci=0;ci<37;ci++) xml += '<Column ss:Width="26"/>';
+  xml += '\n';
+
+  for(var mo=0;mo<12;mo++){
+    var daysInMo = dim(yr,mo);
+    var first = fdm(yr,mo);
+    // Month title
+    xml += '<Row ss:Height="22"><Cell ss:StyleID="sect"><Data ss:Type="String">'+months[mo]+' '+yr+'</Data></Cell></Row>\n';
+    // Day headers
+    xml += '<Row><Cell></Cell>';
+    for(var dl=0;dl<7;dl++) xml += '<Cell ss:StyleID="day-hdr"><Data ss:Type="String">'+dayL[dl]+'</Data></Cell>';
     xml += '</Row>\n';
-    // Member rows
-    team.members.forEach(m => {
-      xml += `<Row><Cell><Data ss:Type="String">${m.name}</Data></Cell>`;
-      for (let d = 1; d <= days; d++) {
-        const key = dk(yr, month, d);
-        const hasVac = (m.days||[]).includes(key);
-        const we = isWe(yr, month, d);
-        const style = hasVac ? ' ss:StyleID="vac"' : we ? ' ss:StyleID="we"' : '';
-        xml += `<Cell${style}><Data ss:Type="String">${hasVac ? "V" : we ? "" : ""}</Data></Cell>`;
+    // Calendar rows — each member gets a row per week
+    // First, build the team combined calendar
+    var weeks = []; var week = []; for(var bl=0;bl<first;bl++) week.push(null);
+    for(var d=1;d<=daysInMo;d++){
+      week.push(d);
+      if(week.length===7){weeks.push(week);week=[];}
+    }
+    if(week.length) { while(week.length<7) week.push(null); weeks.push(week); }
+
+    weeks.forEach(function(wk){
+      xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">Team</Data></Cell>';
+      wk.forEach(function(d){
+        if(!d){xml += '<Cell></Cell>';return;}
+        var key = dk(yr,mo,d);
+        var isWe2 = isWe(yr,mo,d);
+        var isHol2 = !!allHols[key];
+        var who = [];
+        team.members.forEach(function(m,i){if((m.days||[]).indexOf(key)>=0) who.push(i);});
+        var sty = 'day';
+        if(isWe2) sty = 'we';
+        if(isHol2) sty = 'hol';
+        if(who.length===1) sty = 'v'+who[0];
+        else if(who.length>=2) sty = 'overlap';
+        xml += '<Cell ss:StyleID="'+sty+'"><Data ss:Type="Number">'+d+'</Data></Cell>';
+      });
+      xml += '</Row>\n';
+    });
+    xml += '<Row></Row>\n';
+  }
+  xml += '</Table></Worksheet>\n';
+
+  // ═══════════ SHEET 3: Timeline (Gantt) ═══════════
+  xml += '<Worksheet ss:Name="Timeline"><Table ss:DefaultColumnWidth="16">\n';
+  xml += '<Column ss:Width="90"/>';
+  for(var ti=0;ti<31;ti++) xml += '<Column ss:Width="16"/>';
+  xml += '\n';
+
+  for(var mo2=0;mo2<12;mo2++){
+    var daysInMo2 = dim(yr,mo2);
+    var hasActivity = false;
+    team.members.forEach(function(m){(m.days||[]).forEach(function(d){var p=pk(d);if(p.m===mo2)hasActivity=true;});});
+    if(!hasActivity) continue;
+
+    xml += '<Row ss:Height="20"><Cell ss:StyleID="sect"><Data ss:Type="String">'+months[mo2]+'</Data></Cell></Row>\n';
+    // Day number header
+    xml += '<Row><Cell ss:StyleID="day-hdr"><Data ss:Type="String">Name</Data></Cell>';
+    for(var d2=1;d2<=daysInMo2;d2++) xml += '<Cell ss:StyleID="day-hdr"><Data ss:Type="Number">'+d2+'</Data></Cell>';
+    xml += '</Row>\n';
+    // Member Gantt bars
+    team.members.forEach(function(m,i){
+      xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+m.name+'</Data></Cell>';
+      for(var d3=1;d3<=daysInMo2;d3++){
+        var key2 = dk(yr,mo2,d3);
+        var has = (m.days||[]).indexOf(key2)>=0;
+        var isWe3 = isWe(yr,mo2,d3);
+        var isHol3 = !!allHols[key2];
+        var sty2 = has ? 'vb'+(i%25) : isHol3 ? 'hol' : isWe3 ? 'we' : 'day';
+        xml += '<Cell ss:StyleID="'+sty2+'"><Data ss:Type="String">'+(has?'V':'')+'</Data></Cell>';
       }
       xml += '</Row>\n';
     });
-    xml += '</Table></Worksheet>\n';
+    xml += '<Row></Row>\n';
   }
+  xml += '</Table></Worksheet>\n';
 
   xml += '</Workbook>';
-  const blob = new Blob([xml], { type: "application/vnd.ms-excel" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = `${team.name.replace(/\s+/g, "_")}_${yr}.xls`; a.click();
+  var blob = new Blob([xml], { type: "application/vnd.ms-excel" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a"); a.href = url; a.download = team.name.replace(/\s+/g,"_")+"_"+yr+".xls"; a.click();
   URL.revokeObjectURL(url);
 }
 
