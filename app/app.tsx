@@ -2126,7 +2126,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
       {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>m.pto?"#EF4444":dc>m.pto*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/m.pto*100))+"%",transition:"width .3s"}}/></div>}
     </div>
     {(h||isActive)&&!locked&&<div style={{display:"flex",gap:1,flexShrink:0}}>
-      {m.country&&<button onClick={e=>{e.stopPropagation();onOptimize();}} title="Suggest best days" style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="sun" s={13} c="#F59E0B"/></button>}
+      {m.country&&<button onClick={e=>{e.stopPropagation();onOptimize();}} title={t.bestDays||"Suggest best days"} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="sun" s={13} c="#F59E0B"/></button>}
       <button onClick={e=>{e.stopPropagation();onExportICS();}} title={t.export} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="download" s={13} c={th.t3}/></button>
       <button onClick={e=>{e.stopPropagation();onStartRename();}} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="edit" s={13} c={th.t3}/></button>
       <button onClick={e=>{e.stopPropagation();onDelete();}} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="trash" s={13} c={th.t3}/></button>
@@ -2135,30 +2135,30 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     {isActive&&m.region&&<div style={{fontSize:9,color:th.ac,fontWeight:600,marginTop:2,paddingLeft:36}}>{(REGIONS[m.country]||[]).reduce(function(a,r){return r.id===m.region?r.n:a;},"")} region</div>}
     {isActive&&!isEditing&&<div style={{marginTop:6,paddingTop:6,borderTop:"1px solid "+th.gbd,display:"flex",flexDirection:"column",gap:5}}>
       <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
-        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>PTO</span>
+        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>{t.pto||"PTO"}</span>
         <input type="number" min="0" max="60" placeholder="—" value={m.pto||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onPtoChange(parseInt(e.target.value)||null);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:FM,textAlign:"center"}}/>
         <span style={{color:th.t3,fontSize:10}}>{t.dys}</span>
         {m.pto&&<span style={{marginLeft:"auto",fontSize:10,color:dc>m.pto?"#EF4444":th.ac,fontWeight:700}}>{dc}/{m.pto}</span>}
       </div>
       {m.country&&REGIONS[m.country]&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
-        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>Region</span>
+        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>{t.region||"Region"}</span>
         <select value={m.region||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onRegionChange(e.target.value||null);}} style={{flex:1,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:10,fontFamily:F,minWidth:0}}>
-          <option value="">National only</option>
+          <option value="">{t.natOnly||"National only"}</option>
           {REGIONS[m.country].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
         </select>
       </div>}
       {yr&&m.country&&<div style={{fontSize:10,color:th.t3,display:"flex",justifyContent:"space-between"}}>
-        <span>{workingDaysRemaining(m,yr)} work days left</span>
-        <span>{getAllHolidays(m,yr).length} holidays</span>
+        <span>{workingDaysRemaining(m,yr)} {t.workDaysLeft||"work days left"}</span>
+        <span>{getAllHolidays(m,yr).length} {t.holCount||"holidays"}</span>
       </div>}
       <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,marginTop:2}}>
-        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>Role</span>
+        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>{t.role||"Role"}</span>
         <button onClick={function(e){e.stopPropagation();onSetApprover();}} style={{flex:1,padding:"4px 8px",borderRadius:6,border:isApprover?"1.5px solid #10B981":"1px solid "+th.gbd,background:isApprover?"#ECFDF5":"transparent",color:isApprover?"#059669":th.t3,fontSize:10,fontWeight:isApprover?700:500,cursor:"pointer",fontFamily:F,display:"flex",alignItems:"center",justifyContent:"center",gap:4,transition:"all .2s"}}>{isApprover?"👑 "+(t.approverLabel||"Approver"):(t.setApprover||"Set as Approver")}</button>
       </div>
       {isApprover&&approvalMode&&allMembers&&allMembers.length>1&&<div style={{marginTop:6,paddingTop:6,borderTop:"1px solid "+th.gbd}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-          <span style={{fontSize:10,fontWeight:700,color:th.t3,textTransform:"uppercase",letterSpacing:.5}}>Team Approval</span>
-          <button onClick={function(e){e.stopPropagation();onApproveAllMembers();}} style={{padding:"2px 10px",borderRadius:4,border:"none",background:"#10B981",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:F}}>Approve All</button>
+          <span style={{fontSize:10,fontWeight:700,color:th.t3,textTransform:"uppercase",letterSpacing:.5}}>{t.teamApproval||"Team Approval"}</span>
+          <button onClick={function(e){e.stopPropagation();onApproveAllMembers();}} style={{padding:"2px 10px",borderRadius:4,border:"none",background:"#10B981",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:F}}>{t.approveAll||"Approve All"}</button>
         </div>
         {allMembers.filter(function(mm){return mm.id!==m.id;}).map(function(mm,idx){
           var mc2=MC[allMembers.indexOf(mm)%MC.length];
@@ -2305,7 +2305,7 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
       {/* How It Works */}
       <Section icon="arrow" title="How It Works">
         <div style={{marginBottom:8}}><strong style={{color:th.tx}}>1. Create a team</strong> — pick a name and year. You get an instant shareable link.</div>
-        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>2. Add members</strong> — enter each person's name and country. Their public holidays are automatically loaded.</div>
+        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>2. {t.am}</strong> — enter each person's name and country. Their public holidays are automatically loaded.</div>
         <div style={{marginBottom:8}}><strong style={{color:th.tx}}>3. Pick vacation days</strong> — select a member, then click or drag across calendar dates. Weekends are excluded automatically.</div>
         <div style={{marginBottom:8}}><strong style={{color:th.tx}}>4. Share the link</strong> — anyone with the link can view and edit. No accounts, no passwords, no sign-ups.</div>
         <div><strong style={{color:th.tx}}>5. Analyze & export</strong> — switch between views, download reports, and keep your team in sync.</div>
@@ -2606,7 +2606,7 @@ function CalendarSkeleton({th}) {
 
 function AnalyticsDashboard({team,yr,th,t}) {
   var members = team.members || [];
-  if (members.length === 0) return <div className="tvp-fade" style={{textAlign:"center",padding:40,color:th.t3}}>Add members to see analytics</div>;
+  if (members.length === 0) return <div className="tvp-fade" style={{textAlign:"center",padding:40,color:th.t3}}>{t.addMembers||"Add members to see analytics"}</div>;
 
   // Per-member stats
   var memberStats = members.map(function(m,i) {
@@ -2652,14 +2652,14 @@ function AnalyticsDashboard({team,yr,th,t}) {
     <h3 style={{fontSize:16,fontWeight:750,color:th.tx,marginBottom:14,fontFamily:F}}>Team Analytics {yr}</h3>
 
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:20}}>
-      {card(t.totalVacDays, totalDays, members.length + " members")}
-      {card(t.overlapDays, overlapDays, "2+ members out", "#EF4444")}
-      {card(t.peakMonth, (t.M||EN_MO)[topMoIdx], monthly[topMoIdx] + " days")}
+      {card(t.totalVacDays, totalDays, members.length + " " + (t.mbs||"members"))}
+      {card(t.overlapDays, overlapDays, "2+ " + (t.mbs||"members") + " out", "#EF4444")}
+      {card(t.peakMonth, (t.M||EN_MO)[topMoIdx], monthly[topMoIdx] + " " + (t.dys||"days"))}
       {card(t.avgDays, totalDays>0?Math.round(totalDays/members.length):0)}
     </div>
 
     <div style={{background:th.gbg,borderRadius:G.rSm,border:"1px solid "+th.gbd,padding:16,marginBottom:20,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      <div style={{fontSize:12,fontWeight:700,color:th.tx,marginBottom:10}}>Monthly Distribution</div>
+      <div style={{fontSize:12,fontWeight:700,color:th.tx,marginBottom:10}}>{t.monthlyDist||"Monthly Distribution"}</div>
       <div style={{display:"flex",alignItems:"flex-end",gap:4,height:120}}>
         {monthly.map(function(count,i) {
           var pct = count > 0 ? Math.max(8, Math.round(count/maxMo*100)) : 0;
@@ -2673,7 +2673,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
     </div>
 
     <div style={{background:th.gbg,borderRadius:G.rSm,border:"1px solid "+th.gbd,padding:16,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      <div style={{fontSize:12,fontWeight:700,color:th.tx,marginBottom:10}}>Per Member Breakdown</div>
+      <div style={{fontSize:12,fontWeight:700,color:th.tx,marginBottom:10}}>{t.memberBreak||"Per Member Breakdown"}</div>
       {sorted.map(function(s) {
         var pct = s.pto > 0 ? Math.round(s.days/s.pto*100) : 0;
         return <div key={s.name} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderBottom:"1px solid "+th.gbd}}>
