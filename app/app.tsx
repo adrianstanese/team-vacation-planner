@@ -2105,7 +2105,7 @@ function TimelineView({team,th,t}) {
   return <div>
     <div style={{textAlign:"center",marginBottom:16}}><span style={{fontSize:18,fontWeight:700,color:th.tx}}>{t.timeline} — {yr}</span></div>
     {/* Month labels */}
-    <div style={{position:"relative",height:24,marginBottom:8}}>
+    <div style={{position:"relative",height:24,marginBottom:8,marginLeft:110}}>
       {monthStarts.map(({m,pos})=> <span key={m} style={{position:"absolute",left:`${pos}%`,fontSize:10,fontWeight:600,color:th.t3,fontFamily:F}}>{t.M[m].slice(0,3)}</span>)}
     </div>
     {/* Member bars */}
