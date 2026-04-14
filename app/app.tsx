@@ -2712,18 +2712,49 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const setCo=(id,cc)=>{const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
   const setPto=(id,val)=>{updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
   const setRegion=(id,val)=>{updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
-  const tog=(y,m,d)=>{if(!aId||locked)return;const key=dk(y,m,d);
-    const member=team.members.find(function(x){return x.id===aId;});if(!member)return;
-    const ds=member.days||[];const pds=member.pending||[];
-    const inDays=ds.indexOf(key)>=0;const inPending=pds.indexOf(key)>=0;
-    if(inDays){updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,days:ds.filter(function(x){return x!==key;})};
-  const approvePending=(memberId,dayKey)=>{updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==memberId)return mm;var p=(mm.pending||[]);var d=(mm.days||[]);if(dayKey){return{...mm,pending:p.filter(function(x){return x!==dayKey;}),days:d.concat([dayKey])};}return{...mm,pending:[],days:d.concat(p)};}),...{log:addLogEntry(team,"Approved "+(dayKey||"all pending")+" for "+(team.members.find(function(x){return x.id===memberId;})||{}).name)}});};
-  const rejectPending=(memberId,dayKey)=>{updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==memberId)return mm;var p=(mm.pending||[]);if(dayKey){return{...mm,pending:p.filter(function(x){return x!==dayKey;})};}return{...mm,pending:[]};}),...{log:addLogEntry(team,"Rejected "+(dayKey||"all pending")+" for "+(team.members.find(function(x){return x.id===memberId;})||{}).name)}});};
-  const setApprover=(memberId)=>{updateWithHistory({...team,approver:memberId||null});};
-}),...{log:addLogEntry(team,(member.name||"Member")+" removed "+key)}});return;}
-    if(inPending){updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:pds.filter(function(x){return x!==key;})};}),...{log:addLogEntry(team,(member.name||"Member")+" cancelled pending "+key)}});return;}
-    if(approvalMode&&team.approver&&team.approver!==aId){updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:[].concat(pds,[key])};}),...{log:addLogEntry(team,(member.name||"Member")+" requested "+key)}});flash("⏳ Pending approval from "+(team.members.find(function(x){return x.id===team.approver;})||{name:"approver"}).name);return;}
-    updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,days:[].concat(ds,[key])};}),...{log:addLogEntry(team,(member.name||"Member")+" added "+key)}});};
+  const tog=(y,m,d)=>{
+    if(!aId||locked)return;
+    const key=dk(y,m,d);
+    const member=team.members.find(function(x){return x.id===aId;});
+    if(!member)return;
+    const ds=member.days||[];
+    const pds=member.pending||[];
+    const inDays=ds.indexOf(key)>=0;
+    const inPending=pds.indexOf(key)>=0;
+    if(inDays){
+      updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,days:ds.filter(function(x){return x!==key;})};}),log:addLogEntry(team,(member.name||"Member")+" removed "+key)});
+      return;
+    }
+    if(inPending){
+      updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:pds.filter(function(x){return x!==key;})};}),log:addLogEntry(team,(member.name||"Member")+" cancelled pending "+key)});
+      return;
+    }
+    if(approvalMode&&team.approver&&team.approver!==aId){
+      updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:[].concat(pds,[key])};}),log:addLogEntry(team,(member.name||"Member")+" requested "+key)});
+      flash("⏳ Pending approval from "+(team.members.find(function(x){return x.id===team.approver;})||{name:"approver"}).name);
+      return;
+    }
+    updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,days:[].concat(ds,[key])};}),log:addLogEntry(team,(member.name||"Member")+" added "+key)});
+  };
+  const approvePending=function(memberId,dayKey){
+    updateWithHistory({...team,members:team.members.map(function(mm){
+      if(mm.id!==memberId)return mm;
+      var p=(mm.pending||[]);var d=(mm.days||[]);
+      if(dayKey){return{...mm,pending:p.filter(function(x){return x!==dayKey;}),days:d.concat([dayKey])};}
+      return{...mm,pending:[],days:d.concat(p)};
+    }),log:addLogEntry(team,"Approved "+(dayKey||"all pending")+" for "+(team.members.find(function(x){return x.id===memberId;})||{}).name)});
+  };
+  const rejectPending=function(memberId,dayKey){
+    updateWithHistory({...team,members:team.members.map(function(mm){
+      if(mm.id!==memberId)return mm;
+      var p=(mm.pending||[]);
+      if(dayKey){return{...mm,pending:p.filter(function(x){return x!==dayKey;})};}
+      return{...mm,pending:[]};
+    }),log:addLogEntry(team,"Rejected "+(dayKey||"all pending")+" for "+(team.members.find(function(x){return x.id===memberId;})||{}).name)});
+  };
+  const setApprover=function(memberId){
+    updateWithHistory({...team,approver:memberId||null});
+  };
   const toggleLock=()=>updateWithHistory({...team,locked:!team.locked,log:addLogEntry(team,team.locked?"Board unlocked":"Board locked")});
 
   const am=team.members.find(m=>m.id===aId);const ai=am?team.members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
