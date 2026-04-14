@@ -1929,6 +1929,7 @@ function CountrySelect({value,onChange,th,t}) {
 function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,holSet,w7,approvalMode,team,setCommentDay=null}) {
   const days=dim(year,month);const first=fdm(year,month);const cells=[];for(let i=0;i<first;i++)cells.push(null);for(let d=1;d<=days;d++)cells.push(d);
   const am=members.find(m=>m.id===activeId);const ai=am?members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
+  var _tripSet=new Set();if(team&&team.trips)(team.trips).forEach(function(tr){if(!tr.start||!tr.end)return;var d1=new Date(tr.start+"T12:00:00"),d2=new Date(tr.end+"T12:00:00");for(var _d=new Date(d1);_d<=d2;_d.setDate(_d.getDate()+1)){_tripSet.add(dk(_d.getFullYear(),_d.getMonth(),_d.getDate()));}});
   const dragRef=useRef(null);
   const dayLabels=[t.mo,t.tu,t.we2,t.th,t.fr,t.sa,t.su];
 
