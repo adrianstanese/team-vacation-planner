@@ -291,6 +291,69 @@ function holName(dateStr) {
 }
 const HNAMES={"01-01":"New Year's Day","01-02":"Day after New Year","01-06":"Epiphany","01-07":"Orthodox Christmas","01-08":"Day after Orthodox Christmas","01-11":"Independence Manifesto","01-19":"MLK Day","01-24":"Unification Day","01-26":"Australia Day","01-27":"St Devota","02-02":"St Brigid's Day","02-05":"St Agatha","02-08":"Prešeren Day","02-10":"St Paul's Shipwreck","02-15":"Statehood Day","02-16":"Statehood Day","02-17":"Independence Day","02-22":"Founding Day","02-24":"Independence Day","03-01":"Independence Day","03-03":"Liberation Day","03-08":"Women's Day","03-11":"Independence Day","03-14":"Summer/Constitution Day","03-15":"National Day","03-17":"St Patrick's Day","03-19":"St Joseph's Day","03-21":"Nauryz / Nowruz","03-22":"Nauryz Day 2","03-23":"Nauryz Day 3","03-25":"Annunciation/Revolution Day","03-31":"Freedom Day","04-01":"National Day","04-21":"Tiradentes Day","04-23":"Sovereignty Day","04-25":"Liberation Day","04-27":"King's Day / Resistance Day","05-01":"Labour Day","05-02":"Labour Day 2","05-03":"Constitution Day","05-04":"Independence Day","05-05":"Liberation Day","05-06":"St George's Day","05-07":"Defender's Day","05-08":"Victory Day","05-09":"Europe/Victory Day","05-17":"Constitution Day","05-19":"Youth Day","05-21":"Independence Day","05-24":"Education Day","05-25":"Education Day","05-30":"Statehood Day","06-01":"Children's Day","06-02":"Republic Day","06-05":"Constitution Day","06-07":"Sette Giugno","06-08":"Trubar Day","06-10":"National Day","06-12":"Peace Day","06-17":"Independence Day","06-19":"Juneteenth","06-22":"Anti-Fascist Day","06-23":"Midsummer / National Day","06-24":"Midsummer / St John's","06-25":"Statehood Day","06-28":"Constitution Day","06-29":"St Peter & Paul","07-01":"Canada Day","07-03":"Independence Day","07-04":"Independence Day","07-05":"Sts Cyril & Methodius","07-06":"Jan Hus Day","07-13":"Statehood Day","07-14":"Bastille Day","07-15":"Democracy Day","07-16":"Our Lady of Carmen","07-21":"National Day","07-28":"Statehood Day","07-30":"Throne Day","08-01":"National Day","08-02":"Ilinden","08-05":"Victory Day","08-14":"Oued Ed-Dahab Day","08-15":"Assumption Day","08-20":"Restoration Day","08-21":"Youth Day","08-24":"Independence Day","08-25":"Prophet's Birthday","08-27":"Independence Day","08-29":"National Uprising Day","08-30":"Victory Day","08-31":"Language Day","09-03":"Founding Day","09-07":"Unification Day","09-08":"Nativity of Mary / Victory Day","09-15":"Our Lady of Sorrows","09-18":"Independence Day","09-19":"Army Day","09-21":"Independence Day","09-22":"Independence Day","09-23":"National Day","09-28":"Statehood Day","09-30":"Truth & Reconciliation","10-01":"Independence Day","10-03":"Unity Day","10-05":"Republic Day","10-11":"Revolution Day","10-12":"National Day","10-14":"Defenders Day","10-23":"Revolution Day","10-26":"National Day","10-28":"Ohi Day","10-29":"Republic Day","10-31":"Reformation Day","11-01":"All Saints' Day","11-02":"All Souls' Day","11-06":"Green March","11-07":"Revolution Day","11-11":"Armistice/Independence Day","11-15":"Republic Day","11-17":"Freedom Day","11-18":"Remembrance/Independence Day","11-19":"National Day","11-25":"Statehood Day","11-26":"Thanksgiving","11-28":"Independence Day","11-29":"Liberation Day","11-30":"St Andrew's Day","12-01":"National Day","12-02":"National Day","12-03":"National Day","12-06":"Constitution Day","12-08":"Immaculate Conception","12-13":"Republic Day","12-16":"National Day","12-17":"National Day","12-24":"Christmas Eve","12-25":"Christmas Day","12-26":"St Stephen's/Boxing Day","12-31":"New Year's Eve"};
 
+// ─── Regional/State Holidays ────────────────────────────────────
+const REGIONS={
+ES:[
+{id:"AN",n:"Andalusia",add:["02-28"]},
+{id:"AR",n:"Aragon",add:["04-23"],maundy:true},
+{id:"AS",n:"Asturias",add:["09-08"],maundy:true},
+{id:"IB",n:"Balearic Islands",add:["03-01"],maundy:true,eMon:true},
+{id:"CN",n:"Canary Islands",add:["05-30"],maundy:true},
+{id:"CB",n:"Cantabria",add:["07-28"],maundy:true},
+{id:"CL_ES",n:"Castilla y León",add:["04-23"],maundy:true},
+{id:"CM",n:"Castilla-La Mancha",add:["05-31"],maundy:true},
+{id:"CT",n:"Catalonia",add:["09-11","12-26"],eMon:true},
+{id:"EX",n:"Extremadura",add:["09-08"],maundy:true},
+{id:"GA",n:"Galicia",add:["05-17","07-25"],maundy:true},
+{id:"MD",n:"Madrid",add:["05-02","07-25"],maundy:true},
+{id:"MC",n:"Murcia",add:["03-19","06-09"],maundy:true},
+{id:"NC",n:"Navarra",add:["12-03"],maundy:true,eMon:true},
+{id:"PV",n:"Basque Country",add:["03-19","07-25"],eMon:true},
+{id:"RI",n:"La Rioja",add:["06-09"],maundy:true,eMon:true},
+{id:"VC",n:"Valencia",add:["03-19","06-24","10-09"],eMon:true}
+],
+DE:[
+{id:"BW",n:"Baden-Württemberg",add:["01-06"],cc:true,allSaints:true},
+{id:"BY",n:"Bavaria",add:["01-06"],cc:true,assumption:true,allSaints:true},
+{id:"BE_DE",n:"Berlin",add:["03-08"]},
+{id:"BB",n:"Brandenburg",add:["03-08","10-31"]},
+{id:"HB",n:"Bremen",add:["10-31"]},
+{id:"HH",n:"Hamburg",add:["10-31"]},
+{id:"HE",n:"Hesse",cc:true},
+{id:"MV",n:"Meckl.-Vorpommern",add:["10-31"]},
+{id:"NI",n:"Lower Saxony",add:["10-31"]},
+{id:"NW",n:"N. Rhine-Westphalia",cc:true,allSaints:true},
+{id:"RP",n:"Rhineland-Palatinate",cc:true,allSaints:true},
+{id:"SL",n:"Saarland",cc:true,assumption:true,allSaints:true},
+{id:"SN",n:"Saxony",add:["10-31","11-19"]},
+{id:"ST",n:"Saxony-Anhalt",add:["01-06","10-31"]},
+{id:"SH",n:"Schleswig-Holstein",add:["10-31"]},
+{id:"TH",n:"Thuringia",add:["09-20","10-31"]}
+],
+CH:[
+{id:"ZH",n:"Zürich",add:["05-01"],eMon:true},
+{id:"BE_CH",n:"Bern",add:["01-02"],gFri:true,eMon:true,ascen:true,whitMon:true},
+{id:"LU_CH",n:"Lucerne",add:["01-06","03-19"],cc:true,assumption:true,allSaints:true},
+{id:"GE",n:"Geneva",gFri:true,eMon:true,ascen:true,whitMon:true,add:["09-10"]},
+{id:"TI",n:"Ticino",add:["01-06","03-19","06-29"],eMon:true,ascen:true,whitMon:true,cc:true,assumption:true,allSaints:true},
+{id:"VD",n:"Vaud",add:["01-02"],gFri:true,eMon:true,ascen:true,whitMon:true}
+],
+AU:[
+{id:"NSW",n:"New South Wales"},
+{id:"VIC",n:"Victoria"},
+{id:"QLD",n:"Queensland"},
+{id:"WA_AU",n:"Western Australia"},
+{id:"SA_AU",n:"South Australia"},
+{id:"TAS",n:"Tasmania"}
+],
+CA:[
+{id:"ON",n:"Ontario"},
+{id:"QC",n:"Quebec",add:["06-24"]},
+{id:"BC",n:"British Columbia"},
+{id:"AB",n:"Alberta"}
+]
+};
+
 // ─── Country Data ────────────────────────────────────────────────
 const EU_C=[{c:"AL",n:"Albania",f:"🇦🇱"},{c:"AD",n:"Andorra",f:"🇦🇩"},{c:"AT",n:"Austria",f:"🇦🇹"},{c:"BY",n:"Belarus",f:"🇧🇾"},{c:"BE",n:"Belgium",f:"🇧🇪"},{c:"BA",n:"Bosnia & Herz.",f:"🇧🇦"},{c:"BG",n:"Bulgaria",f:"🇧🇬"},{c:"HR",n:"Croatia",f:"🇭🇷"},{c:"CY",n:"Cyprus",f:"🇨🇾"},{c:"CZ",n:"Czechia",f:"🇨🇿"},{c:"DK",n:"Denmark",f:"🇩🇰"},{c:"EE",n:"Estonia",f:"🇪🇪"},{c:"FI",n:"Finland",f:"🇫🇮"},{c:"FR",n:"France",f:"🇫🇷"},{c:"DE",n:"Germany",f:"🇩🇪"},{c:"GR",n:"Greece",f:"🇬🇷"},{c:"HU",n:"Hungary",f:"🇭🇺"},{c:"IS",n:"Iceland",f:"🇮🇸"},{c:"IE",n:"Ireland",f:"🇮🇪"},{c:"IT",n:"Italy",f:"🇮🇹"},{c:"XK",n:"Kosovo",f:"🇽🇰"},{c:"LV",n:"Latvia",f:"🇱🇻"},{c:"LI",n:"Liechtenstein",f:"🇱🇮"},{c:"LT",n:"Lithuania",f:"🇱🇹"},{c:"LU",n:"Luxembourg",f:"🇱🇺"},{c:"MK",n:"N. Macedonia",f:"🇲🇰"},{c:"MT",n:"Malta",f:"🇲🇹"},{c:"MD",n:"Moldova",f:"🇲🇩"},{c:"MC",n:"Monaco",f:"🇲🇨"},{c:"ME",n:"Montenegro",f:"🇲🇪"},{c:"NL",n:"Netherlands",f:"🇳🇱"},{c:"NO",n:"Norway",f:"🇳🇴"},{c:"PL",n:"Poland",f:"🇵🇱"},{c:"PT",n:"Portugal",f:"🇵🇹"},{c:"RO",n:"Romania",f:"🇷🇴"},{c:"RS",n:"Serbia",f:"🇷🇸"},{c:"SK",n:"Slovakia",f:"🇸🇰"},{c:"SI",n:"Slovenia",f:"🇸🇮"},{c:"SM",n:"San Marino",f:"🇸🇲"},{c:"ES",n:"Spain",f:"🇪🇸"},{c:"SE",n:"Sweden",f:"🇸🇪"},{c:"CH",n:"Switzerland",f:"🇨🇭"},{c:"TR",n:"Turkey",f:"🇹🇷"},{c:"UA",n:"Ukraine",f:"🇺🇦"},{c:"GB",n:"United Kingdom",f:"🇬🇧"},{c:"SA",n:"Saudi Arabia",f:"🇸🇦"},{c:"AE",n:"UAE",f:"🇦🇪"},{c:"CL",n:"Chile",f:"🇨🇱"},{c:"BR",n:"Brazil",f:"🇧🇷"},{c:"MA",n:"Morocco",f:"🇲🇦"},{c:"KZ",n:"Kazakhstan",f:"🇰🇿"},{c:"BH",n:"Bahrain",f:"🇧🇭"},{c:"US",n:"United States",f:"🇺🇸"},{c:"CA",n:"Canada",f:"🇨🇦"},{c:"AU",n:"Australia",f:"🇦🇺"}].sort((a,b)=>a.n.localeCompare(b.n));
 
@@ -386,6 +449,78 @@ light:{bg:"linear-gradient(145deg, #FEF7FF 0%, #F0F4FF 50%, #F0FFF4 100%)",sf:"r
 dark:{bg:"linear-gradient(145deg, #13111C 0%, #1A1625 50%, #110F1A 100%)",sf:"rgba(30,25,50,0.85)",sh:"rgba(55,48,88,0.5)",sa:"rgba(76,29,149,0.2)",bd:"rgba(139,92,246,0.15)",bl:"rgba(139,92,246,0.08)",tx:"#EDE9FE",t2:"#C4B5FD",t3:"#8B5CF6",ti:"#13111C",ac:"#A78BFA",ah:"#8B5CF6",al:"rgba(167,139,250,0.12)",am:"#3B2370",wm:"#FBBF24",wl:"rgba(251,191,36,0.08)",sd:"0 2px 12px rgba(0,0,0,0.3)",sm:"0 4px 20px rgba(0,0,0,0.4)",sl:"0 16px 48px rgba(0,0,0,0.5)",gd:"linear-gradient(135deg,#8B5CF6,#6366F1)",hc:"rgba(239,68,68,0.15)",ht:"#FB7185",gbg:"rgba(30,25,50,0.75)",gbd:"rgba(139,92,246,0.12)"},
 pink:{bg:"linear-gradient(145deg, #FFF0F6 0%, #FCE7F3 50%, #FDF2F8 100%)",sf:"rgba(255,255,255,0.8)",sh:"rgba(252,231,243,0.6)",sa:"rgba(251,207,232,0.4)",bd:"rgba(236,72,153,0.1)",bl:"rgba(236,72,153,0.06)",tx:"#831843",t2:"#9D174D",t3:"#EC4899",ti:"#FFF",ac:"#EC4899",ah:"#DB2777",al:"rgba(236,72,153,0.08)",am:"#F9A8D4",wm:"#F59E0B",wl:"rgba(245,158,11,0.06)",sd:"0 1px 8px rgba(236,72,153,0.06)",sm:"0 2px 16px rgba(236,72,153,0.1)",sl:"0 12px 40px rgba(236,72,153,0.15)",gd:"linear-gradient(135deg,#EC4899,#A855F7)",hc:"rgba(239,68,68,0.08)",ht:"#E11D48",gbg:"rgba(255,255,255,0.65)",gbd:"rgba(236,72,153,0.1)"},
 };
+
+function computeRegionalHolidays(cc, regionId, year) {
+  if (!regionId || !REGIONS[cc]) return [];
+  const region = REGIONS[cc].find(function(r){ return r.id === regionId; });
+  if (!region) return [];
+  var all = [];
+  var fixed = region.add || [];
+  for (var i = 0; i < fixed.length; i++) { all.push(year + "-" + fixed[i]); }
+  // Easter-based regional holidays
+  var we = westernEaster(year);
+  if (region.maundy) { var mt = addDays(year, we.m, we.d, -3); all.push(dFmt(year, mt.m, mt.d)); }
+  if (region.eMon) { var em = addDays(year, we.m, we.d, 1); all.push(dFmt(year, em.m, em.d)); }
+  if (region.gFri) { var gf = addDays(year, we.m, we.d, -2); all.push(dFmt(year, gf.m, gf.d)); }
+  if (region.cc) { var cc2 = addDays(year, we.m, we.d, 60); all.push(dFmt(year, cc2.m, cc2.d)); }
+  if (region.ascen) { var asc = addDays(year, we.m, we.d, 39); all.push(dFmt(year, asc.m, asc.d)); }
+  if (region.whitMon) { var wm = addDays(year, we.m, we.d, 50); all.push(dFmt(year, wm.m, wm.d)); }
+  if (region.assumption) all.push(year + "-08-15");
+  if (region.allSaints) all.push(year + "-11-01");
+  // AU & CA dynamic regional holidays
+  if (cc === "AU") {
+    if (regionId === "NSW") all.push(dFmt(year, 8, nthWeekday(year, 8, 1, 1)));
+    if (regionId === "VIC") { all.push(dFmt(year, 3, nthWeekday(year, 3, 1, 2))); all.push(dFmt(year, 11, nthWeekday(year, 11, 2, 1))); }
+    if (regionId === "QLD") { all.push(dFmt(year, 5, nthWeekday(year, 5, 1, 1))); }
+    if (regionId === "WA_AU") { all.push(dFmt(year, 6, nthWeekday(year, 6, 1, 1))); all.push(dFmt(year, 9, lastWeekday(year, 9, 1))); }
+    if (regionId === "SA_AU") { all.push(dFmt(year, 3, nthWeekday(year, 3, 1, 2))); all.push(dFmt(year, 10, nthWeekday(year, 10, 1, 1))); }
+    if (regionId === "TAS") { all.push(dFmt(year, 2, nthWeekday(year, 2, 1, 2))); }
+  }
+  if (cc === "CA") {
+    if (regionId === "ON" || regionId === "BC" || regionId === "AB") {
+      all.push(dFmt(year, 2, nthWeekday(year, 2, 1, 3))); // Family Day
+      all.push(dFmt(year, 8, nthWeekday(year, 8, 1, 1))); // Civic/Heritage
+    }
+  }
+  return all;
+}
+
+function getAllHolidays(member, year) {
+  var base = computeHolidays(member.country, year);
+  var regional = computeRegionalHolidays(member.country, member.region, year);
+  var combined = {};
+  for (var i = 0; i < base.length; i++) combined[base[i]] = 1;
+  for (var i = 0; i < regional.length; i++) combined[regional[i]] = 1;
+  return Object.keys(combined);
+}
+
+function workingDaysRemaining(member, year) {
+  var today = new Date();
+  var startM = today.getFullYear() === year ? today.getMonth() : 0;
+  var startD = today.getFullYear() === year ? today.getDate() : 1;
+  var hols = getAllHolidays(member, year);
+  var holSet = {};
+  for (var i = 0; i < hols.length; i++) holSet[hols[i]] = 1;
+  var vacSet = {};
+  var days = member.days || [];
+  for (var i = 0; i < days.length; i++) vacSet[days[i]] = 1;
+  var count = 0;
+  for (var m = startM; m < 12; m++) {
+    var daysInMonth = new Date(year, m + 1, 0).getDate();
+    var sd = (m === startM) ? startD : 1;
+    for (var d = sd; d <= daysInMonth; d++) {
+      var dt = new Date(year, m, d);
+      var dow = dt.getDay();
+      if (dow === 0 || dow === 6) continue;
+      var key = year + "-" + String(m+1).padStart(2,"0") + "-" + String(d).padStart(2,"0");
+      if (holSet[key]) continue;
+      if (vacSet[key]) continue;
+      count++;
+    }
+  }
+  return count;
+}
+
 const F="'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif";
 const FM="'SF Mono','Fira Code',monospace";
 const MC=[{b:"#DBEAFE",t:"#1E40AF",d:"#3B82F6"},{b:"#FCE7F3",t:"#9D174D",d:"#EC4899"},{b:"#D1FAE5",t:"#065F46",d:"#10B981"},{b:"#FEF3C7",t:"#92400E",d:"#F59E0B"},{b:"#E0E7FF",t:"#3730A3",d:"#6366F1"},{b:"#FFE4E6",t:"#9F1239",d:"#F43F5E"},{b:"#CCFBF1",t:"#134E4A",d:"#14B8A6"},{b:"#FED7AA",t:"#9A3412",d:"#F97316"},{b:"#E9D5FF",t:"#6B21A8",d:"#A855F7"},{b:"#CFFAFE",t:"#155E75",d:"#06B6D4"},{b:"#FEE2E2",t:"#991B1B",d:"#EF4444"},{b:"#D9F99D",t:"#3F6212",d:"#84CC16"},{b:"#FBCFE8",t:"#831843",d:"#F472B6"},{b:"#BAE6FD",t:"#0C4A6E",d:"#0EA5E9"},{b:"#FDE68A",t:"#78350F",d:"#FBBF24"},{b:"#C7D2FE",t:"#3730A3",d:"#818CF8"},{b:"#A7F3D0",t:"#064E3B",d:"#34D399"},{b:"#FECACA",t:"#7F1D1D",d:"#F87171"},{b:"#DDD6FE",t:"#5B21B6",d:"#8B5CF6"},{b:"#99F6E4",t:"#115E59",d:"#2DD4BF"},{b:"#FDE047",t:"#713F12",d:"#EAB308"},{b:"#F0ABFC",t:"#701A75",d:"#D946EF"},{b:"#67E8F9",t:"#164E63",d:"#22D3EE"},{b:"#FDA4AF",t:"#881337",d:"#FB7185"},{b:"#86EFAC",t:"#14532D",d:"#4ADE80"}];
@@ -1781,7 +1916,7 @@ function ConflictAlerts({team,threshold,th,t}) {
 }
 
 // ─── Member Row ──────────────────────────────────────────────────
-function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onExportICS,onOptimize,th,t,locked}){
+function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,yr,onExportICS,onOptimize,th,t,locked}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const[h,setH]=useState(false);const dc=(m.days||[]).length||0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
@@ -1798,13 +1933,33 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div>
-      <div style={{fontSize:11,color:th.t3}}>{co?co.f+" ":""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}</div>
+      <div style={{fontSize:11,color:th.t3}}>{co?co.f+" ":""}{m.region?<span style={{fontSize:9,color:th.ac,fontWeight:600}}>{(REGIONS[m.country]||[]).reduce(function(a,r){return r.id===m.region?r.n:a;},"")+" · "}</span>:""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}</div>
+      {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>m.pto?"#EF4444":dc>m.pto*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/m.pto*100))+"%",transition:"width .3s"}}/></div>}
     </div>
     {(h||isActive)&&!locked&&<div style={{display:"flex",gap:1,flexShrink:0}}>
       {m.country&&<button onClick={e=>{e.stopPropagation();onOptimize();}} title="Suggest best days" style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="sun" s={13} c="#F59E0B"/></button>}
       <button onClick={e=>{e.stopPropagation();onExportICS();}} title={t.export} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="download" s={13} c={th.t3}/></button>
       <button onClick={e=>{e.stopPropagation();onStartRename();}} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="edit" s={13} c={th.t3}/></button>
       <button onClick={e=>{e.stopPropagation();onDelete();}} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="trash" s={13} c={th.t3}/></button>
+    </div>}
+    {isActive&&!isEditing&&<div style={{marginTop:6,paddingTop:6,borderTop:"1px solid "+th.gbd,display:"flex",flexDirection:"column",gap:4}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
+        <span style={{color:th.t3,fontWeight:600,minWidth:50}}>PTO</span>
+        <input type="number" min="0" max="60" placeholder="—" value={m.pto||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onPtoChange(parseInt(e.target.value)||null);}} style={{width:48,padding:"2px 6px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:FM,textAlign:"center"}}/>
+        <span style={{color:th.t3}}>{t.dys}</span>
+        {m.pto&&<span style={{marginLeft:"auto",fontSize:10,color:dc>m.pto?"#EF4444":th.ac,fontWeight:700}}>{dc}/{m.pto}</span>}
+      </div>
+      {m.country&&REGIONS[m.country]&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
+        <span style={{color:th.t3,fontWeight:600,minWidth:50}}>Region</span>
+        <select value={m.region||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onRegionChange(e.target.value||null);}} style={{flex:1,padding:"2px 6px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:F}}>
+          <option value="">National</option>
+          {REGIONS[m.country].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
+        </select>
+      </div>}
+      {yr&&m.country&&<div style={{fontSize:10,color:th.t3,display:"flex",gap:8}}>
+        <span>{workingDaysRemaining(m,yr)} work days left</span>
+        <span>{getAllHolidays(m,yr).length} holidays</span>
+      </div>}
     </div>}
   </div>;
 }
@@ -1862,8 +2017,8 @@ function ShareModal({teamId,teamName,onClose,th,t}){
         <button onClick={onClose} style={{background:th.sh,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={15} c={th.t2}/></button>
       </div>
       {/* Tabs */}
-      <div style={{display:"flex",gap:4,marginBottom:16}}>
-        {[{k:"link",i:"link",l:t.cl},{k:"qr",i:"grid",l:"QR"},{k:"embed",i:"code",l:t.embed}].map(o=> <button key={o.k} onClick={()=>setTab(o.k)} style={{padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",border:o.k===tab?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:o.k===tab?th.al:"transparent",color:o.k===tab?th.ac:th.t2,display:"flex",alignItems:"center",gap:4}}><Ic n={o.i} s={13} c={o.k===tab?th.ac:th.t3}/>{o.l}</button>)}
+      <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
+        {[{k:"link",i:"link",l:t.cl},{k:"qr",i:"grid",l:"QR"},{k:"ical",i:"calendar",l:"Subscribe"},{k:"widget",i:"bar",l:"Widget"},{k:"embed",i:"code",l:t.embed}].map(o=> <button key={o.k} onClick={()=>setTab(o.k)} style={{padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",border:o.k===tab?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:o.k===tab?th.al:"transparent",color:o.k===tab?th.ac:th.t2,display:"flex",alignItems:"center",gap:4}}><Ic n={o.i} s={13} c={o.k===tab?th.ac:th.t3}/>{o.l}</button>)}
       </div>
       {tab==="link"&&<Fragment>
         <p style={{margin:"0 0 10px",fontSize:13,color:th.t2}}>{t.shs} {teamName}</p>
@@ -1874,6 +2029,23 @@ function ShareModal({teamId,teamName,onClose,th,t}){
         <p style={{margin:"0 0 12px",fontSize:13,color:th.t2}}>Scan to join {teamName}</p>
         <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><QRCode data={link} size={180} th={th}/></div>
         <div style={{background:th.bg,borderRadius:8,padding:"8px 12px",border:`1px solid ${th.bd}`,textAlign:"center",fontSize:11,color:th.t3,fontFamily:FM}}>{teamId}</div>
+      </Fragment>}
+      {tab==="ical"&&<Fragment>
+        <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>iCal Subscribe URL</p>
+        <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>Add this URL to Google Calendar, Outlook, or Apple Calendar. It updates automatically when vacations change.</p>
+        <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{"webcal://" + window.location.host + window.location.pathname + "?team=" + teamId + "&view=ics"}</div>
+        <Btn th={th} onClick={()=>copy("webcal://" + window.location.host + window.location.pathname + "?team=" + teamId + "&view=ics")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center",marginBottom:8}}>{cp?t.cp:"Copy Subscribe URL"}</Btn>
+        <div style={{fontSize:11,color:th.t3,lineHeight:1.6}}>
+          <div style={{marginBottom:4}}><strong style={{color:th.tx}}>Google Calendar:</strong> Settings → Add calendar → From URL → paste</div>
+          <div style={{marginBottom:4}}><strong style={{color:th.tx}}>Outlook:</strong> Add calendar → Subscribe from web → paste</div>
+          <div><strong style={{color:th.tx}}>Apple Calendar:</strong> File → New Calendar Subscription → paste</div>
+        </div>
+      </Fragment>}
+      {tab==="widget"&&<Fragment>
+        <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>Mini Dashboard Widget</p>
+        <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>A compact 300x200px widget showing who is out this week. Perfect for Notion, company wikis, or office TV screens.</p>
+        <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{"<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"220\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>"}</div>
+        <Btn th={th} onClick={()=>copy("<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"220\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center"}}>{cp?t.cp:"Copy Widget Code"}</Btn>
       </Fragment>}
       {tab==="embed"&&<Fragment>
         <p style={{margin:"0 0 10px",fontSize:13,color:th.t2}}>Paste this code into any website to embed the team calendar:</p>
@@ -1931,7 +2103,7 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
         <Feature emoji="👆" title="Drag-to-Select" desc="Click and drag across multiple days to select an entire vacation range in one motion. Automatically skips weekends."/>
         <Feature emoji="🔄" title="Multi-Year Support (2026–2035)" desc="Holidays are computed algorithmically — Western & Orthodox Easter, moveable feasts, country-specific rules — for any year in the range."/>
         <Feature emoji="🗓️" title="Quarterly Focus View" desc="Toggle Q1/Q2/Q3/Q4 to zoom into three months at a time with larger calendar cards for tactical planning."/>
-        <Feature emoji="🏛️" title="45 European Country Holidays" desc="Automatic public holiday detection for all EU, EEA, EFTA countries plus UK, Balkans, Turkey, Ukraine, and more."/>
+        <Feature emoji="🏛️" title="55 Countries with Regional Holidays" desc="Public holidays for 55 countries across Europe, Middle East, Americas, and Africa. Regional/state holidays for Spain (17 communities), Germany (16 states), Switzerland (6 cantons), Australia (6 states), and Canada (4 provinces)."/>
         <Feature emoji="🟡" title="Holiday Clash Detector" desc="Warns when someone books vacation on their own country's public holiday — with a one-click button to remove wasted days."/>
         <Feature emoji="☀️" title="Smart Vacation Optimizer" desc="Analyzes each member's country holidays and suggests optimal bridge days: 'Take 1 day off → get 4 days free.'"/>
       </Section>
@@ -1952,6 +2124,13 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
         <Feature emoji="↩️" title="Undo / Redo" desc="Ctrl+Z and Ctrl+Shift+Z with 20-action history. Also available as buttons in the toolbar."/>
       </Section>
 
+      <Section icon="users" title="Team Management">
+        <Feature emoji="📊" title="PTO Balance Tracker" desc="Set each member's total PTO allowance. A progress bar shows usage: green under 80%, amber 80-100%, red over limit."/>
+        <Feature emoji="📅" title="Working Days Counter" desc="See remaining working days per member — excluding weekends, public holidays, and booked vacation. Updates in real-time."/>
+        <Feature emoji="✅" title="Approval Workflow" desc="Toggle approval mode in settings. Designated approvers can review pending vacation requests before they become final."/>
+        <Feature emoji="🗺️" title="Regional Holiday Support" desc="Members in Spain, Germany, Switzerland, Australia, and Canada can select their specific region for accurate local holidays."/>
+      </Section>
+
       <Section icon="download" title="Export & Integration">
         <Feature emoji="📥" title="ICS Calendar Export" desc="Download individual member or full team .ics files. Import into Google Calendar, Outlook, or Apple Calendar."/>
         <Feature emoji="📄" title="PDF / HTML Report" desc="Downloadable annual report with member table, date chips, overlap analysis, and team summary."/>
@@ -1959,6 +2138,8 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
         <Feature emoji="📗" title="Excel (XLSX) Export" desc="SpreadsheetML file that opens natively in Excel with formatted columns — ready for payroll or HR."/>
         <Feature emoji="📋" title="TSV / Google Sheets Feed" desc="Append &view=tsv to any team URL. Use Google Sheets IMPORTDATA() for a live auto-refreshing feed."/>
         <Feature emoji="🖥️" title="JSON API" desc="Append &view=json to get structured data for dashboards, Slack bots, or any integration."/>
+        <Feature emoji="🔄" title="iCal Subscribe URL" desc="Add a webcal:// URL to Google Calendar, Outlook, or Apple Calendar. Vacations update automatically — no re-downloading."/>
+        <Feature emoji="📺" title="Mini Dashboard Widget" desc="A compact 320x220 embeddable widget showing who's out this week. Perfect for Notion pages, company wikis, or office TV screens."/>
       </Section>
 
       <Section icon="globe" title="Design & Accessibility">
@@ -2191,10 +2372,10 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
 
 // ─── Workspace ───────────────────────────────────────────────────
 function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
-  const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);
+  const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
   const[showSh,setShowSh]=useState(false);const[view,setView]=useState("cal");const[toast,setToast]=useState(null);
   const[mob,setMob]=useState(window.innerWidth<768);const[sb,setSb]=useState(window.innerWidth>=768);const[settings,setSettings]=useState(false);const[holBr,setHolBr]=useState(false);
-  const[threshold,setThreshold]=useState(team.threshold||2);
+  const[threshold,setThreshold]=useState(team.threshold||2);const[approvalMode,setApprovalMode]=useState(team.approvalMode||false);
   const[showOptimizer,setShowOptimizer]=useState(null); // member id
   const[showCSVImport,setShowCSVImport]=useState(false);
   const[csvText,setCsvText]=useState("");
@@ -2219,11 +2400,13 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   // Compute holidays for all team countries
   const holSet=new Set();team.members.forEach(m=>{if(m.country)computeHolidays(m.country,yr).forEach(h=>holSet.add(h));});
 
-  const startAdd=()=>{if(locked){flash(t.locked);return;}if(team.members.length>=25){flash(t.mx);return;}setAdding(true);setNn("");setNc(null);};
-  const confirmAdd=()=>{const n=nn.trim();if(!n||!nc)return;const nm={id:gid(),name:n,country:nc,days:[]};const co=EU_C.find(c=>c.c===nc);updateWithHistory({...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)});setAId(nm.id);setAdding(false);setNn("");setNc(null);if(mob)setSb(false);};
+  const startAdd=()=>{if(locked){flash(t.locked);return;}if(team.members.length>=25){flash(t.mx);return;}setAdding(true);setNn("");setNc(null);setNr(null);};
+  const confirmAdd=()=>{const n=nn.trim();if(!n||!nc)return;const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:true};const co=EU_C.find(c=>c.c===nc);updateWithHistory({...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)});setAId(nm.id);setAdding(false);setNn("");setNc(null);setNr(null);if(mob)setSb(false);};
   const del=id=>{if(locked)return;const m=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.filter(x=>x.id!==id),log:addLogEntry(team,`${(m&&m.name)||"Member"} was removed`)});if(aId===id)setAId(null);flash(t.mr);};
   const ren=(id,n)=>{setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
   const setCo=(id,cc)=>{const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
+  const setPto=(id,val)=>{updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
+  const setRegion=(id,val)=>{updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
   const tog=(y,m,d)=>{if(!aId||locked)return;const key=dk(y,m,d);const adding2=!(am&&am.days||[]).includes(key);updateWithHistory({...team,members:team.members.map(mm=>{if(mm.id!==aId)return mm;const ds=mm.days||[];return{...mm,days:ds.includes(key)?ds.filter(x=>x!==key):[...ds,key]};}),log:addLogEntry(team,`${(am&&am.name)||"Member"} ${adding2?"added":"removed"} ${key}`)});};
   const toggleLock=()=>updateWithHistory({...team,locked:!team.locked,log:addLogEntry(team,team.locked?"Board unlocked":"Board locked")});
 
@@ -2267,6 +2450,19 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportCSV(team)}>CSV</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportXLSX(team)}>Excel</Btn>
       <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>Import</Btn>
+      <div style={{width:1,height:20,background:th.bd}}/>
+      <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}>
+        <span style={{fontWeight:600}}>Alert</span>
+        <select value={threshold} onChange={function(e){var v=parseInt(e.target.value);setThreshold(v);updateWithHistory({...team,threshold:v});}} style={{padding:"2px 6px",border:"1px solid "+th.bd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:FM}}>
+          <option value={2}>2+</option><option value={3}>3+</option><option value={4}>4+</option><option value={5}>5+</option>
+        </select>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11}}>
+        <span style={{color:th.t2,fontWeight:600}}>Approval</span>
+        <button onClick={function(){var v=!approvalMode;setApprovalMode(v);updateWithHistory({...team,approvalMode:v});}} style={{width:32,height:18,borderRadius:9,border:"none",cursor:"pointer",background:approvalMode?th.ac:th.sh,position:"relative",transition:"background .2s"}}>
+          <div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:approvalMode?16:2,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+        </button>
+      </div>
     </div>}
 
     {/* View tabs */}
@@ -2288,10 +2484,14 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
               <div style={{width:28,height:28,borderRadius:"50%",background:MC[team.members.length%MC.length].d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{nn.trim()?nn.trim()[0].toUpperCase():"?"}</div>
               <input autoFocus value={nn} onChange={e=>setNn(e.target.value)} placeholder={t.en2} onKeyDown={e=>{if(e.key==="Enter"&&nn.trim()&&nc)confirmAdd();if(e.key==="Escape"){setAdding(false);}}} maxLength={30} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:600,fontFamily:F,color:th.tx,outline:"none",padding:"2px 0"}}/>
             </div>
-            <CountrySelect value={nc} onChange={setNc} th={th} t={t}/>
+            <CountrySelect value={nc} onChange={function(v){setNc(v);setNr(null);}} th={th} t={t}/>
+            {nc && REGIONS[nc] && <select value={nr||""} onChange={function(e){setNr(e.target.value||null);}} style={{width:"100%",padding:"10px 12px",borderRadius:G.rXs,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:14,fontFamily:F,marginTop:6}}>
+              <option value="">National only (no region)</option>
+              {REGIONS[nc].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
+            </select>}
             <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>setAdding(false)}>{t.can}</Btn></div>
           </div>}
-          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)}/>)}
+          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}

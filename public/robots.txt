@@ -19,4 +19,7 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
-Sitemap: https://www.vacationplanner.team/sitemap.xml
+User-agent: Bingbot
+Allow: /
+
+Sitemap: https://vacationplanner.team/sitemap.xml

@@ -1,15 +1,16 @@
 {
   "name": "Team Vacation Planner",
   "short_name": "VacationPlanner",
-  "description": "Free team vacation planner for teams up to 25. 55 countries, public holidays 2026-2035. No login required.",
+  "description": "Free team vacation planner for teams up to 25. 55 countries, regional holidays, 2026-2035. No login required.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FEF7FF",
-  "theme_color": "#7C3AED",
+  "background_color": "#F2F1EE",
+  "theme_color": "#2563EB",
   "orientation": "any",
   "categories": ["productivity", "business", "utilities"],
   "lang": "en",
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
