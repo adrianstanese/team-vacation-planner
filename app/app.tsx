@@ -3231,7 +3231,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
 
     {/* View tabs */}
     {!mob&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"6px 14px",display:"flex",gap:3,overflowX:"auto",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      {views.map(v=> <button key={v.k} onClick={()=>{setView(v.k);setVk(function(p){return p+1;});}} style={{padding:"5px 10px",borderRadius:6,fontSize:11,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?`1.5px solid ${th.ac}`:`1px solid transparent`,background:v.k===view?th.al:"transparent",color:v.k===view?th.ac:th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?th.ac:th.t3}/>{v.l}</button>)}
+      {views.map(v=> <button key={v.k} onClick={()=>{setView(v.k);setVk(function(p){return p+1;});}} style={{padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?(v.k==="trips"?"1.5px solid #D97706":`1.5px solid ${th.ac}`):`1px solid transparent`,background:v.k===view?(v.k==="trips"?"#FAEEDA":th.al):"transparent",color:v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3}/>{v.l}</button>)}
     </div>}
 
     <div style={{display:"flex",flex:1,overflow:"hidden"}}>
