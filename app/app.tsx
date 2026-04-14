@@ -459,8 +459,11 @@ const CSS_ANIMS = `
 @keyframes floatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(2deg); } }
 @keyframes floatB { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px) rotate(-1.5deg); } }
 @keyframes floatC { 0%,100% { transform: translateY(-4px) rotate(1deg); } 50% { transform: translateY(-16px) rotate(-2deg); } }
-@keyframes glowSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-.tvp-spin { animation: glowSpin 3s linear infinite; }
+.tvp-glow-border { position: relative; }
+.tvp-glow-border::before { content: ""; position: absolute; inset: 0; border-radius: 20px; padding: 2px; background: conic-gradient(from var(--angle, 0deg), transparent 40%, #818CF8 50%, #A78BFA 55%, #6366F1 60%, transparent 70%); animation: borderSpin 3s linear infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; z-index: 1; }
+@property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes borderSpin { to { --angle: 360deg; } }
+.tvp-glow-border::before { background: conic-gradient(from var(--angle), transparent 30%, #818CF8 45%, #A78BFA 50%, #6366F1 55%, transparent 70%); }
 @keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(99,102,241,.15); } 50% { box-shadow: 0 0 20px rgba(99,102,241,.35); } }
 @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 .tvp-fade { animation: fadeIn .3s ease-out both; }
@@ -2736,19 +2739,11 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
       <p style={{fontSize:15,color:th.t2,margin:"0 0 32px",lineHeight:1.5}}>{t.tag1}<br/>{t.tag2}</p>
 
       {!mode&&<div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:24}}>
-        {/* Create Team with glow border */}
-        <div onClick={()=>{setMode("create");setErr(null);}} style={{position:"relative",borderRadius:22,padding:2,cursor:"pointer",overflow:"hidden",background:th.gbg}}>
-          <div className="tvp-spin" style={{position:"absolute",inset:-20,background:"conic-gradient(from 0deg, transparent 0%, transparent 30%, #818CF8 40%, #A78BFA 50%, #6366F1 55%, transparent 65%, transparent 100%)",borderRadius:"50%",zIndex:0}}/>
-          <div style={{position:"relative",zIndex:1,background:"linear-gradient(135deg, rgba(129,140,248,0.15), rgba(99,102,241,0.1))",backdropFilter:"blur(20px) saturate(1.8)",WebkitBackdropFilter:"blur(20px) saturate(1.8)",borderRadius:20,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,transition:"all 0.35s"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={function(e){e.currentTarget.style.transform="translateY(0)";}}>
-            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #818CF8, #6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(99,102,241,0.2)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="plus" s={22} c="#fff"/></div>
-            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.crt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{t.crSub}</div></div>
-          </div>
-        </div>
-        {/* Join Team - normal card */}
         {[
+          {m:"create",i:"plus",grad:"linear-gradient(135deg, rgba(129,140,248,0.15), rgba(99,102,241,0.1))",glowColor:"rgba(99,102,241,0.2)",iconGrad:"linear-gradient(135deg, #818CF8, #6366F1)",tt:t.crt,st:t.crSub,glow:true},
           {m:"join",i:"link",grad:"linear-gradient(135deg, rgba(52,211,153,0.12), rgba(16,185,129,0.08))",glowColor:"rgba(16,185,129,0.18)",iconGrad:"linear-gradient(135deg, #34D399, #10B981)",tt:t.jnt,st:t.jnSub},
         ].map(o=>
-          <button key={o.m} onClick={()=>{setMode(o.m);setErr(null);}} style={{
+          <button key={o.m} className={o.glow?"tvp-glow-border":""} onClick={()=>{setMode(o.m);setErr(null);}} style={{
             background:o.grad,
             backdropFilter:"blur(20px) saturate(1.8)",
             WebkitBackdropFilter:"blur(20px) saturate(1.8)",
