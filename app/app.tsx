@@ -459,11 +459,7 @@ const CSS_ANIMS = `
 @keyframes floatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(2deg); } }
 @keyframes floatB { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px) rotate(-1.5deg); } }
 @keyframes floatC { 0%,100% { transform: translateY(-4px) rotate(1deg); } 50% { transform: translateY(-16px) rotate(-2deg); } }
-.tvp-glow-border { position: relative; }
-.tvp-glow-border::before { content: ""; position: absolute; inset: 0; border-radius: 20px; padding: 2px; background: conic-gradient(from var(--angle, 0deg), transparent 40%, #818CF8 50%, #A78BFA 55%, #6366F1 60%, transparent 70%); animation: borderSpin 3s linear infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; z-index: 1; }
-@property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
-@keyframes borderSpin { to { --angle: 360deg; } }
-.tvp-glow-border::before { background: conic-gradient(from var(--angle), transparent 30%, #818CF8 45%, #A78BFA 50%, #6366F1 55%, transparent 70%); }
+@keyframes glowSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(99,102,241,.15); } 50% { box-shadow: 0 0 20px rgba(99,102,241,.35); } }
 @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 .tvp-fade { animation: fadeIn .3s ease-out both; }
@@ -2721,7 +2717,7 @@ function TodayHolidays({th,t}) {
 function FadeIn({children,delay}){var ref=useRef(null);var[vis,setVis]=useState(false);useEffect(function(){if(!ref.current)return;var obs=new IntersectionObserver(function(en){if(en[0].isIntersecting){setVis(true);obs.disconnect();}},{threshold:0.1});obs.observe(ref.current);return function(){obs.disconnect();};},[]);return <div ref={ref} style={{opacity:vis?1:0,transform:vis?"none":"translateY(16px)",transition:"opacity .5s ease "+(delay||0)+"ms,transform .5s ease "+(delay||0)+"ms"}}>{children}</div>;}
 function fireConfetti(){var cv=document.createElement("canvas");cv.style.cssText="position:fixed;inset:0;z-index:9999;pointer-events:none";document.body.appendChild(cv);var ctx=cv.getContext("2d");cv.width=window.innerWidth;cv.height=window.innerHeight;var P=[];var cols=["#8B5CF6","#6366F1","#EC4899","#F59E0B","#10B981","#3B82F6"];for(var i=0;i<80;i++)P.push({x:cv.width/2,y:cv.height/2,vx:(Math.random()-.5)*12,vy:Math.random()*-14-4,s:Math.random()*6+3,c:cols[i%6],l:1,d:Math.random()*.015+.008,r:Math.random()*360});(function draw(){ctx.clearRect(0,0,cv.width,cv.height);var alive=false;P.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=.35;p.l-=p.d;p.r+=p.vx;if(p.l>0){alive=true;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r*Math.PI/180);ctx.globalAlpha=p.l;ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();}});if(alive)requestAnimationFrame(draw);else cv.remove();})();}
 function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,lang,setLang,theme,setTheme}){
-  const[name,setName]=useState("");const[scrY,setScrY]=useState(0);useEffect(function(){var h=function(){setScrY(window.scrollY);};window.addEventListener("scroll",h,{passive:true});return function(){window.removeEventListener("scroll",h);};},[]);const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
+  const[name,setName]=useState("");const[mounted,setMounted]=useState(false);useEffect(function(){setMounted(true);},[]);const[scrY,setScrY]=useState(0);useEffect(function(){var h=function(){setScrY(window.scrollY);};window.addEventListener("scroll",h,{passive:true});return function(){window.removeEventListener("scroll",h);};},[]);const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
   const YRS=Array.from({length:10},(_,i)=>2026+i);
 
   if(about) return <AboutPage th={th} t={t} onBack={()=>setAbout(false)} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>;
@@ -2739,11 +2735,19 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
       <p style={{fontSize:15,color:th.t2,margin:"0 0 32px",lineHeight:1.5}}>{t.tag1}<br/>{t.tag2}</p>
 
       {!mode&&<div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:24}}>
+        {/* Create Team with glow border — only renders spinning div after mount */}
+        <div onClick={()=>{setMode("create");setErr(null);}} style={{position:"relative",borderRadius:22,padding:2,cursor:"pointer",overflow:"hidden"}}>
+          {mounted&&<div style={{position:"absolute",inset:-20,background:"conic-gradient(from 0deg,transparent 0%,transparent 30%,#818CF8 40%,#A78BFA 50%,#6366F1 55%,transparent 65%,transparent 100%)",animation:"glowSpin 3s linear infinite",borderRadius:"50%",zIndex:0}}/>}
+          <div style={{position:"relative",zIndex:1,background:"linear-gradient(135deg,rgba(129,140,248,0.15),rgba(99,102,241,0.1))",backdropFilter:"blur(20px) saturate(1.8)",WebkitBackdropFilter:"blur(20px) saturate(1.8)",border:"1px solid rgba(255,255,255,0.45)",borderRadius:20,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(99,102,241,0.2),0 1px 3px rgba(0,0,0,0.04),inset 0 1px 0 rgba(255,255,255,0.6)"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";}}>
+            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg,#818CF8,#6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(99,102,241,0.2)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="plus" s={22} c="#fff"/></div>
+            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.crt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{t.crSub}</div></div>
+          </div>
+        </div>
+        {/* Join Team */}
         {[
-          {m:"create",i:"plus",grad:"linear-gradient(135deg, rgba(129,140,248,0.15), rgba(99,102,241,0.1))",glowColor:"rgba(99,102,241,0.2)",iconGrad:"linear-gradient(135deg, #818CF8, #6366F1)",tt:t.crt,st:t.crSub,glow:true},
           {m:"join",i:"link",grad:"linear-gradient(135deg, rgba(52,211,153,0.12), rgba(16,185,129,0.08))",glowColor:"rgba(16,185,129,0.18)",iconGrad:"linear-gradient(135deg, #34D399, #10B981)",tt:t.jnt,st:t.jnSub},
         ].map(o=>
-          <button key={o.m} className={o.glow?"tvp-glow-border":""} onClick={()=>{setMode(o.m);setErr(null);}} style={{
+          <button key={o.m} onClick={()=>{setMode(o.m);setErr(null);}} style={{
             background:o.grad,
             backdropFilter:"blur(20px) saturate(1.8)",
             WebkitBackdropFilter:"blur(20px) saturate(1.8)",
