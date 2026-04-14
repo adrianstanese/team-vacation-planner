@@ -3001,15 +3001,17 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
   // Trip days stored per member in team.tripDays = {memberId: ["2026-07-05",...]}
   var tripDays=team.tripDays||{};
 
-  var toggleDay=function(year,month,day){
+  var toggleDay=function(y2,m2,d2){
     if(!aId)return;
-    var key=dk(year,month,day);
-    var md={...tripDays};
-    var arr=[...(md[aId]||[])];
+    try{
+    var key=dk(y2,m2,d2);
+    var md=JSON.parse(JSON.stringify(team.tripDays||{}));
+    var arr=md[aId]||[];
     var idx=arr.indexOf(key);
     if(idx>=0)arr.splice(idx,1); else arr.push(key);
     md[aId]=arr;
     onUpdate({...team,tripDays:md});
+    }catch(e){console.error("toggleDay error",e);}
   };
 
   // Calendar months
@@ -3075,7 +3077,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
                   style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:6,cursor:(we&&!team.w7)||!aId?"default":"pointer",transition:"transform .12s",
                     background:isTrip?"#D97706":trippers.length>0?trippers[0].mc.b:isHol?"#DBEAFE":we?"transparent":"transparent",
                     color:isTrip?"#fff":trippers.length>0?trippers[0].mc.t:isHol?"#3B82F6":we?th.t3+"80":th.tx,
-                    opacity:past&&!isTrip&&trippers.length===0?0.4:1,
+                    opacity:1,
                     border:isTrip?"1px solid #B45309":"1px solid transparent"}}>
                   <span style={{fontSize:11,fontWeight:isTrip?700:500,lineHeight:1}}>{day}</span>
                   {trippers.length>1&&<span style={{position:"absolute",top:-3,right:-3,width:12,height:12,borderRadius:"50%",background:"#D97706",color:"#fff",fontSize:7,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{trippers.length}</span>}
