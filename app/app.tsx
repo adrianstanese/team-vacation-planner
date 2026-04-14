@@ -1897,12 +1897,12 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           } else if(!am && mh.length === 2) {
             var mcA = MC[members.indexOf(mh[0])%MC.length];
             var mcB = MC[members.indexOf(mh[1])%MC.length];
-            vacBg = "linear-gradient(135deg," + mcA.d + " 50%," + mcB.d + " 50%)"; vacColor = "#fff"; vacWeight = 800;
+            vacBg = "linear-gradient(135deg," + mcA.d + " 50%," + mcB.d + " 50%)"; vacColor = "#fff"; vacWeight = 800; showCount = 2;
           } else if(!am && mh.length === 3) {
             var mc3a = MC[members.indexOf(mh[0])%MC.length];
             var mc3b = MC[members.indexOf(mh[1])%MC.length];
             var mc3c = MC[members.indexOf(mh[2])%MC.length];
-            vacBg = "linear-gradient(135deg," + mc3a.d + " 33%," + mc3b.d + " 33% 66%," + mc3c.d + " 66%)"; vacColor = "#fff"; vacWeight = 800;
+            vacBg = "linear-gradient(135deg," + mc3a.d + " 33%," + mc3b.d + " 33% 66%," + mc3c.d + " 66%)"; vacColor = "#fff"; vacWeight = 800; showCount = 3;
           } else if(!am && mh.length >= 4) {
             vacBg = "#EF4444"; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 8px rgba(239,68,68,0.3)"; showCount = mh.length;
           }
