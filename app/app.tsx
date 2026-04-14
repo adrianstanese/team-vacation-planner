@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+i
+  // Saudi Arabia fixed holidays
+  if(cc==="SA"){h.push(y+"-02-22");h.push(y+"-09-23");}
+mport { useState, useEffect, useRef, useCallback, Fragment } from "react";
 
 // ═══════════════════════════════════════════════════════════════════
 // TEAM VACATION PLANNER v5
@@ -559,7 +562,7 @@ const dim=(y,m)=>new Date(y,m+1,0).getDate();
 const fdm=(y,m)=>{const d=new Date(y,m,1).getDay();return d===0?6:d-1;};
 const dk=(y,m,d)=>`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 const pk=k=>{const[y,m,d]=k.split("-").map(Number);return{y,m:m-1,d};};
-const isWe=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
+const isWe=(y,m,d,cc)=>{const w=new Date(y,m,d).getDay();if(cc&&SUN_THU.indexOf(cc)>=0)return w===5||w===6;return w===0||w===6;};
 const N=new Date(),CY=N.getFullYear(),CM=N.getMonth(),CD=N.getDate();
 
 // ─── Storage (hybrid: API for teams, localStorage for prefs, window.storage for artifact sandbox) ───
@@ -1933,8 +1936,8 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
   const dragRef=useRef(null);
   const dayLabels=[t.mo,t.tu,t.we2,t.th,t.fr,t.sa,t.su];
 
-  const[popDay,setPopDay]=useState(null);const handleMouseDown=(day)=>{if(!activeId||(isWe(year,month,day)&&!w7))return;setPopDay(day);setTimeout(function(){setPopDay(null);},200);dragRef.current={start:day,days:new Set([day]),adding:!(am&&am.days||[]).includes(dk(year,month,day))};onToggle(year,month,day);};
-  const handleMouseEnter=(day)=>{if(!dragRef.current||!activeId||(isWe(year,month,day)&&!w7))return;const{start,days:dragDays,adding}=dragRef.current;const lo=Math.min(start,day),hi=Math.max(start,day);const newDays=new Set();for(let d=lo;d<=hi;d++){if(!isWe(year,month,d)||w7)newDays.add(d);}const toProcess=[...newDays].filter(d=>!dragDays.has(d));toProcess.forEach(d=>{const key=dk(year,month,d);const hasDayAlready=(am&&am.days||[]).includes(key);if((adding&&!hasDayAlready)||(!adding&&hasDayAlready))onToggle(year,month,d);});dragRef.current.days=newDays;};
+  const[popDay,setPopDay]=useState(null);const handleMouseDown=(day)=>{if(!activeId||(isWe(year,month,day,am&&am.country)&&!w7))return;setPopDay(day);setTimeout(function(){setPopDay(null);},200);dragRef.current={start:day,days:new Set([day]),adding:!(am&&am.days||[]).includes(dk(year,month,day))};onToggle(year,month,day);};
+  const handleMouseEnter=(day)=>{if(!dragRef.current||!activeId||(isWe(year,month,day,am&&am.country)&&!w7))return;const{start,days:dragDays,adding}=dragRef.current;const lo=Math.min(start,day),hi=Math.max(start,day);const newDays=new Set();for(let d=lo;d<=hi;d++){if(!isWe(year,month,d)||w7)newDays.add(d);}const toProcess=[...newDays].filter(d=>!dragDays.has(d));toProcess.forEach(d=>{const key=dk(year,month,d);const hasDayAlready=(am&&am.days||[]).includes(key);if((adding&&!hasDayAlready)||(!adding&&hasDayAlready))onToggle(year,month,d);});dragRef.current.days=newDays;};
   const handleMouseUp=()=>{dragRef.current=null;};
 
   useEffect(()=>{const up=()=>{dragRef.current=null;};window.addEventListener("mouseup",up);return()=>window.removeEventListener("mouseup",up);},[]);
@@ -1950,7 +1953,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1}} onMouseLeave={handleMouseUp}>
         {cells.map((day,i)=>{
           if(!day) return <div key={`e${i}`}/>;
-          const we=isWe(year,month,day);const key=dk(year,month,day);
+          const we=isWe(year,month,day,am&&am.country);const key=dk(year,month,day);
           const mh=members.filter(m=>(m.days||[]).includes(key));const isA=(am&&am.days||[]).includes(key);const isUnapproved=approvalMode&&am&&!am.approved&&am.id!==(typeof team!=="undefined"?team.approver:null);
           const isTd=year===CY&&month===CM&&day===CD;
           const past=new Date(year,month,day)<new Date(CY,CM,CD);
