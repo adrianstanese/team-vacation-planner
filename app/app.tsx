@@ -549,7 +549,9 @@ const FM="'SF Mono','Fira Code',monospace";
 const MC=[{b:"#DBEAFE",t:"#1E40AF",d:"#3B82F6"},{b:"#FCE7F3",t:"#9D174D",d:"#EC4899"},{b:"#D1FAE5",t:"#065F46",d:"#10B981"},{b:"#FEF3C7",t:"#92400E",d:"#F59E0B"},{b:"#E0E7FF",t:"#3730A3",d:"#6366F1"},{b:"#FFE4E6",t:"#9F1239",d:"#F43F5E"},{b:"#CCFBF1",t:"#134E4A",d:"#14B8A6"},{b:"#FED7AA",t:"#9A3412",d:"#F97316"},{b:"#E9D5FF",t:"#6B21A8",d:"#A855F7"},{b:"#CFFAFE",t:"#155E75",d:"#06B6D4"},{b:"#FEE2E2",t:"#991B1B",d:"#EF4444"},{b:"#D9F99D",t:"#3F6212",d:"#84CC16"},{b:"#FBCFE8",t:"#831843",d:"#F472B6"},{b:"#BAE6FD",t:"#0C4A6E",d:"#0EA5E9"},{b:"#FDE68A",t:"#78350F",d:"#FBBF24"},{b:"#C7D2FE",t:"#3730A3",d:"#818CF8"},{b:"#A7F3D0",t:"#064E3B",d:"#34D399"},{b:"#FECACA",t:"#7F1D1D",d:"#F87171"},{b:"#DDD6FE",t:"#5B21B6",d:"#8B5CF6"},{b:"#99F6E4",t:"#115E59",d:"#2DD4BF"},{b:"#FDE047",t:"#713F12",d:"#EAB308"},{b:"#F0ABFC",t:"#701A75",d:"#D946EF"},{b:"#67E8F9",t:"#164E63",d:"#22D3EE"},{b:"#FDA4AF",t:"#881337",d:"#FB7185"},{b:"#86EFAC",t:"#14532D",d:"#4ADE80"}];
 
 // ─── Utilities ───────────────────────────────────────────────────
-const gid=()=>Math.random().toString(36).slice(2,8)+Date.now().toString(36);
+const gid=()=>{var a=new Uint8Array(16);crypto.getRandomValues(a);return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");};
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
 const dim=(y,m)=>new Date(y,m+1,0).getDate();
 const fdm=(y,m)=>{const d=new Date(y,m,1).getDay();return d===0?6:d-1;};
 const dk=(y,m,d)=>`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
@@ -627,7 +629,7 @@ function generatePDFReport(team, t) {
   var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
   var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
 
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+team.name+' - '+yr+'</title>';
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' - '+yr+'</title>';
   html += '<style>';
   html += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;margin:30px 40px;color:#1f2937;font-size:12px}';
   html += 'h1{font-size:22px;margin:0 0 2px;color:#1f2937}';
@@ -667,14 +669,14 @@ function generatePDFReport(team, t) {
   html += '</style></head><body>';
 
   // Header
-  html += '<div class="hdr"><h1>'+team.name+'</h1>';
+  html += '<div class="hdr"><h1>'+esc(team.name)+'</h1>';
   html += '<div class="sub">'+yr+' &middot; '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' &middot; Generated '+new Date().toLocaleDateString()+'</div></div>';
 
   // Legend
   html += '<div class="legend">';
   team.members.forEach(function(m,i){
     var c=MC[i%MC.length];
-    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+m.name+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
+    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
   });
   html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">Holiday</span></div>';
   html += '</div>';
@@ -703,7 +705,7 @@ function generatePDFReport(team, t) {
     // Member bars
     team.members.forEach(function(m,i){
       var c = MC[i%MC.length];
-      html += '<div class="tl-row"><div class="tl-name">'+m.name+'</div><div class="tl-bar">';
+      html += '<div class="tl-row"><div class="tl-name">'+esc(m.name)+'</div><div class="tl-bar">';
       for(var d=1;d<=daysInMonth;d++){
         var key = dk(yr,mo,d);
         var has = (m.days||[]).indexOf(key) >= 0; var isPending=false;
@@ -762,7 +764,7 @@ function generatePDFReport(team, t) {
       else ranges.push(start.slice(5)+' to '+end.slice(5));
       ri++;
     }
-    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+m.name+'</td>';
+    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+esc(m.name)+'</td>';
     html += '<td>'+(co?co.f+' '+co.n:'—')+'</td>';
     html += '<td style="text-align:center;font-weight:700">'+sorted.length+'</td>';
     html += '<td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
@@ -826,7 +828,7 @@ function generateApprovedPDF(team, t) {
     date: t.today || "Date"
   };
 
-  var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+team.name+' — '+L.title+' '+yr+'</title>';
+  var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' — '+L.title+' '+yr+'</title>';
   h += '<style>';
   h += '@page{size:A4 landscape;margin:10mm 12mm}';
   h += '*{box-sizing:border-box}';
@@ -879,7 +881,7 @@ function generateApprovedPDF(team, t) {
   // ── Header
   h += '<div class="hd"><div class="hd-l">';
   h += '<div class="hd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg></div>';
-  h += '<div><h1>'+team.name+'</h1><p class="hd-sub">'+L.title+' '+yr+' · '+ds+'</p></div>';
+  h += '<div><h1>'+esc(team.name)+'</h1><p class="hd-sub">'+L.title+' '+yr+' · '+ds+'</p></div>';
   h += '</div><span class="badge">'+L.badge+'</span></div>';
 
   // ── Stats
@@ -906,7 +908,7 @@ function generateApprovedPDF(team, t) {
     });
     if(rS)rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));
     var ps=m.pto?days.length+"/"+m.pto:"–";
-    h+='<tr><td><span class="dot" style="background:'+mc.d+'"></span><strong>'+m.name+'</strong></td>';
+    h+='<tr><td><span class="dot" style="background:'+mc.d+'"></span><strong>'+esc(m.name)+'</strong></td>';
     h+='<td>'+(co?co.f+" "+co.n:"–")+'</td>';
     h+='<td style="text-align:center;font-weight:700;color:'+mc.d+';font-size:11px">'+days.length+'</td>';
     h+='<td style="text-align:center;font-weight:600">'+ps+'</td>';
@@ -942,7 +944,7 @@ function generateApprovedPDF(team, t) {
   h+='<div class="lg">';
   am.forEach(function(m){
     var mc=MC[team.members.indexOf(m)%MC.length];
-    h+='<span class="lg-i"><span class="lg-b" style="background:'+mc.d+'"></span><strong>'+m.name+'</strong></span>';
+    h+='<span class="lg-i"><span class="lg-b" style="background:'+mc.d+'"></span><strong>'+esc(m.name)+'</strong></span>';
   });
   h+='<span style="color:#d1d5db">|</span>';
   h+='<span class="lg-i"><span class="lg-b" style="background:#f3f4f6;border:1px solid #d1d5db"></span>'+L.we+'</span>';
@@ -952,7 +954,7 @@ function generateApprovedPDF(team, t) {
 
   // ── Signatures
   h+='<div class="ft">';
-  h+='<div class="sig"><div class="sig-line"><div class="sig-n">'+aprName+'</div><div class="sig-r">'+L.approver+' · '+ds+'</div></div></div>';
+  h+='<div class="sig"><div class="sig-line"><div class="sig-n">'+esc(aprName)+'</div><div class="sig-r">'+L.approver+' · '+ds+'</div></div></div>';
   h+='<div style="width:40px"></div>';
   h+='<div class="sig"><div class="sig-line"><div class="sig-n">&nbsp;</div><div class="sig-r">'+L.ack+' · '+L.date+'</div></div></div>';
   h+='</div>';
@@ -980,7 +982,7 @@ function printReport(team, t) {
   var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
   var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
 
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+team.name+' - '+yr+'</title>';
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' - '+yr+'</title>';
   html += '<style>';
   html += '*{box-sizing:border-box;margin:0;padding:0}';
   html += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;margin:0;padding:24px 32px;color:#1f2937;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
@@ -1028,13 +1030,13 @@ function printReport(team, t) {
   html += '<div class="no-print" style="position:fixed;top:10px;right:10px;z-index:100"><button onclick="window.print()" style="padding:8px 20px;border-radius:8px;border:none;background:#7C3AED;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Print / Save as PDF</button></div>';
 
   // Header
-  html += '<div class="hdr"><div><h1>'+team.name+'</h1><div class="sub">'+yr+' &middot; '+team.members.length+' members &middot; Generated '+new Date().toLocaleDateString()+'</div></div><div style="font-size:9px;color:#9ca3af">vacationplanner.team</div></div>';
+  html += '<div class="hdr"><div><h1>'+esc(team.name)+'</h1><div class="sub">'+yr+' &middot; '+team.members.length+' members &middot; Generated '+new Date().toLocaleDateString()+'</div></div><div style="font-size:9px;color:#9ca3af">vacationplanner.team</div></div>';
 
   // Legend
   html += '<div class="legend">';
   team.members.forEach(function(m,i){
     var c=MC[i%MC.length];
-    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+m.name+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
+    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
   });
   html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">Holiday</span></div>';
   html += '</div>';
@@ -1060,7 +1062,7 @@ function printReport(team, t) {
     html += '</div>';
     team.members.forEach(function(m,i){
       var c=MC[i%MC.length];
-      html += '<div class="tl-row"><div class="tl-name">'+m.name+'</div><div class="tl-bar">';
+      html += '<div class="tl-row"><div class="tl-name">'+esc(m.name)+'</div><div class="tl-bar">';
       for(var d2=1;d2<=daysInMonth;d2++){
         var key=dk(yr,mo,d2);
         var has=(m.days||[]).indexOf(key)>=0;var isPnd=false;
@@ -1113,7 +1115,7 @@ function printReport(team, t) {
       while(ri+1<sorted.length){var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;if(diff<=3){ri++;end=sorted[ri];}else break;}
       if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
     }
-    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+m.name+'</td><td>'+(co?co.f+' '+co.n:'—')+'</td><td style="text-align:center;font-weight:700">'+sorted.length+'</td><td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
+    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+esc(m.name)+'</td><td>'+(co?co.f+' '+co.n:'—')+'</td><td style="text-align:center;font-weight:700">'+sorted.length+'</td><td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
   });
   html += '</table>';
 
