@@ -1944,11 +1944,12 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <CountrySelect value={m.country} onChange={onCountryChange} th={th} t={t}/>
   </div>;
 
-  return <div onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:isActive?c.b:h?th.sh:"transparent",borderRadius:8,cursor:"pointer",border:isActive?`1.5px solid ${c.d}40`:"1.5px solid transparent",boxShadow:isActive?th.gwAc:"none",transition:"all .15s"}}>
+  return <div onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{padding:"6px 10px",background:isActive?c.b:h?th.sh:"transparent",borderRadius:8,cursor:"pointer",border:isActive?`1.5px solid ${c.d}40`:"1.5px solid transparent",boxShadow:isActive?th.gwAc:"none",transition:"all .15s"}}>
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div>
-      <div style={{fontSize:11,color:th.t3}}>{co?co.f+" ":""}{m.region?<span style={{fontSize:9,color:th.ac,fontWeight:600}}>{(REGIONS[m.country]||[]).reduce(function(a,r){return r.id===m.region?r.n:a;},"")+" · "}</span>:""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}</div>
+      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}</div>
       {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>m.pto?"#EF4444":dc>m.pto*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/m.pto*100))+"%",transition:"width .3s"}}/></div>}
     </div>
     {(h||isActive)&&!locked&&<div style={{display:"flex",gap:1,flexShrink:0}}>
@@ -1957,21 +1958,23 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
       <button onClick={e=>{e.stopPropagation();onStartRename();}} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="edit" s={13} c={th.t3}/></button>
       <button onClick={e=>{e.stopPropagation();onDelete();}} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="trash" s={13} c={th.t3}/></button>
     </div>}
-    {isActive&&!isEditing&&<div style={{marginTop:6,paddingTop:6,borderTop:"1px solid "+th.gbd,display:"flex",flexDirection:"column",gap:4}}>
+    </div>
+    {isActive&&m.region&&<div style={{fontSize:9,color:th.ac,fontWeight:600,marginTop:2,paddingLeft:36}}>{(REGIONS[m.country]||[]).reduce(function(a,r){return r.id===m.region?r.n:a;},"")} region</div>}
+    {isActive&&!isEditing&&<div style={{marginTop:6,paddingTop:6,borderTop:"1px solid "+th.gbd,display:"flex",flexDirection:"column",gap:5}}>
       <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
-        <span style={{color:th.t3,fontWeight:600,minWidth:50}}>PTO</span>
-        <input type="number" min="0" max="60" placeholder="—" value={m.pto||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onPtoChange(parseInt(e.target.value)||null);}} style={{width:48,padding:"2px 6px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:FM,textAlign:"center"}}/>
-        <span style={{color:th.t3}}>{t.dys}</span>
+        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>PTO</span>
+        <input type="number" min="0" max="60" placeholder="—" value={m.pto||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onPtoChange(parseInt(e.target.value)||null);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:FM,textAlign:"center"}}/>
+        <span style={{color:th.t3,fontSize:10}}>{t.dys}</span>
         {m.pto&&<span style={{marginLeft:"auto",fontSize:10,color:dc>m.pto?"#EF4444":th.ac,fontWeight:700}}>{dc}/{m.pto}</span>}
       </div>
       {m.country&&REGIONS[m.country]&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
-        <span style={{color:th.t3,fontWeight:600,minWidth:50}}>Region</span>
-        <select value={m.region||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onRegionChange(e.target.value||null);}} style={{flex:1,padding:"2px 6px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:F}}>
-          <option value="">National</option>
+        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>Region</span>
+        <select value={m.region||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onRegionChange(e.target.value||null);}} style={{flex:1,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:10,fontFamily:F,minWidth:0}}>
+          <option value="">National only</option>
           {REGIONS[m.country].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
         </select>
       </div>}
-      {yr&&m.country&&<div style={{fontSize:10,color:th.t3,display:"flex",gap:8}}>
+      {yr&&m.country&&<div style={{fontSize:10,color:th.t3,display:"flex",justifyContent:"space-between"}}>
         <span>{workingDaysRemaining(m,yr)} work days left</span>
         <span>{getAllHolidays(m,yr).length} holidays</span>
       </div>}
