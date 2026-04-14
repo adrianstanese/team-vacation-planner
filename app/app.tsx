@@ -588,6 +588,16 @@ const db={
       try{var ls=localStorage.getItem(k);if(ls)return JSON.parse(ls);}catch(e){}
       return null;
     }catch(e){return null;}
+  },
+  async del(k,s=false){
+    try{
+      if(k.startsWith("team:")&&s){
+        var teamId=k.replace("team:","");
+        try{await fetch(API_BASE+"?id="+teamId,{method:"DELETE"});}catch(e){}
+      }
+      if(window.storage){try{await window.storage.delete(k,s);}catch(e){}}
+      if(!s){try{localStorage.removeItem(k);}catch(e){}}
+    }catch(e){}
   }
 };
 
@@ -3437,6 +3447,6 @@ export default function App(){
     }
     return <ErrorBoundary><WS team={team} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
   }
-  const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);};
+  const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);db.del("team:"+id,true);};
   return <ErrorBoundary><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
 }
