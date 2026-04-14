@@ -791,175 +791,179 @@ function generatePDFReport(team, t) {
 function generateApprovedPDF(team, t) {
   var yr = team.year || CY;
   var MO = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var moShort = MO.map(function(m){return m.slice(0,3);});
-  var approverMember = team.approver ? team.members.find(function(m){return m.id===team.approver;}) : null;
-  var approverName = approverMember ? approverMember.name : (t.approverLabel||"Approver");
-  var today = new Date();
-  var dateStr = today.getDate()+" "+MO[today.getMonth()]+" "+today.getFullYear();
+  var moS = MO.map(function(m){return m.slice(0,3);});
+  var DL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
+  var apr = team.approver ? team.members.find(function(m){return m.id===team.approver;}) : null;
+  var aprName = apr ? apr.name : (t.approverLabel||"Approver");
+  var now = new Date();
+  var ds = now.getDate()+" "+MO[now.getMonth()]+" "+now.getFullYear();
 
-  var approvedMembers = team.members.filter(function(m){
+  var am = team.members.filter(function(m){
     return m.approved===true && (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length > 0;
   });
-  var totalApproved = 0;
-  approvedMembers.forEach(function(m){ totalApproved += (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length; });
+  var tot = 0;
+  am.forEach(function(m){ tot += (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length; });
 
-  // Translated labels
-  var lbl = {
+  // Labels
+  var L = {
     title: t.approvalCert || "Approved Vacation Schedule",
-    subtitle: t.offToday ? (t.approvalCert||"Official record of approved time off") : "Official record of approved time off",
-    badge: t.approved || "Approved",
+    badge: "✓ " + (t.approved||"APPROVED"),
     members: t.mbs || "Members",
-    approvedDays: (t.approved||"Approved")+" "+(t.dys||"Days"),
-    avg: (t.avgDays || "Avg / Person"),
-    sectionTitle: (t.approved||"Approved")+" "+(t.dys||"Days"),
+    appDays: (t.approved||"Approved") + " " + (t.dys||"Days"),
+    avg: t.avgDays || "Avg/Person",
+    sect1: (t.approved||"Approved") + " " + (t.dys||"Days") + " — " + (t.summary||"Summary"),
     member: t.mb || "Member",
     country: t.co || "Country",
     days: t.dys || "Days",
-    periods: t.timeline || "Periods",
-    calTitle: (t.cal||"Calendar")+" — "+(t.approved||"Approved"),
-    weekend: t.we2 || t.sa || "Weekend",
-    holiday: t.holiday || t.hol || "Holiday",
-    certText: t.approvalCert || "Approval Certification",
-    approver: t.approverLabel || "Approver",
-    ackBy: t.mbs || "Team Member",
-    date: t.today || "Date",
-    generated: t.printBtn ? t.printBtn.split("/")[0].trim() : "Generated",
     pto: t.pto || "PTO",
-    confirm: ""
+    periods: t.timeline || "Periods",
+    sect2: t.cal || "Calendar",
+    we: t.sa || "Weekend",
+    hol: t.holiday || t.hol || "Holiday",
+    vacation: t.onVac || "Vacation",
+    approver: t.approverLabel || "Approver",
+    ack: t.mb || "Team Member",
+    date: t.today || "Date"
   };
 
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+team.name+' '+yr+'</title>';
-  html += '<style>';
-  html += '@page{size:A4;margin:12mm 14mm}';
-  html += 'body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;margin:0;padding:0;color:#1a1a2e;font-size:9px;line-height:1.4}';
-  html += '.hdr{text-align:center;border-bottom:2.5px solid #4f46e5;padding-bottom:10px;margin-bottom:10px}';
-  html += 'h1{font-size:17px;margin:0;color:#1a1a2e;font-weight:800;letter-spacing:-.3px}';
-  html += '.sub{font-size:10px;color:#6b7280;margin:2px 0 0}';
-  html += '.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;background:#dcfce7;color:#166534;border:1px solid #86efac;margin-top:6px}';
-  html += '.stats{display:flex;justify-content:center;gap:24px;margin:10px 0;padding:8px 0;background:#f5f3ff;border-radius:6px}';
-  html += '.stat-n{font-size:16px;font-weight:800;color:#4f46e5;text-align:center}';
-  html += '.stat-l{font-size:7px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;text-align:center;font-weight:600}';
-  html += 'table{width:100%;border-collapse:collapse;margin-bottom:8px}';
-  html += 'th{background:#f5f3ff;color:#312e81;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 6px;text-align:left;border-bottom:1.5px solid #c7d2fe}';
-  html += 'td{padding:4px 6px;border-bottom:1px solid #f3f4f6;font-size:9px;vertical-align:middle}';
-  html += 'tr:nth-child(even){background:#faf9ff}';
-  html += '.chip{display:inline-block;padding:2px 7px;border-radius:4px;font-size:7.5px;font-weight:700;margin:1px 2px;white-space:nowrap}';
-  html += '.sect{font-size:10px;font-weight:700;color:#312e81;border-bottom:1px solid #e5e7eb;padding-bottom:3px;margin:10px 0 6px}';
-  html += '.cal{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}';
-  html += '.cmo{border:1px solid #e5e7eb;border-radius:5px;padding:4px}';
-  html += '.cmt{font-size:8px;font-weight:700;text-align:center;color:#312e81;margin-bottom:2px}';
-  html += '.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:0}';
-  html += '.cl{text-align:center;font-size:6px;color:#9ca3af;font-weight:700}';
-  html += '.cd{text-align:center;font-size:7px;padding:2px 0;border-radius:0;color:#374151}';
-  html += '.cw{color:#c9c9c9;background:#f5f5f5}';
-  html += '.ch{background:#fef2f2;color:#dc2626;font-weight:700}';
-  html += '.cv{color:#fff;font-weight:800;border-radius:2px;background:#dc2626;outline:1.5px solid #b91c1c}';
-  html += '.cv2{color:#fff;font-weight:800;border-radius:2px;outline:1.5px solid rgba(0,0,0,.2)}';
-  html += '.ft{border-top:1.5px solid #4f46e5;padding-top:8px;margin-top:10px}';
-  html += '.sg{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:8px}';
-  html += '.sb{border-top:1px solid #1a1a2e;padding-top:4px;margin-top:30px}';
-  html += '.sn{font-size:10px;font-weight:700;color:#1a1a2e}';
-  html += '.sr{font-size:8px;color:#6b7280}';
-  html += '.sl{font-size:7px;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-top:2px}';
-  html += '.wm{text-align:center;margin-top:8px;font-size:7px;color:#d1d5db;letter-spacing:.5px}';
-  html += '</style></head><body>';
-
+  var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+team.name+' — '+L.title+' '+yr+'</title>';
+  h += '<style>';
+  h += '@page{size:A4 landscape;margin:10mm 12mm}';
+  h += '*{box-sizing:border-box}';
+  h += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0;padding:0;color:#111827;font-size:8.5px;line-height:1.3;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
   // Header
-  html += '<div class="hdr">';
-  html += '<h1>'+team.name+' — '+lbl.title+' '+yr+'</h1>';
-  html += '<p class="sub">'+dateStr+'</p>';
-  html += '<span class="badge">✓ '+lbl.badge+'</span>';
-  html += '</div>';
-
+  h += '.hd{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #4f46e5;padding-bottom:8px;margin-bottom:8px}';
+  h += '.hd-l{display:flex;align-items:center;gap:10px}';
+  h += '.hd-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center}';
+  h += '.hd-icon svg{width:16px;height:16px}';
+  h += '.hd h1{font-size:14px;margin:0;font-weight:800;letter-spacing:-.3px}';
+  h += '.hd-sub{font-size:8px;color:#6b7280;margin:1px 0 0}';
+  h += '.badge{padding:3px 10px;border-radius:10px;font-size:7px;font-weight:800;letter-spacing:.6px;background:#dcfce7;color:#166534;border:1px solid #86efac;text-transform:uppercase}';
   // Stats
-  html += '<div class="stats">';
-  html += '<div><div class="stat-n">'+approvedMembers.length+'</div><div class="stat-l">'+lbl.members+'</div></div>';
-  html += '<div><div class="stat-n">'+totalApproved+'</div><div class="stat-l">'+lbl.approvedDays+'</div></div>';
-  html += '<div><div class="stat-n">'+Math.round(totalApproved/(approvedMembers.length||1))+'</div><div class="stat-l">'+lbl.avg+'</div></div>';
-  html += '</div>';
-
+  h += '.st{display:flex;gap:12px;margin:6px 0 8px}';
+  h += '.st-c{flex:1;text-align:center;padding:6px 0;background:#f5f3ff;border-radius:6px;border:1px solid #e0e7ff}';
+  h += '.st-n{font-size:18px;font-weight:800;color:#4f46e5}';
+  h += '.st-l{font-size:6.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;font-weight:700}';
   // Table
-  html += '<div class="sect">'+lbl.sectionTitle+'</div>';
-  html += '<table><tr><th>'+lbl.member+'</th><th>'+lbl.country+'</th><th style="text-align:center">'+lbl.days+'</th><th style="text-align:center">'+lbl.pto+'</th><th>'+lbl.periods+'</th></tr>';
-  approvedMembers.forEach(function(m,i) {
+  h += '.s{font-size:9px;font-weight:700;color:#312e81;margin:8px 0 4px;padding-bottom:2px;border-bottom:1.5px solid #c7d2fe}';
+  h += 'table{width:100%;border-collapse:collapse}';
+  h += 'th{background:#f5f3ff;color:#312e81;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:4px 5px;text-align:left;border-bottom:1.5px solid #c7d2fe}';
+  h += 'td{padding:3px 5px;border-bottom:1px solid #f3f4f6;font-size:8px}';
+  h += 'tr:nth-child(even){background:#faf9ff}';
+  h += '.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}';
+  h += '.ch{display:inline-block;padding:1px 6px;border-radius:3px;font-size:7px;font-weight:700;margin:0 1px;white-space:nowrap}';
+  // Calendar
+  h += '.cg{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:4px 0 6px}';
+  h += '.cm{border:1px solid #e5e7eb;border-radius:4px;padding:3px}';
+  h += '.ct{font-size:7.5px;font-weight:700;text-align:center;color:#312e81;margin-bottom:2px}';
+  h += '.cd-g{display:grid;grid-template-columns:repeat(7,1fr);gap:0}';
+  h += '.dl{text-align:center;font-size:5.5px;color:#9ca3af;font-weight:700}';
+  h += '.d{text-align:center;font-size:6.5px;padding:1.5px 0;color:#6b7280}';
+  h += '.d-we{background:#f3f4f6;color:#c9c9c9}';
+  h += '.d-h{background:#fef2f2;color:#ef4444;font-weight:700}';
+  h += '.d-v{background:#ef4444;color:#fff;font-weight:800;border-radius:2px}';
+  h += '.d-v2{color:#fff;font-weight:800;border-radius:2px}';
+  // Legend
+  h += '.lg{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0;padding:3px 6px;background:#f9fafb;border-radius:3px;border:1px solid #e5e7eb;font-size:7px}';
+  h += '.lg-i{display:flex;align-items:center;gap:2px}';
+  h += '.lg-b{width:8px;height:8px;border-radius:2px;display:inline-block}';
+  // Footer
+  h += '.ft{display:flex;justify-content:space-between;align-items:flex-end;border-top:1.5px solid #4f46e5;padding-top:6px;margin-top:6px}';
+  h += '.sig{flex:1}';
+  h += '.sig-line{border-top:1px solid #374151;margin-top:20px;padding-top:3px}';
+  h += '.sig-n{font-size:9px;font-weight:700;color:#111827}';
+  h += '.sig-r{font-size:7px;color:#6b7280}';
+  h += '.wm{font-size:6px;color:#d1d5db;text-align:center;margin-top:4px;letter-spacing:.3px}';
+  h += '</style></head><body>';
+
+  // ── Header
+  h += '<div class="hd"><div class="hd-l">';
+  h += '<div class="hd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg></div>';
+  h += '<div><h1>'+team.name+'</h1><p class="hd-sub">'+L.title+' '+yr+' · '+ds+'</p></div>';
+  h += '</div><span class="badge">'+L.badge+'</span></div>';
+
+  // ── Stats
+  h += '<div class="st">';
+  h += '<div class="st-c"><div class="st-n">'+am.length+'</div><div class="st-l">'+L.members+'</div></div>';
+  h += '<div class="st-c"><div class="st-n">'+tot+'</div><div class="st-l">'+L.appDays+'</div></div>';
+  h += '<div class="st-c"><div class="st-n">'+Math.round(tot/(am.length||1))+'</div><div class="st-l">'+L.avg+'</div></div>';
+  h += '</div>';
+
+  // ── Table
+  h += '<div class="s">'+L.sect1+'</div>';
+  h += '<table><tr><th>'+L.member+'</th><th>'+L.country+'</th><th style="text-align:center;width:40px">'+L.days+'</th><th style="text-align:center;width:50px">'+L.pto+'</th><th>'+L.periods+'</th></tr>';
+  am.forEach(function(m) {
     var days = (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).sort();
     var co = EU_C.find(function(x){return x.c===m.country;});
     var mc = MC[team.members.indexOf(m)%MC.length];
-    var ranges = []; var rStart = null; var rPrev = null;
+    // Periods
+    var rng=[],rS=null,rP=null;
     days.forEach(function(d){
-      var p = d.split("-"); var dt = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
-      if(!rPrev){ rStart=d; rPrev=dt; return; }
-      var diff = (dt - rPrev) / 86400000;
-      if(diff <= 3) { rPrev=dt; }
-      else { ranges.push(rStart===_fD2(rPrev,moShort)?_fD(rStart,moShort):_fD(rStart,moShort)+" – "+_fD2(rPrev,moShort)); rStart=d; rPrev=dt; }
+      var p=d.split("-");var dt=new Date(+p[0],+p[1]-1,+p[2]);
+      if(!rP){rS=d;rP=dt;return;}
+      if((dt-rP)/864e5<=3){rP=dt;}
+      else{rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));rS=d;rP=dt;}
     });
-    if(rStart) ranges.push(rStart===_fD2(rPrev,moShort)?_fD(rStart,moShort):_fD(rStart,moShort)+" – "+_fD2(rPrev,moShort));
-    var ptoStr = m.pto ? days.length+"/"+m.pto : "–";
-    html += '<tr>';
-    html += '<td><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+mc.d+';margin-right:4px;vertical-align:middle"></span><strong>'+m.name+'</strong></td>';
-    html += '<td>'+(co?co.f+" "+co.n:"–")+'</td>';
-    html += '<td style="text-align:center;font-weight:700;color:'+mc.d+'">'+days.length+'</td>';
-    html += '<td style="text-align:center">'+ptoStr+'</td>';
-    html += '<td>'+ranges.map(function(r){return '<span class="chip" style="color:'+mc.d+';background:'+mc.d+'12;border:1px solid '+mc.d+'30">'+r+'</span>';}).join("")+'</td>';
-    html += '</tr>';
+    if(rS)rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));
+    var ps=m.pto?days.length+"/"+m.pto:"–";
+    h+='<tr><td><span class="dot" style="background:'+mc.d+'"></span><strong>'+m.name+'</strong></td>';
+    h+='<td>'+(co?co.f+" "+co.n:"–")+'</td>';
+    h+='<td style="text-align:center;font-weight:700;color:'+mc.d+';font-size:11px">'+days.length+'</td>';
+    h+='<td style="text-align:center;font-weight:600">'+ps+'</td>';
+    h+='<td>'+rng.map(function(r){return '<span class="ch" style="color:'+mc.d+';background:'+mc.d+'10;border:1px solid '+mc.d+'30">'+r+'</span>';}).join("")+'</td></tr>';
   });
-  html += '</table>';
+  h+='</table>';
 
-  // Calendar
-  var dayLabels = [t.mo||"M",t.tu||"T",t.we2||"W",t.th||"T",t.fr||"F",t.sa||"S",t.su||"S"];
-  html += '<div class="sect">'+lbl.calTitle+'</div>';
-  html += '<div class="cal">';
-  var holSet2 = {};
-  approvedMembers.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){holSet2[h]=true;}); });
+  // ── Calendar (6 per row for landscape)
+  h+='<div class="s">'+L.sect2+' '+yr+'</div>';
+  h+='<div class="cg">';
+  var hs={};
+  am.forEach(function(m){if(m.country)getAllHolidays(m,yr).forEach(function(x){hs[x]=true;});});
   for(var mo=0;mo<12;mo++){
-    html += '<div class="cmo"><div class="cmt">'+MO[mo]+'</div><div class="cg">';
-    for(var dl=0;dl<7;dl++) html += '<div class="cl">'+dayLabels[dl]+'</div>';
-    var fd = fdm(yr,mo); var dm = dim(yr,mo);
-    for(var bl=0;bl<fd;bl++) html += '<div></div>';
-    for(var d=1;d<=dm;d++){
-      var key=dk(yr,mo,d); var dow2=(fd+d-1)%7; var isWe3=dow2>=5; var isHol2=!!holSet2[key];
-      var who2=[];
-      approvedMembers.forEach(function(m){if((m.days||[]).indexOf(key)>=0)who2.push(team.members.indexOf(m));});
-      var cls2="cd"; var sty2="";
-      if(isWe3) cls2+=" cw";
-      if(isHol2 && who2.length===0) cls2+=" ch";
-      if(who2.length===1){cls2+=" cv";sty2="background:"+MC[who2[0]%MC.length].d+";outline-color:"+MC[who2[0]%MC.length].d;}
-      else if(who2.length>=2){cls2+=" cv";sty2="background:#dc2626;outline-color:#991b1b";}
-      html += '<div class="'+cls2+'"'+(sty2?' style="'+sty2+'"':'')+'>'+d+(who2.length>1?'<span style="display:block;font-size:5px;line-height:1;margin-top:-1px;font-weight:900">'+who2.length+'</span>':'')+'</div>';
+    h+='<div class="cm"><div class="ct">'+MO[mo]+'</div><div class="cd-g">';
+    for(var dl=0;dl<7;dl++)h+='<div class="dl">'+DL[dl]+'</div>';
+    var fd=fdm(yr,mo),dm2=dim(yr,mo);
+    for(var bl=0;bl<fd;bl++)h+='<div></div>';
+    for(var d=1;d<=dm2;d++){
+      var k=dk(yr,mo,d),dw=(fd+d-1)%7,we=dw>=5,ih=!!hs[k];
+      var w=[];am.forEach(function(m){if((m.days||[]).indexOf(k)>=0)w.push(team.members.indexOf(m));});
+      var cl="d",st="";
+      if(we)cl+=" d-we";
+      if(ih&&w.length===0)cl+=" d-h";
+      if(w.length===1){cl+=" d-v";st="background:"+MC[w[0]%MC.length].d;}
+      else if(w.length>=2){cl+=" d-v";st="background:#dc2626";}
+      h+='<div class="'+cl+'"'+(st?' style="'+st+'"':'')+'>'+d+'</div>';
     }
-    html += '</div></div>';
+    h+='</div></div>';
   }
-  html += '</div>';
+  h+='</div>';
 
-  // Legend
-  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;padding:4px 8px;background:#f9fafb;border-radius:4px;border:1px solid #e5e7eb">';
-  approvedMembers.forEach(function(m){
-    var mc = MC[team.members.indexOf(m)%MC.length];
-    html += '<span style="display:flex;align-items:center;gap:3px;font-size:8px;font-weight:600"><span style="width:10px;height:10px;border-radius:2px;background:'+mc.d+';display:inline-block;outline:1px solid rgba(0,0,0,.1)"></span>'+m.name+'</span>';
+  // ── Legend
+  h+='<div class="lg">';
+  am.forEach(function(m){
+    var mc=MC[team.members.indexOf(m)%MC.length];
+    h+='<span class="lg-i"><span class="lg-b" style="background:'+mc.d+'"></span><strong>'+m.name+'</strong></span>';
   });
-  html += '<span style="display:flex;align-items:center;gap:3px;font-size:8px;color:#9ca3af">|</span>';
-  html += '<span style="display:flex;align-items:center;gap:3px;font-size:7px;color:#6b7280"><span style="width:10px;height:10px;border-radius:2px;background:#f5f5f5;border:1px solid #e5e7eb;display:inline-block"></span>'+lbl.weekend+'</span>';
-  html += '<span style="display:flex;align-items:center;gap:3px;font-size:7px;color:#6b7280"><span style="width:10px;height:10px;border-radius:2px;background:#fef2f2;border:1px solid #fecaca;display:inline-block"></span>'+lbl.holiday+'</span>';
-  html += '</div>';
+  h+='<span style="color:#d1d5db">|</span>';
+  h+='<span class="lg-i"><span class="lg-b" style="background:#f3f4f6;border:1px solid #d1d5db"></span>'+L.we+'</span>';
+  h+='<span class="lg-i"><span class="lg-b" style="background:#fef2f2;border:1px solid #fecaca"></span>'+L.hol+'</span>';
+  h+='<span class="lg-i"><span class="lg-b" style="background:#ef4444"></span>'+L.vacation+'</span>';
+  h+='</div>';
 
-  // Footer
-  html += '<div class="ft">';
-  html += '<div class="sg">';
-  html += '<div><div class="sb"><div class="sn">'+approverName+'</div><div class="sr">'+lbl.approver+'</div><div class="sl">'+lbl.date+': '+dateStr+'</div></div></div>';
-  html += '<div><div class="sb"><div class="sn">&nbsp;</div><div class="sr">'+lbl.ackBy+'</div><div class="sl">'+lbl.date+': _______________</div></div></div>';
-  html += '</div></div>';
-  html += '<div class="wm">Team Vacation Planner · vacationplanner.team · '+dateStr+'</div>';
-  html += '</body></html>';
+  // ── Signatures
+  h+='<div class="ft">';
+  h+='<div class="sig"><div class="sig-line"><div class="sig-n">'+aprName+'</div><div class="sig-r">'+L.approver+' · '+ds+'</div></div></div>';
+  h+='<div style="width:40px"></div>';
+  h+='<div class="sig"><div class="sig-line"><div class="sig-n">&nbsp;</div><div class="sig-r">'+L.ack+' · '+L.date+'</div></div></div>';
+  h+='</div>';
+  h+='<div class="wm">vacationplanner.team · '+ds+'</div>';
+  h+='</body></html>';
 
-  var w = window.open("", "_blank");
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(function(){w.print();}, 500);
+  var w2=window.open("","_blank");w2.document.write(h);w2.document.close();w2.focus();setTimeout(function(){w2.print();},500);
 }
 
-function _fD(d, mo) { var p = d.split("-"); return parseInt(p[2])+" "+mo[parseInt(p[1])-1]; }
-function _fD2(dt, mo) { return dt.getDate()+" "+mo[dt.getMonth()]; }
+function _fd(d,mo){var p=d.split("-");return parseInt(p[2])+" "+mo[parseInt(p[1])-1];}
+function _fd2(dt,mo){return dt.getDate()+" "+mo[dt.getMonth()];}
 
 
 // ─── Print Report (opens formatted view in new window with print dialog) ──
