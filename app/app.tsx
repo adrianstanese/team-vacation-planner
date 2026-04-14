@@ -1593,8 +1593,8 @@ function VisitCounter({ th }) {
 function TeamStats({ th, t }) {
   const [stats, setStats] = useState(null);
   useEffect(() => {
-    fetch("/api/stats").then(function(r){return r.json();}).then(function(data){
-      if(data && (data.teams > 0 || data.members > 0)) setStats(data);
+    fetch("/api/stats",{cache:"no-store"}).then(function(r){return r.json();}).then(function(data){
+      if(data && typeof data.teams==="number") setStats(data);
     }).catch(function(){});
   }, []);
 

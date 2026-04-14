@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 
 const sql = neon(process.env.DATABASE_URL!);
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const rows = await sql`
@@ -16,8 +18,6 @@ export async function GET() {
     return NextResponse.json({
       teams: rows[0]?.teams || 0,
       members: rows[0]?.members || 0,
-    }, {
-      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
     });
   } catch (error) {
     console.error("Stats error:", error);
