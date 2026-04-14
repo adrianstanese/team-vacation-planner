@@ -2806,11 +2806,11 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>downloadTeamICS(team)}>Team .ics</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportCSV(team)}>CSV</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportXLSX(team)}>Excel</Btn>
-      {team.members.some(function(m){return (m.days||[]).length>0;})&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>Approved PDF</Btn>}
+      {approvalMode&&team.members.some(function(m){return m.approved===true&&(m.days||[]).length>0;})&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>{t.approvedPdf}</Btn>}
       <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>Import</Btn>
       <div style={{width:1,height:20,background:th.bd}}/>
       <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}>
-        <span style={{fontWeight:600}}>Alert</span>
+        <span style={{fontWeight:600}}>{t.alertLabel}</span>
         <select value={threshold} onChange={function(e){var v=parseInt(e.target.value);setThreshold(v);updateWithHistory({...team,threshold:v});}} style={{padding:"2px 6px",border:"1px solid "+th.bd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:FM}}>
           <option value={2}>2+</option><option value={3}>3+</option><option value={4}>4+</option><option value={5}>5+</option>
         </select>
