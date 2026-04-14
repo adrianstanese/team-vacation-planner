@@ -2356,92 +2356,51 @@ function ShareModal({teamId,teamName,onClose,th,t}){
 // ─── About Page ──────────────────────────────────────────────────
 
 function GlobeView({th,members}) {
-  const ref = useRef(null);
-  const initRef = useRef(false);
-  useEffect(() => {
-    if(!ref.current || initRef.current || !window.THREE) return;
-    initRef.current = true;
-    var T = window.THREE;
-    var w = ref.current.offsetWidth, h = 280;
-    var scene = new T.Scene();
-    var camera = new T.PerspectiveCamera(45, w/h, 0.1, 1000);
-    camera.position.z = 2.8;
-    var renderer = new T.WebGLRenderer({antialias:true,alpha:true});
-    renderer.setSize(w, h);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    ref.current.appendChild(renderer.domElement);
+  // Flat interactive world map with country dots
+  var CC={RO:[45.9,24.9],BG:[42.7,25.5],DE:[51.2,10.4],FR:[46.2,2.2],ES:[40.5,-3.7],IT:[41.9,12.5],GB:[55.4,-3.4],PT:[39.4,-8.2],HU:[47.2,19.0],NL:[52.1,5.3],SE:[60.1,18.6],AT:[47.5,13.3],CH:[46.8,8.2],PL:[51.9,19.1],CZ:[49.8,15.5],GR:[39.1,21.8],HR:[45.1,15.2],IE:[53.4,-8.2],DK:[56.3,9.5],FI:[61.9,25.7],NO:[60.5,8.5],BE:[50.5,4.5],SK:[48.7,19.7],SI:[46.2,14.9],EE:[58.6,25.0],LV:[56.9,24.1],LT:[55.2,23.9],LU:[49.8,6.1],RS:[44.0,21.0],BA:[43.9,17.7],MK:[41.5,21.7],ME:[42.7,19.4],AL:[41.2,20.2],UA:[48.4,31.2],MD:[47.4,28.8],US:[37.1,-95.7],CA:[56.1,-106.3],AU:[-25.3,133.8],AE:[23.4,53.8],SA:[23.9,45.1],BH:[26.0,50.6],CL:[-35.7,-71.5],BR:[-14.2,-51.9],MA:[31.8,-7.1],KZ:[48.0,68.0],TR:[38.9,35.2],BY:[53.7,27.9],NZ:[-40.9,174.9]};
+  var used={};
+  (members||[]).forEach(function(m){if(m.country)used[m.country]=(used[m.country]||0)+1;});
+  var entries=Object.entries(used);
+  if(entries.length===0)return null;
+  var maxCnt=Math.max.apply(null,entries.map(function(e){return e[1];}));
 
-    // Globe group — everything rotates together
-    var globe = new T.Group();
-    scene.add(globe);
+  // Mercator projection: lat/lng -> x/y (0-700, 0-380)
+  function proj(lat,lng){
+    var x=((lng+180)/360)*700;
+    var latR=lat*Math.PI/180;
+    var y=(0.5-Math.log(Math.tan(Math.PI/4+latR/2))/(2*Math.PI))*380;
+    return [x,y];
+  }
 
-    var isDark = th.bg === "#0B0F1A" || th.bg === "#0e1117";
+  var [hov,setHov]=useState(null);
 
-    // Solid sphere
-    var sphereMat = new T.MeshPhongMaterial({
-      color: isDark ? 0x1e1e3f : 0xeeedf5,
-      emissive: isDark ? 0x0f0f2a : 0xf8f7ff,
-      shininess: 20, transparent: true, opacity: 0.9
-    });
-    globe.add(new T.Mesh(new T.SphereGeometry(1, 64, 64), sphereMat));
+  return <div style={{position:"relative",width:"100%",borderRadius:12,overflow:"hidden",background:th.bg==="0B0F1A"||th.bg==="#0e1117"?"rgba(30,30,60,.4)":"rgba(139,92,246,.04)",border:"1px solid "+th.gbd,padding:"12px 0"}}>
+    <svg viewBox="0 0 700 380" style={{width:"100%",height:"auto",display:"block"}}>
+      {/* Grid lines */}
+      {[-60,-30,0,30,60].map(function(lat){var pts=[];for(var lng=-180;lng<=180;lng+=5){var p=proj(lat,lng);pts.push(p[0]+","+p[1]);}return <polyline key={"lat"+lat} points={pts.join(" ")} fill="none" stroke={th.gbd} strokeWidth="0.5" opacity="0.4"/>;})}
+      {[-150,-120,-90,-60,-30,0,30,60,90,120,150].map(function(lng){var pts=[];for(var lat=-70;lat<=80;lat+=5){var p=proj(lat,lng);pts.push(p[0]+","+p[1]);}return <polyline key={"lng"+lng} points={pts.join(" ")} fill="none" stroke={th.gbd} strokeWidth="0.5" opacity="0.4"/>;})}
 
-    // Wireframe overlay — latitude/longitude lines
-    var wfMat = new T.MeshBasicMaterial({color: isDark ? 0x6366f1 : 0x8B5CF6, wireframe: true, transparent: true, opacity: 0.08});
-    globe.add(new T.Mesh(new T.SphereGeometry(1.003, 24, 24), wfMat));
-
-    // Lighting
-    var dl = new T.DirectionalLight(0xffffff, 0.9); dl.position.set(5, 3, 5); scene.add(dl);
-    scene.add(new T.AmbientLight(isDark ? 0x303050 : 0x606060, 0.6));
-
-    // Country dot positions
-    var CC = {RO:[45.9,24.9],BG:[42.7,25.5],DE:[51.2,10.4],FR:[46.2,2.2],ES:[40.5,-3.7],IT:[41.9,12.5],GB:[55.4,-3.4],PT:[39.4,-8.2],HU:[47.2,19.0],NL:[52.1,5.3],SE:[60.1,18.6],AT:[47.5,13.3],CH:[46.8,8.2],PL:[51.9,19.1],CZ:[49.8,15.5],GR:[39.1,21.8],HR:[45.1,15.2],IE:[53.4,-8.2],DK:[56.3,9.5],FI:[61.9,25.7],NO:[60.5,8.5],BE:[50.5,4.5],SK:[48.7,19.7],SI:[46.2,14.9],EE:[58.6,25.0],LV:[56.9,24.1],LT:[55.2,23.9],LU:[49.8,6.1],RS:[44.0,21.0],BA:[43.9,17.7],MK:[41.5,21.7],ME:[42.7,19.4],AL:[41.2,20.2],UA:[48.4,31.2],MD:[47.4,28.8],US:[37.1,-95.7],CA:[56.1,-106.3],AU:[-25.3,133.8],AE:[23.4,53.8],SA:[23.9,45.1],BH:[26.0,50.6],CL:[-35.7,-71.5],BR:[-14.2,-51.9],MA:[31.8,-7.1],KZ:[48.0,68.0],TR:[38.9,35.2],BY:[53.7,27.9],NZ:[-40.9,174.9]};
-
-    // Count members per country
-    var used = {};
-    (members||[]).forEach(function(m){if(m.country)used[m.country]=(used[m.country]||0)+1;});
-
-    // Place dots ON the globe group so they rotate with it
-    Object.entries(used).forEach(function([cc,cnt]){
-      var ll = CC[cc]; if(!ll) return;
-      var lat = ll[0] * Math.PI / 180;
-      var lng = -ll[1] * Math.PI / 180; // negate for correct orientation
-      var R = 1.02; // slightly above surface
-      var x = R * Math.cos(lat) * Math.cos(lng);
-      var y = R * Math.sin(lat);
-      var z = R * Math.cos(lat) * Math.sin(lng);
-      var size = 0.02 + Math.min(cnt, 10) * 0.008;
-      var dotMat = new T.MeshBasicMaterial({color: 0x8B5CF6});
-      var dot = new T.Mesh(new T.SphereGeometry(size, 12, 12), dotMat);
-      dot.position.set(x, y, z);
-      globe.add(dot); // child of globe = rotates with it
-
-      // Glow ring
-      var ringGeo = new T.RingGeometry(size * 1.4, size * 2, 16);
-      var ringMat = new T.MeshBasicMaterial({color: 0x8B5CF6, transparent: true, opacity: 0.25, side: T.DoubleSide});
-      var ring = new T.Mesh(ringGeo, ringMat);
-      ring.position.set(x, y, z);
-      ring.lookAt(0, 0, 0);
-      globe.add(ring);
-    });
-
-    // Slow rotation animation
-    var raf;
-    var animate = function() {
-      raf = requestAnimationFrame(animate);
-      globe.rotation.y += 0.001; // very slow
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    return function() {
-      cancelAnimationFrame(raf);
-      renderer.dispose();
-      if(ref.current && renderer.domElement.parentNode === ref.current) {
-        ref.current.removeChild(renderer.domElement);
-      }
-    };
-  }, []);
-  return <div ref={ref} style={{width:"100%",height:280,borderRadius:16,overflow:"hidden"}}/>;
+      {/* Country dots */}
+      {entries.map(function([cc,cnt]){
+        var ll=CC[cc];if(!ll)return null;
+        var p=proj(ll[0],ll[1]);
+        var r=4+Math.min(cnt,10)*2.5;
+        var co=EU_C.find(function(x){return x.c===cc;});
+        var label=co?(co.f+" "+co.n):cc;
+        return <g key={cc} onMouseEnter={function(){setHov(cc);}} onMouseLeave={function(){setHov(null);}} style={{cursor:"pointer"}}>
+          <circle cx={p[0]} cy={p[1]} r={r+4} fill="#8B5CF6" opacity="0.12">
+            <animate attributeName="r" values={(r+4)+","+(r+8)+","+(r+4)} dur="3s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx={p[0]} cy={p[1]} r={r} fill="#8B5CF6" stroke="#fff" strokeWidth="1.5"/>
+          <text x={p[0]} y={p[1]+1} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize={cnt>9?"9":"8"} fontWeight="700" fontFamily="system-ui">{cnt>1?cnt:""}</text>
+          {hov===cc&&<g>
+            <rect x={p[0]-45} y={p[1]-r-26} width="90" height="20" rx="6" fill={th.tx} opacity="0.9"/>
+            <text x={p[0]} y={p[1]-r-14} textAnchor="middle" fill={th.bg} fontSize="9" fontWeight="600" fontFamily="system-ui">{label} ({cnt})</text>
+          </g>}
+        </g>;
+      })}
+    </svg>
+  </div>;
 }
 
 function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
@@ -2469,7 +2428,7 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
         <div style={{width:56,height:56,borderRadius:16,background:th.gd,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:`0 8px 40px ${th.ac}50, inset 0 1px 0 rgba(255,255,255,0.3)`}}><Ic n="sun" s={26} c="#fff"/></div>
         <h1 style={{margin:"0 0 8px",fontSize:28,fontWeight:800,color:th.tx,letterSpacing:-.6}}>{t.brand}</h1>
         <p style={{margin:0,fontSize:15,color:th.t2,lineHeight:1.6}}>{a.hero}</p>
-        {typeof window!=="undefined"&&window.THREE&&<GlobeView th={th} members={EU_C.map(function(x){return {country:x.c};})}/>}
+        <GlobeView th={th} members={EU_C.map(function(x){return {country:x.c};})}/>
       </div>
       <Section icon="arrow" title={a.howTitle}>
         <div style={{marginBottom:8}}><strong style={{color:th.tx}}>1. {a.s1}</strong> — {a.s1d}</div>
@@ -3036,7 +2995,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
       })}
     </div>
   
-    {typeof window!=="undefined"&&window.THREE&&<div style={{marginTop:16,borderRadius:12,overflow:"hidden",border:"1px solid "+th.gbd,background:th.gbg}}><GlobeView th={th} members={team.members}/></div>}
+    <GlobeView th={th} members={team.members}/>
     <TeamWorldMap team={team} th={th} t={t}/>
   </div>;
 }
@@ -3422,7 +3381,7 @@ function CookieNotice({th, t}) {
 
 // ─── App ─────────────────────────────────────────────────────────
 export default function App(){
-  useEffect(()=>{if(!window.THREE){var s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js";document.head.appendChild(s);}},[]);
+
   const[screen,setScreen]=useState("home");const[team,setTeam]=useState(null);const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState("en");const[theme,setTheme]=useState("light");
   const th=TH[theme];const t=TX[lang];
 
