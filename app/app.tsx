@@ -2838,6 +2838,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
         <div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 7px",background:th.al,borderRadius:16,cursor:"pointer",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} onClick={()=>{try{navigator.clipboard.writeText(team.id)}catch(e){};flash(t.cp);}}><Ic n="copy" s={10} c={th.ac}/><span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{team.id.slice(0,8)}</span></div>
         <button onClick={()=>setSettings(!settings)} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
         <Btn th={th} v="secondary" sz="sm" icon="share" onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
+        {approvalMode&&team.members.some(function(m){return m.approved===true&&(m.days||[]).length>0;})&&<Btn th={th} sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{background:"#ECFDF5",color:"#059669",border:"1px solid #A7F3D0",fontWeight:700}}>{mob?"":"✓ "+(t.approvedPdf||"Approved PDF")}</Btn>}
       </div>
     </header>
 
