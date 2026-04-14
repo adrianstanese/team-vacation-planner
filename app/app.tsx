@@ -698,7 +698,7 @@ function generatePDFReport(team, t) {
       html += '<div class="tl-row"><div class="tl-name">'+m.name+'</div><div class="tl-bar">';
       for(var d=1;d<=daysInMonth;d++){
         var key = dk(yr,mo,d);
-        var has = (m.days||[]).indexOf(key) >= 0; var isPending = (m.pending||[]).indexOf(key) >= 0;
+        var has = (m.days||[]).indexOf(key) >= 0; var isPending=false;
         html += '<div class="tl-day" style="background:'+(has?c.d:(isPending?c.d+'80':'#f3f4f6'))+(isPending?';background-image:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.4) 2px,rgba(255,255,255,.4) 4px)':'')+'"></div>';
       }
       html += '</div></div>';
@@ -853,6 +853,7 @@ function generateApprovedPDF(team, t) {
   html += '<div class="section"><div class="section-title">Approved Vacation Days by Member</div>';
   html += '<table><tr><th style="width:25%">Member</th><th style="width:20%">Country / Region</th><th style="width:8%;text-align:center">Days</th><th style="width:10%;text-align:center">PTO</th><th>Approved Periods</th></tr>';
   team.members.forEach(function(m,i) {
+    if(!m.approved && approverMember) return;
     var days = (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).sort();
     if(days.length===0) return;
     var co = EU_C.find(function(x){return x.c===m.country;});
@@ -1037,7 +1038,7 @@ function printReport(team, t) {
       html += '<div class="tl-row"><div class="tl-name">'+m.name+'</div><div class="tl-bar">';
       for(var d2=1;d2<=daysInMonth;d2++){
         var key=dk(yr,mo,d2);
-        var has=(m.days||[]).indexOf(key)>=0;var isPnd=(m.pending||[]).indexOf(key)>=0;
+        var has=(m.days||[]).indexOf(key)>=0;var isPnd=false;
         var isHol2=!!allHols[key];
         var isWe2=isWe(yr,mo,d2);
         html += '<div class="tl-day" style="background:'+(has?c.d:isPnd?c.d+'60':isHol2?'#fecaca':isWe2?'#f3f4f6':'#f9fafb')+(isPnd?';background-image:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px)':'')+'"></div>';
@@ -1834,7 +1835,7 @@ function CountrySelect({value,onChange,th,t}) {
 }
 
 // ─── Calendar with Drag Selection ────────────────────────────────
-function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,holSet,w7}) {
+function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,holSet,w7,approvalMode,team}) {
   const days=dim(year,month);const first=fdm(year,month);const cells=[];for(let i=0;i<first;i++)cells.push(null);for(let d=1;d<=days;d++)cells.push(d);
   const am=members.find(m=>m.id===activeId);const ai=am?members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
   const dragRef=useRef(null);
@@ -1858,7 +1859,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
         {cells.map((day,i)=>{
           if(!day) return <div key={`e${i}`}/>;
           const we=isWe(year,month,day);const key=dk(year,month,day);
-          const mh=members.filter(m=>(m.days||[]).includes(key));const isA=(am&&am.days||[]).includes(key);const isPendingA=(am&&(am.pending||[]).includes(key));const hasPending=members.some(function(m){return (m.pending||[]).includes(key);});
+          const mh=members.filter(m=>(m.days||[]).includes(key));const isA=(am&&am.days||[]).includes(key);const isUnapproved=approvalMode&&am&&!am.approved&&am.id!==(typeof team!=="undefined"?team.approver:null);
           const isTd=year===CY&&month===CM&&day===CD;
           const past=new Date(year,month,day)<new Date(CY,CM,CD);
           const isHol=(holSet&&holSet.has(key));
@@ -1894,8 +1895,9 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           if(mh.length===0 && !isHol && we && w7 && !isA) { vacBg = "transparent"; vacColor = th.tx; }
           if(isTd) vacBorder = "2px solid " + th.ac;
           var pendingStripe = "";
-          if(isPendingA) { vacBg = ac.d + "40"; vacColor = ac.d; pendingStripe = "repeating-linear-gradient(45deg,transparent,transparent 3px," + ac.d + "18 3px," + ac.d + "18 6px)"; }
-          else if(hasPending && mh.length===0 && !isA) { pendingStripe = "repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(245,158,11,.12) 3px,rgba(245,158,11,.12) 6px)"; }
+          if(isA && isUnapproved) { pendingStripe = "repeating-linear-gradient(45deg,transparent,transparent 3px," + ac.d + "20 3px," + ac.d + "20 6px)"; }
+          var hasUnapprovedMember = mh.some(function(mx){return approvalMode && !mx.approved;});
+          if(!isA && hasUnapprovedMember && mh.length>0) { pendingStripe = "repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(245,158,11,.12) 3px,rgba(245,158,11,.12) 6px)"; }
 
           return <div key={day}
             onMouseDown={e=>{e.preventDefault();handleMouseDown(day);}}
@@ -2094,7 +2096,7 @@ function ConflictAlerts({team,threshold,th,t}) {
 }
 
 // ─── Member Row ──────────────────────────────────────────────────
-function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,onApproveAll,onRejectAll}){
+function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const[h,setH]=useState(false);const dc=(m.days||[]).length||0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
@@ -2112,7 +2114,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:4}}>{m.name}{isApprover&&<span title="Approver" style={{fontSize:11}}>👑</span>}</div>
-      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}{(m.pending||[]).length>0?<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" +"+((m.pending||[]).length)+"⏳"}</span>:""}</div>
+      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}{approvalMode&&!isApprover?(m.approved?<span style={{color:"#10B981",fontWeight:700,fontSize:9}}>{" ✓"}</span>:<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" ⏳"}</span>):""}</div>
       {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>m.pto?"#EF4444":dc>m.pto*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/m.pto*100))+"%",transition:"width .3s"}}/></div>}
     </div>
     {(h||isActive)&&!locked&&<div style={{display:"flex",gap:1,flexShrink:0}}>
@@ -2145,10 +2147,24 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
         <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>Role</span>
         <button onClick={function(e){e.stopPropagation();onSetApprover();}} style={{flex:1,padding:"4px 8px",borderRadius:6,border:isApprover?"1.5px solid #10B981":"1px solid "+th.gbd,background:isApprover?"#ECFDF5":"transparent",color:isApprover?"#059669":th.t3,fontSize:10,fontWeight:isApprover?700:500,cursor:"pointer",fontFamily:F,display:"flex",alignItems:"center",justifyContent:"center",gap:4,transition:"all .2s"}}>{isApprover?"👑 Approver":"Set as Approver"}</button>
       </div>
-      {(m.pending||[]).length>0&&<div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,marginTop:4,padding:"4px 8px",background:"#FEF3C7",borderRadius:6,border:"1px solid #FDE68A"}}>
-        <span style={{color:"#92400E",fontWeight:700}}>{(m.pending||[]).length} pending</span>
-        <button onClick={function(e){e.stopPropagation();onApproveAll();}} style={{marginLeft:"auto",padding:"2px 8px",borderRadius:4,border:"none",background:"#10B981",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:F}}>Approve All</button>
-        <button onClick={function(e){e.stopPropagation();onRejectAll();}} style={{padding:"2px 8px",borderRadius:4,border:"none",background:"#EF4444",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:F}}>Reject</button>
+      {isApprover&&approvalMode&&allMembers&&allMembers.length>1&&<div style={{marginTop:6,paddingTop:6,borderTop:"1px solid "+th.gbd}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+          <span style={{fontSize:10,fontWeight:700,color:th.t3,textTransform:"uppercase",letterSpacing:.5}}>Team Approval</span>
+          <button onClick={function(e){e.stopPropagation();onApproveAllMembers();}} style={{padding:"2px 10px",borderRadius:4,border:"none",background:"#10B981",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:F}}>Approve All</button>
+        </div>
+        {allMembers.filter(function(mm){return mm.id!==m.id;}).map(function(mm,idx){
+          var mc2=MC[allMembers.indexOf(mm)%MC.length];
+          var dayCount2=(mm.days||[]).length;
+          var isAppr=mm.approved===true;
+          return <div key={mm.id} onClick={function(e){e.stopPropagation();}} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 6px",borderRadius:6,marginBottom:2,background:isAppr?"#F0FDF4":"transparent",border:"1px solid "+(isAppr?"#BBF7D0":th.gbd),transition:"all .2s"}}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:mc2.d,flexShrink:0}}/>
+            <span style={{flex:1,fontSize:10,fontWeight:600,color:th.tx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{mm.name}</span>
+            <span style={{fontSize:9,color:th.t3,fontFamily:FM,minWidth:20,textAlign:"right"}}>{dayCount2}d</span>
+            <button onClick={function(e){e.stopPropagation();onToggleMemberApproval(mm.id);}} style={{width:32,height:16,borderRadius:8,border:"none",cursor:"pointer",background:isAppr?"#10B981":"#D1D5DB",position:"relative",transition:"background .2s",flexShrink:0}}>
+              <div style={{width:12,height:12,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:isAppr?18:2,transition:"left .2s",boxShadow:"0 1px 2px rgba(0,0,0,.2)"}}/>
+            </button>
+          </div>;
+        })}
       </div>}
     </div>}
   </div>;
@@ -2706,7 +2722,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const holSet=new Set();team.members.forEach(m=>{if(m.country)computeHolidays(m.country,yr).forEach(h=>holSet.add(h));});
 
   const startAdd=()=>{if(locked){flash(t.locked);return;}if(team.members.length>=25){flash(t.mx);return;}setAdding(true);setNn("");setNc(null);setNr(null);};
-  const confirmAdd=()=>{const n=nn.trim();if(!n||!nc)return;const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:true};const co=EU_C.find(c=>c.c===nc);updateWithHistory({...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)});setAId(nm.id);setAdding(false);setNn("");setNc(null);setNr(null);if(mob)setSb(false);};
+  const confirmAdd=()=>{const n=nn.trim();if(!n||!nc)return;const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:!team.approver};const co=EU_C.find(c=>c.c===nc);updateWithHistory({...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)});setAId(nm.id);setAdding(false);setNn("");setNc(null);setNr(null);if(mob)setSb(false);};
   const del=id=>{if(locked)return;const m=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.filter(x=>x.id!==id),log:addLogEntry(team,`${(m&&m.name)||"Member"} was removed`)});if(aId===id)setAId(null);flash(t.mr);};
   const ren=(id,n)=>{setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
   const setCo=(id,cc)=>{const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
@@ -2718,42 +2734,28 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
     const member=team.members.find(function(x){return x.id===aId;});
     if(!member)return;
     const ds=member.days||[];
-    const pds=member.pending||[];
-    const inDays=ds.indexOf(key)>=0;
-    const inPending=pds.indexOf(key)>=0;
-    if(inDays){
-      updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,days:ds.filter(function(x){return x!==key;})};}),log:addLogEntry(team,(member.name||"Member")+" removed "+key)});
-      return;
-    }
-    if(inPending){
-      updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:pds.filter(function(x){return x!==key;})};}),log:addLogEntry(team,(member.name||"Member")+" cancelled pending "+key)});
-      return;
-    }
-    if(approvalMode&&team.approver&&team.approver!==aId){
-      updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:[].concat(pds,[key])};}),log:addLogEntry(team,(member.name||"Member")+" requested "+key)});
-      flash("⏳ Pending approval from "+(team.members.find(function(x){return x.id===team.approver;})||{name:"approver"}).name);
-      return;
-    }
-    updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,days:[].concat(ds,[key])};}),log:addLogEntry(team,(member.name||"Member")+" added "+key)});
-  };
-  const approvePending=function(memberId,dayKey){
+    const has=ds.indexOf(key)>=0;
     updateWithHistory({...team,members:team.members.map(function(mm){
-      if(mm.id!==memberId)return mm;
-      var p=(mm.pending||[]);var d=(mm.days||[]);
-      if(dayKey){return{...mm,pending:p.filter(function(x){return x!==dayKey;}),days:d.concat([dayKey])};}
-      return{...mm,pending:[],days:d.concat(p)};
-    }),log:addLogEntry(team,"Approved "+(dayKey||"all pending")+" for "+(team.members.find(function(x){return x.id===memberId;})||{}).name)});
-  };
-  const rejectPending=function(memberId,dayKey){
-    updateWithHistory({...team,members:team.members.map(function(mm){
-      if(mm.id!==memberId)return mm;
-      var p=(mm.pending||[]);
-      if(dayKey){return{...mm,pending:p.filter(function(x){return x!==dayKey;})};}
-      return{...mm,pending:[]};
-    }),log:addLogEntry(team,"Rejected "+(dayKey||"all pending")+" for "+(team.members.find(function(x){return x.id===memberId;})||{}).name)});
+      if(mm.id!==aId)return mm;
+      return{...mm,days:has?ds.filter(function(x){return x!==key;}):[].concat(ds,[key])};
+    }),log:addLogEntry(team,(member.name||"Member")+(has?" removed ":" added ")+key)});
   };
   const setApprover=function(memberId){
     updateWithHistory({...team,approver:memberId||null});
+  };
+  const toggleMemberApproval=function(memberId){
+    var m=team.members.find(function(x){return x.id===memberId;});
+    var wasApproved=m&&m.approved;
+    updateWithHistory({...team,members:team.members.map(function(mm){
+      if(mm.id!==memberId)return mm;
+      return{...mm,approved:!wasApproved};
+    }),log:addLogEntry(team,(m?m.name:"Member")+(wasApproved?" approval revoked":" approved"))});
+  };
+  const approveAll=function(){
+    updateWithHistory({...team,members:team.members.map(function(mm){
+      if(mm.id===team.approver)return mm;
+      return{...mm,approved:true};
+    }),log:addLogEntry(team,"All members approved")});
   };
   const toggleLock=()=>updateWithHistory({...team,locked:!team.locked,log:addLogEntry(team,team.locked?"Board unlocked":"Board locked")});
 
@@ -2834,7 +2836,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
             </select>}
             <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>setAdding(false)}>{t.can}</Btn></div>
           </div>}
-          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} onApproveAll={()=>approvePending(m.id)} onRejectAll={()=>rejectPending(m.id)}/>)}
+          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}
@@ -2917,7 +2919,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
             </div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:mob?"1fr":quarter!==null?"repeat(3,1fr)":"repeat(3,1fr)",gap:mob?10:14}}>
-            {allM.filter(({month})=>quarter===null||Math.floor(month/3)===quarter).map(({year,month})=> <Cal key={month} year={year} month={month} members={team.members} activeId={locked?null:aId} onToggle={tog} compact={mob&&quarter===null} th={th} t={t} holSet={holSet} w7={team.w7}/>)}
+            {allM.filter(({month})=>quarter===null||Math.floor(month/3)===quarter).map(({year,month})=> <Cal key={month} year={year} month={month} members={team.members} activeId={locked?null:aId} onToggle={tog} compact={mob&&quarter===null} th={th} t={t} holSet={holSet} w7={team.w7} approvalMode={approvalMode} team={team}/>)}
           </div>
         </Fragment>}
 
