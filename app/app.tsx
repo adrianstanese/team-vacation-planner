@@ -459,7 +459,7 @@ const CSS_ANIMS = `
 @keyframes floatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(2deg); } }
 @keyframes floatB { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px) rotate(-1.5deg); } }
 @keyframes floatC { 0%,100% { transform: translateY(-4px) rotate(1deg); } 50% { transform: translateY(-16px) rotate(-2deg); } }
-@keyframes dashMove { 0% { stroke-dashoffset: 950; } 100% { stroke-dashoffset: 0; } }
+@keyframes glowTrace { 0% { top: 0%; left: 0%; } 25% { top: 0%; left: 100%; } 50% { top: 100%; left: 100%; } 75% { top: 100%; left: 0%; } 100% { top: 0%; left: 0%; } }
 @keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(99,102,241,.15); } 50% { box-shadow: 0 0 20px rgba(99,102,241,.35); } }
 @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 .tvp-fade { animation: fadeIn .3s ease-out both; }
