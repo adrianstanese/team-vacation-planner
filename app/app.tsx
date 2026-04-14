@@ -1838,7 +1838,7 @@ function Inp({value,onChange,placeholder,autoFocus,maxLength,onKeyDown,th}){
 
 const Toast=({message:m,visible:v})=>m?<div style={{position:"fixed",bottom:32,left:"50%",transform:"translateX(-50%) translateY("+(v?0:20)+"px)",background:"linear-gradient(135deg,#818CF8,#6366F1)",color:"#fff",padding:"12px 24px",borderRadius:50,fontSize:14,fontWeight:600,fontFamily:F,boxShadow:"0 8px 32px rgba(99,102,241,0.3)",opacity:v?1:0,transition:"all .3s",pointerEvents:"none",zIndex:9999,display:"flex",alignItems:"center",gap:8}}><Ic n="check" s={16} c="#FFF"/>{m}</div>:null;
 
-const LangPk=({lang,set,th})=><div style={{display:"flex",gap:3,flexWrap:"wrap",justifyContent:"center"}}>{Object.entries(LANGS).map(([k,v])=><button key={k} onClick={()=>set(k)} style={{padding:"3px 7px",borderRadius:6,fontSize:11,fontWeight:600,fontFamily:F,cursor:"pointer",border:k===lang?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:k===lang?th.al:"transparent",color:k===lang?th.ac:th.t2}}>{v.f}{v.l}</button>)}</div>;
+const LangPk=({lang,set,th})=><div style={{display:"flex",gap:2,flexWrap:"wrap",justifyContent:"center"}}>{Object.entries(LANGS).map(([k,v])=><button key={k} onClick={()=>set(k)} style={{padding:"3px 5px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:k===lang?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:k===lang?th.al:"transparent",color:k===lang?th.ac:th.t2}}>{v.f}{v.l}</button>)}</div>;
 
 const LangDrop=({lang,set,th})=>{
   const cur=LANGS[lang]||LANGS.en;
