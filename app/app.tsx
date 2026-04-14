@@ -2991,7 +2991,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
   </div>;
 }
 
-function TripsView({team,onUpdate,th,t,yr}){
+function TripsView({team,onUpdate,th,t,yr,holSet}){
   var[aId,setAId]=useState(null);
   var[quarter,setQuarter]=useState(null);
   var am=team.members.find(function(m){return m.id===aId;});
@@ -3355,7 +3355,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
         </Fragment>}
         <FadeIn delay={200}><VisitCounter th={th}/></FadeIn>
       
-        {view==="trips"&&<TripsView team={team} onUpdate={updateWithHistory} th={th} t={t} yr={yr}/>}
+        {view==="trips"&&<TripsView team={team} onUpdate={updateWithHistory} th={th} t={t} yr={yr} holSet={holSet}/>}
         {view==="analytics"&&<AnalyticsDashboard team={team} yr={yr} th={th} t={t}/>}
 </main>
     </div>
