@@ -2105,8 +2105,8 @@ function TimelineView({team,th,t}) {
   return <div>
     <div style={{textAlign:"center",marginBottom:16}}><span style={{fontSize:18,fontWeight:700,color:th.tx}}>{t.timeline} — {yr}</span></div>
     {/* Month labels */}
-    <div style={{position:"relative",height:24,marginBottom:8,marginLeft:110}}>
-      {monthStarts.map(({m,pos})=> <span key={m} style={{position:"absolute",left:`${pos}%`,fontSize:10,fontWeight:600,color:th.t3,fontFamily:F}}>{t.M[m].slice(0,3)}</span>)}
+    <div style={{position:"relative",height:24,marginBottom:8,marginLeft:110,marginRight:30}}>
+      {monthStarts.map(({m,pos},idx)=>{var next=idx<11?monthStarts[idx+1].pos:100;var center=(pos+next)/2;return <span key={m} style={{position:"absolute",left:center+"%",transform:"translateX(-50%)",fontSize:10,fontWeight:600,color:th.t3,fontFamily:F}}>{t.M[m].slice(0,3)}</span>;})}
     </div>
     {/* Member bars */}
     <div style={{display:"flex",flexDirection:"column",gap:6}}>
