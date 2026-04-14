@@ -3256,7 +3256,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const am=team.members.find(m=>m.id===aId);const ai=am?team.members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
   const allM=Array.from({length:12},(_,i)=>({year:yr,month:i}));
 
-  const[vk,setVk]=useState(0);const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:t.activityLog||"Log"},{k:"analytics",i:"bar",l:t.analytics||"Analytics"},{k:"trips",i:"globe",l:t.trips||"Trips",amber:true}];
+  const[vk,setVk]=useState(0);const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:t.activityLog||"Log"},{k:"analytics",i:"bar",l:t.analytics||"Analytics"},{k:"trips",i:"globe",l:t.trips||"Trips",am:1}];
 
   return <div style={{minHeight:"100vh",background:th.bg,fontFamily:F,display:"flex",flexDirection:"column"}}>
     <header style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"0 12px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
@@ -3310,7 +3310,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
 
     {/* View tabs */}
     {!mob&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"6px 14px",display:"flex",gap:3,overflowX:"auto",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      {views.map(v=> <button key={v.k} onClick={()=>{setView(v.k);setVk(function(p){return p+1;});}} style={{padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?(v.amber?"1.5px solid #D97706":`1.5px solid ${th.ac}`):v.amber?"1px solid #E5C07B30":"1px solid transparent",background:v.k===view?(v.amber?"#FAEEDA":th.al):v.amber?"#FAEEDA20":"transparent",color:v.k===view?(v.amber?"#D97706":th.ac):v.amber?"#D97706":th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?(v.amber?"#D97706":th.ac):v.amber?"#D97706":th.t3}/>{v.l}{v.amber&&(team.trips||[]).length>0&&<span style={{background:"#D97706",color:"#fff",fontSize:8,fontWeight:800,padding:"1px 4px",borderRadius:8,minWidth:14,textAlign:"center"}}>{(team.trips||[]).length}</span>}</button>)}
+      {views.map(v=> <button key={v.k} onClick={()=>{setView(v.k);setVk(function(p){return p+1;});}} style={{padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?(v.am?"1.5px solid #D97706":`1.5px solid ${th.ac}`):v.am?"1px solid rgba(217,119,6,.2)":"1px solid transparent",background:v.k===view?(v.am?"#FAEEDA":th.al):v.am?"rgba(254,243,199,.3)":"transparent",color:v.k===view?(v.am?"#D97706":th.ac):v.am?"#D97706":th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?(v.am?"#D97706":th.ac):v.am?"#D97706":th.t3}/>{v.l}{v.am&&(team.trips||[]).length>0?<span style={{background:"#D97706",color:"#fff",fontSize:8,fontWeight:800,padding:"1px 4px",borderRadius:8,marginLeft:2}}>{(team.trips||[]).length}</span>:null}</button>)}
     </div>}
 
     <div style={{display:"flex",flex:1,overflow:"hidden"}}>
@@ -3328,4 +3328,344 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
               <input autoFocus value={nn} onChange={e=>setNn(e.target.value)} placeholder={t.en2} onKeyDown={e=>{if(e.key==="Enter"&&nn.trim()&&nc)confirmAdd();if(e.key==="Escape"){setAdding(false);}}} maxLength={30} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:600,fontFamily:F,color:th.tx,outline:"none",padding:"2px 0"}}/>
             </div>
             <CountrySelect value={nc} onChange={function(v){setNc(v);setNr(null);}} th={th} t={t}/>
-            {nc && REGIONS[nc] && <select value={nr||""} onChange={function(e){setNr(e.target.value||null);}} style={{width:"100%",padding:"10px 12px",borderRadius:G.rXs,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:14,fontFamily:F
+            {nc && REGIONS[nc] && <select value={nr||""} onChange={function(e){setNr(e.target.value||null);}} style={{width:"100%",padding:"10px 12px",borderRadius:G.rXs,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:14,fontFamily:F,marginTop:6}}>
+              <option value="">National only (no region)</option>
+              {REGIONS[nc].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
+            </select>}
+            <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>setAdding(false)}>{t.can}</Btn></div>
+          </div>}
+          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
+          {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
+        </div>
+      </aside>}
+
+      <main key={view} className="tvp-fade" style={{flex:1,overflow:"auto",padding:mob?"14px 10px 80px":"20px 28px"}}>
+        {/* Mobile action strip — visible only on portrait mobile */}
+        {mob&&!sb&&<div style={{marginBottom:10,display:"flex",flexDirection:"column",gap:6}}>
+          <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
+            {!locked&&<button onClick={()=>{setSb(true);setTimeout(startAdd,150);}} style={{padding:"6px 12px",borderRadius:10,border:"none",background:`linear-gradient(135deg,${th.ac},#6366F1)`,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(124,58,237,0.25)",whiteSpace:"nowrap"}}><Ic n="plus" s={12} c="#fff"/>{t.am}</button>}
+            <button onClick={()=>setHolBr(true)} style={{padding:"6px 12px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #EF4444)",cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(245,158,11,0.25)",whiteSpace:"nowrap"}}><Ic n="flag" s={12} c="#fff"/>{t.ch}</button>
+            <button onClick={()=>setSb(true)} style={{padding:"6px 10px",borderRadius:10,border:`1px solid ${th.bd}`,background:th.sf,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:600,color:th.t2,whiteSpace:"nowrap"}}><Ic n="users" s={12} c={th.t2}/>{team.members.length}/25</button>
+          </div>
+          {team.members.length>0&&<div style={{display:"flex",gap:4,overflowX:"auto",paddingBottom:2}}>
+            {team.members.map((m,i)=>{const active=m.id===aId;return <button key={m.id} onClick={()=>setAId(active?null:m.id)} style={{padding:"4px 10px",borderRadius:20,border:active?`2px solid ${MC[i%MC.length].d}`:`1px solid ${th.bd}`,background:active?MC[i%MC.length].d+"18":th.sf,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:active?700:500,color:active?MC[i%MC.length].d:th.t2,whiteSpace:"nowrap",flexShrink:0}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:MC[i%MC.length].d,flexShrink:0}}/>
+              {m.name}
+              {(m.days||[]).length>0&&<span style={{fontSize:9,fontWeight:700,color:active?MC[i%MC.length].d:th.t3,fontFamily:FM}}>{(m.days||[]).length}d</span>}
+            </button>;})}
+          </div>}
+        </div>}
+        {/* Conflict alerts */}
+        {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
+
+        {/* Legend at top */}
+        {team.members.length>0&&view==="cal"&&<div style={{marginBottom:10,padding:"8px 12px",background:th.gbg,borderRadius:G.rXs,border:`1px solid ${th.gbd}`,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+            {team.members.map((m,i)=>{const c=MC[i%MC.length];const co=m.country?EU_C.find(x=>x.c===m.country):null;
+              return <div key={m.id} onClick={()=>setAId(m.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",background:aId===m.id?c.b:th.sh,borderRadius:14,fontSize:10,fontWeight:500,color:c.t,cursor:"pointer",border:aId===m.id?`1.5px solid ${c.d}40`:"1.5px solid transparent"}}><div style={{width:6,height:6,borderRadius:"50%",background:c.d}}/>{co?co.f+" ":""}{m.name} ({(m.days||[]).length})</div>;})}
+            <div style={{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:14,fontSize:10,color:th.ht,background:th.hc}}><div style={{width:6,height:6,borderRadius:3,background:th.ht}}/> {t.holiday}</div>
+          </div>
+        </div>}
+
+        {view==="cal"&&am&&<div style={{background:ac.b,borderRadius:12,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:8,border:`1px solid ${ac.d}30`,flexWrap:"wrap",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:22,height:22,borderRadius:"50%",background:ac.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:700}}>{am.name[0].toUpperCase()}</div>
+            <span style={{fontSize:12,fontWeight:600,color:ac.t}}>{t.ed}: {am.name}</span>
+            <span style={{fontSize:11,color:ac.t,opacity:.7}}>{t.tap}</span>
+          </div>
+          <button onClick={()=>{setAId(null);flash(am.name+": "+(am.days||[]).length+" "+(((am.days||[]).length===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>Done · {(am.days||[]).length} {((am.days||[]).length===1)?t.dy:t.dys}</button>
+        </div>}
+
+        {/* Holiday Clash Warning */}
+        {view==="cal"&&am&&(()=>{const clashes=detectHolidayClashes(am,yr);if(!clashes.length) return null;
+          return <div style={{background:"#FFFBEB",border:"1px solid #FCD34D",borderRadius:8,padding:"10px 14px",marginBottom:10,display:"flex",flexDirection:"column",gap:4}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#92400E",display:"flex",alignItems:"center",gap:6}}>🟡 {clashes.length} vacation day{clashes.length>1?"s":""} on public holidays</div>
+            <div style={{fontSize:11,color:"#92400E",lineHeight:1.6}}>
+              {clashes.map(c=> <div key={c.date}><strong>{c.date.slice(5)}</strong> is <strong>{c.name}</strong> in {c.country} — you don't need a vacation day</div>)}
+            </div>
+            <button onClick={()=>{const holDates=clashes.map(c=>c.date);const newDays=am.days.filter(d=>!holDates.includes(d));updateWithHistory({...team,members:team.members.map(m=>m.id===am.id?{...m,days:newDays}:m)});flash(`Removed ${clashes.length} holiday clash${clashes.length>1?"es":""}`);}}
+              style={{alignSelf:"flex-start",padding:"4px 12px",borderRadius:6,border:"1px solid #FCD34D",background:"#FEF3C7",color:"#92400E",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:F,marginTop:2}}>
+              Remove {clashes.length} wasted day{clashes.length>1?"s":""}
+            </button>
+          </div>;
+        })()}
+
+        <WhosOutBanner team={team} th={th} t={t}/>
+        {view==="cal"&&!am&&team.members.length>0&&!locked&&<div style={{background:th.al,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:th.ac,fontWeight:500}}>{t.sel}</div>}
+        {view==="cal"&&locked&&<div style={{background:th.wl,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#92400E",fontWeight:500,display:"flex",alignItems:"center",gap:6}}><Ic n="lock" s={14} c="#92400E"/>{t.locked}</div>}
+
+        {view==="cal"&&team.members.length>1&&<div style={{display:"flex",flexWrap:"wrap",gap:3,justifyContent:"center",marginBottom:8,padding:"5px 8px",background:th.gbg,borderRadius:8,border:"1px solid "+th.gbd}}>{team.members.map(function(m,i){var mc=MC[i%MC.length];var act=m.id===aId;return <button key={m.id} onClick={function(){setAId(m.id===aId?null:m.id);}} style={{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:5,border:act?"1.5px solid "+mc.d:"1px solid transparent",background:act?mc.b:"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:act?mc.t:th.t2,fontFamily:F}}><span style={{width:7,height:7,borderRadius:"50%",background:mc.d}}/>{m.name}</button>;})}</div>}
+        {/* Export Pill Bar */}
+        {view==="cal"&&team.members.length>0&&<div style={{padding:"8px 14px",background:th.sf,borderRadius:G.rXs,border:"1px solid "+th.bd,display:"flex",alignItems:"center",gap:4,flexWrap:"wrap",marginBottom:12}}>
+          <span style={{fontSize:10,fontWeight:700,color:th.t3,marginRight:2}}>EXPORT:</span>
+          <button onClick={function(){generatePDFReport(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.pdf}</button>
+          <button onClick={function(){downloadTeamICS(team)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Team .ics</button>
+          <button onClick={function(){exportXLSX(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Excel</button>
+          <button onClick={function(){exportCSV(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>CSV</button>
+          <button onClick={function(){var tsv=generateTSV(team,t);var blob=new Blob([tsv],{type:"text/tab-separated-values"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=team.name.replace(/\s/g,"_")+"_vacations.tsv";a.click();URL.revokeObjectURL(url);}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>TSV</button>
+          <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>Share / QR</button>
+          <button onClick={function(){printReport(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
+          <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Import</button>
+          {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<button onClick={function(){generateApprovedPDF(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
+        </div>}
+
+        {view==="cal"&&team.members.length===0&&<div style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:40,marginBottom:12}}>🌴</div><h2 style={{margin:"0 0 6px",fontSize:20,fontWeight:700,color:th.tx}}>{t.et}</h2><p style={{margin:"0 0 20px",fontSize:14,color:th.t2,lineHeight:1.5}}>{t.es2}</p><Btn th={th} icon="plus" onClick={()=>{setSb(true);setTimeout(startAdd,150);}}>{t.af}</Btn></div>}
+
+        {view==="cal"&&<Fragment>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+            <span style={{fontSize:18,fontWeight:700,color:th.tx,letterSpacing:-.5}}>{yr}</span>
+            <div style={{display:"flex",gap:2}}>
+              {[{l:"Year",v:null},{l:"Q1",v:0},{l:"Q2",v:1},{l:"Q3",v:2},{l:"Q4",v:3}].map(q=>
+                <button key={q.l} onClick={()=>setQuarter(q.v)} style={{padding:"3px 10px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:quarter===q.v?`1.5px solid ${th.ac}`:`1px solid ${th.gbd}`,background:quarter===q.v?th.al:th.gbg,color:quarter===q.v?th.ac:th.t3,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>{q.l}</button>)}
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:mob?"1fr":quarter!==null?"repeat(3,1fr)":"repeat(3,1fr)",gap:mob?10:14}}>
+            {allM.filter(({month})=>quarter===null||Math.floor(month/3)===quarter).map(({year,month})=> <Cal key={month} year={year} month={month} members={team.members} activeId={locked?null:aId} onToggle={tog} compact={mob&&quarter===null} th={th} t={t} holSet={holSet} w7={team.w7} approvalMode={approvalMode} team={team} setCommentDay={setCommentDay}/>)}
+          </div>
+        </Fragment>}
+
+        {view==="heatmap"&&<HeatmapView team={team} th={th} t={t} holSet={holSet}/>}
+        {view==="timeline"&&<TimelineView team={team} th={th} t={t}/>}
+        {view==="coverage"&&<CoverageView team={team} th={th} t={t}/>}
+        {view==="log"&&<ChangeLogView team={team} th={th} t={t}/>}
+        {view==="summary"&&<Fragment>
+          <h3 style={{margin:"0 0 14px",fontSize:16,fontWeight:700,color:th.tx}}>{t.tv} — {yr}</h3>
+          {(()=>{const countries=new Set();team.members.forEach(m=>{if(m.country)countries.add(m.country);});
+            if(!countries.size) return <div style={{color:th.t3,fontSize:13,textAlign:"center",padding:30}}>No countries assigned.</div>;
+            const allH={};[...countries].forEach(cc=>computeHolidays(cc,yr).forEach(h=>{if(!allH[h])allH[h]=[];allH[h].push(cc);}));
+            const dates=Object.keys(allH).sort();
+            return <div style={{display:"flex",flexDirection:"column",gap:6}}>{dates.map(d=>{const p=pk(d);const dow=new Date(p.y,p.m,p.d).toLocaleDateString("en",{weekday:"short"});const affected=team.members.filter(m=>(allH[d]||[]).includes(m.country));
+              return <div key={d} style={{background:th.sf,borderRadius:6,border:`1px solid ${th.bd}`,padding:"8px 12px",display:"flex",alignItems:"center",gap:10}}>
+                <div style={{minWidth:36,textAlign:"center"}}><div style={{fontSize:15,fontWeight:700,color:th.ht,fontFamily:F}}>{p.d}</div><div style={{fontSize:9,color:th.t3,fontWeight:600}}>{t.M[p.m].slice(0,3)}</div></div>
+                <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:th.tx}}>{holName(d)}</div><div style={{fontSize:10,color:th.t3}}>{dow} — {affected.map(m=>m.name).join(", ")}</div></div>
+              </div>;})}</div>;
+          })()}
+        </Fragment>}
+        <FadeIn delay={200}><VisitCounter th={th}/></FadeIn>
+      
+        {view==="trips"&&<TripsView team={team} onUpdate={updateWithHistory} th={th} t={t} yr={yr} holSet={holSet}/>}
+        {view==="analytics"&&<AnalyticsDashboard team={team} yr={yr} th={th} t={t}/>}
+</main>
+    </div>
+
+    {mob&&sb&&<div onClick={()=>setSb(false)} style={{position:"fixed",inset:0,top:56,background:"rgba(0,0,0,.3)",zIndex:80}}/>}
+    {showSh&&<ShareModal teamId={team.id} teamName={team.name} onClose={()=>setShowSh(false)} th={th} t={t}/>}
+    
+    {mob&&<div className="tvp-botnav" style={{background:th.gbg,borderTop:"1px solid "+th.gbd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+      {views.map(function(v){return <button key={v.k} onClick={function(){setView(v.k);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 8px",minWidth:48}}>
+        <Ic n={v.i} s={18} c={v.k===view?th.ac:th.t3}/>
+        <span style={{fontSize:9,fontWeight:v.k===view?700:500,color:v.k===view?th.ac:th.t3,fontFamily:F}}>{v.l}</span>
+      </button>;})}
+    </div>}
+
+    
+    {commentDay&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setCommentDay(null)}>
+      <div onClick={e=>e.stopPropagation()} style={{background:th.bg,borderRadius:16,maxWidth:360,width:"100%",padding:20,boxShadow:th.sl}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <h3 style={{margin:0,fontSize:15,fontWeight:700,color:th.tx,fontFamily:F}}>{commentDay}</h3>
+          <button onClick={()=>setCommentDay(null)} style={{background:"none",border:"none",cursor:"pointer"}}><Ic n="x" s={16} c={th.t2}/></button>
+        </div>
+        {(team.comments&&team.comments[commentDay]||[]).map(function(cm,ci){return <div key={ci} style={{padding:"6px 8px",background:th.sh,borderRadius:8,marginBottom:4,fontSize:12}}>
+          <div style={{fontWeight:600,color:th.tx}}>{cm.by} <span style={{fontWeight:400,color:th.t3,fontSize:10}}>{new Date(cm.at).toLocaleString()}</span></div>
+          <div style={{color:th.t2,marginTop:2}}>{cm.t}</div>
+        </div>;})}
+        <div style={{display:"flex",gap:6,marginTop:8}}>
+          <input value={commentText} onChange={e=>setCommentText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&commentText.trim())addComment(commentDay,commentText.trim());}} placeholder={t.addComment||"Add a comment..."} style={{flex:1,padding:"6px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
+          <button onClick={()=>{if(commentText.trim())addComment(commentDay,commentText.trim());}} disabled={!commentText.trim()} style={{padding:"6px 14px",borderRadius:8,border:"none",background:commentText.trim()?th.ac:"#D1D5DB",color:"#fff",fontSize:12,fontWeight:600,cursor:commentText.trim()?"pointer":"default",fontFamily:F}}>Post</button>
+        </div>
+      </div>
+    </div>}
+
+    {holBr&&<HolBrowser onClose={()=>setHolBr(false)} th={th} t={t} year={yr}/>}
+
+    {/* Smart Optimizer Modal */}
+    {showOptimizer&&(()=>{const mem=team.members.find(m=>m.id===showOptimizer);if(!mem)return null;const suggestions=findBridgeDays(mem.country,yr);
+      return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowOptimizer(null)}>
+        <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:480,width:"100%",maxHeight:"70vh",display:"flex",flexDirection:"column",boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+          <div style={{padding:"16px 20px",borderBottom:`1px solid ${th.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx,fontFamily:F}}>{t.bestDays} {mem.name}</h3>
+            <button onClick={()=>setShowOptimizer(null)} style={{background:th.sh,border:"none",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
+          </div>
+          <div style={{flex:1,overflowY:"auto",padding:"12px 16px"}}>
+            {suggestions.length===0?<div style={{textAlign:"center",padding:30,color:th.t3,fontSize:13}}>No bridge day opportunities found for {yr}.</div>:
+            suggestions.map((s,i)=> <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:i%2===0?th.bg:"transparent",borderRadius:8,marginBottom:4}}>
+              <div style={{width:36,height:36,borderRadius:10,background:"#D1FAE5",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <span style={{fontSize:14,fontWeight:800,color:"#065F46"}}>{s.gain}d</span>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,color:th.tx}}>{s.label}</div>
+                <div style={{fontSize:11,color:th.t3}}>Take {s.off} day{s.off>1?"s":""} off → get {s.gain} consecutive days</div>
+              </div>
+              <Btn th={th} v="ghost" sz="sm" onClick={()=>{const newDays=[...(mem.days||[]),...s.take.filter(d=>!(mem.days||[]).includes(d))];updateWithHistory({...team,members:team.members.map(m=>m.id===mem.id?{...m,days:newDays}:m)});flash(`Added ${s.off} day${s.off>1?"s":""}`);}} style={{fontSize:11}}>+ Add</Btn>
+            </div>)}
+          </div>
+        </div>
+      </div>;
+    })()}
+
+    {/* CSV Import Modal */}
+    {showCSVImport&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowCSVImport(false)}>
+      <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:500,width:"100%",padding:24,boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
+          <h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx}}>Import CSV</h3>
+          <button onClick={()=>setShowCSVImport(false)} style={{background:th.sh,border:"none",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
+        </div>
+        <p style={{margin:"0 0 10px",fontSize:12,color:th.t2}}>Format: Name, Country, Start Date (YYYY-MM-DD), End Date</p>
+        <textarea value={csvText} onChange={e=>setCsvText(e.target.value)} placeholder={'Name,Country,Start,End\n"John Doe","Romania","2026-07-01","2026-07-15"'} rows={8} style={{width:"100%",padding:10,border:`1.5px solid ${th.bd}`,borderRadius:8,fontSize:12,fontFamily:FM,resize:"vertical",outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/>
+        <div style={{display:"flex",gap:8,marginTop:12}}>
+          <label style={{flex:1}}>
+            <input type="file" accept=".csv,.txt" style={{display:"none"}} onChange={e=>{const f=(e.target.files&&e.target.files[0]);if(f){const r=new FileReader();r.onload=()=>setCsvText(r.result);r.readAsText(f);}}}/>
+            <div style={{padding:"8px 14px",background:th.sh,borderRadius:8,textAlign:"center",cursor:"pointer",fontSize:12,fontWeight:600,color:th.t2,border:`1px solid ${th.bd}`}}>Choose File</div>
+          </label>
+          <Btn th={th} disabled={!csvText.trim()} onClick={()=>{const imported=parseCSVImport(csvText);if(imported.length){updateWithHistory({...team,members:[...team.members,...imported]});setShowCSVImport(false);setCsvText("");flash(`Imported ${imported.length} member${imported.length>1?"s":""}`);}else{flash("No valid data found");}}}>Import {csvText.trim()?`(${parseCSVImport(csvText).length} found)`:""}</Btn>
+        </div>
+      </div>
+    </div>}
+
+    <Toast message={toast} visible={!!toast}/>
+  </div>;
+}
+
+// ─── Error Boundary (functional wrapper) ─────────────────────────
+function ErrorBoundary({children}) {
+  const [hasError, setHasError] = useState(false);
+  useEffect(() => {
+    const handler = (event) => { setHasError(true); event.preventDefault(); };
+    window.addEventListener("error", handler);
+    return () => window.removeEventListener("error", handler);
+  }, []);
+  if (hasError) {
+    return <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:F,padding:40,background:"#F2F1EE",textAlign:"center"}}>
+      <div style={{fontSize:48,marginBottom:16}}>🌴</div>
+      <h1 style={{fontSize:22,fontWeight:700,color:"#1A1A1A",margin:"0 0 8px"}}>Something went wrong</h1>
+      <p style={{fontSize:14,color:"#6B6B6B",margin:"0 0 24px",lineHeight:1.6}}>The app encountered an unexpected error. Your team data is safe.</p>
+      <button onClick={()=>{window.location.hash="";window.location.reload();}} style={{padding:"12px 28px",borderRadius:10,border:"none",background:"#2563EB",color:"#fff",fontSize:14,fontWeight:700,fontFamily:F,cursor:"pointer"}}>Go to Home Page</button>
+    </div>;
+  }
+  return children;
+}
+
+// ─── Cookie / Privacy Notice ─────────────────────────────────────
+function CookieNotice({th, t}) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    try { if (!localStorage.getItem("tvp-cookie-ok")) setShow(true); } catch(e) { setShow(true); }
+  }, []);
+  const accept = () => {
+    setShow(false);
+    try { localStorage.setItem("tvp-cookie-ok", "1"); } catch(e) {}
+  };
+  if (!show) return null;
+  return <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,padding:"12px 20px",background:"linear-gradient(135deg,rgba(76,29,149,0.95),rgba(99,102,241,0.95))",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexWrap:"wrap"}}>
+    <span style={{fontSize:12,color:"#EDE9FE",fontFamily:F,lineHeight:1.5}}>{t.cookieMsg}</span>
+    <button onClick={accept} style={{padding:"6px 18px",borderRadius:20,border:"1px solid rgba(255,255,255,0.25)",background:"rgba(255,255,255,0.2)",color:"#fff",fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>{t.gotIt}</button>
+  </div>;
+}
+
+// ─── App ─────────────────────────────────────────────────────────
+export default function App(){
+
+  const[screen,setScreen]=useState("home");const[team,setTeam]=useState(null);const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState("en");const[theme,setTheme]=useState("light");
+  const th=TH[theme];const t=TX[lang];
+
+  useEffect(()=>{(async()=>{
+    const sl=await db.ld("drift-lang");const st=await db.ld("drift-theme");
+    if(sl){setLang(sl);}else{
+      // Auto-detect language from timezone on first visit
+      const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"";
+      const tzLang={
+        "Europe/Stockholm":"sv","Europe/Gothenburg":"sv",
+        "Europe/Rome":"it","Europe/Vatican":"it",
+        "Europe/Sofia":"bg",
+        "Europe/Paris":"fr","Europe/Brussels":"fr","America/Guadeloupe":"fr",
+        "Europe/Berlin":"de","Europe/Vienna":"de","Europe/Zurich":"de",
+        "Europe/Madrid":"es","Europe/Canary":"es","America/Santiago":"es",
+        "Europe/Lisbon":"pt","America/Sao_Paulo":"pt","Atlantic/Madeira":"pt",
+        "Europe/Bucharest":"ro",
+        "Europe/Budapest":"hu",
+      };
+      const detected=tzLang[tz];
+      if(detected&&TX[detected]){setLang(detected);db.sv("drift-lang",detected);}
+    }
+    // Theme: use stored preference, otherwise always default to light
+    if(st){setTheme(st);}
+
+    // 24-month TTL cleanup
+    const sv=await db.ld("my-teams");
+    const teams=sv||[];
+    const now=Date.now();const TTL=24*30*24*60*60*1000; // ~24 months in ms
+    const valid=[];const expired=[];
+    for(var _ti=0;_ti<teams.length;_ti++){var tm=teams[_ti];
+      // Check if team data still exists and isn't expired
+      const td=await db.ld(`team:${tm.id}`,true);
+      if(td&&td.createdAt){
+        const age=now-new Date(td.createdAt).getTime();
+        if(age<TTL){valid.push(tm);}else{expired.push(tm.id);}
+      } else if(td){valid.push(tm);} // No createdAt = legacy, keep
+      // If td is null, team was deleted, skip it
+    }
+    // Clean up expired teams from shared storage
+    for(var _ei=0;_ei<expired.length;_ei++){var id=expired[_ei];try{if(window.storage)await window.storage.delete(`team:${id}`,true);}catch(e){}}
+    if(expired.length>0||valid.length!==teams.length){await db.sv("my-teams",valid);}
+    setMyTeams(valid);
+
+    // Link-only access: check URL hash
+    const hash=window.location.hash;const match=hash.match(/team=([a-z0-9]+)/i);
+    if(match){const ld=await db.ld(`team:${match[1]}`,true);if(ld){
+      // Check TTL
+      if(ld.createdAt){const age=now-new Date(ld.createdAt).getTime();if(age>=TTL){setScreen("home");return;}}
+      setTeam(ld);setScreen("ws");
+      // Silently track in my-teams for cleanup purposes (not displayed)
+      if(!valid.find(x=>x.id===match[1])){const u=[...valid,{id:match[1],name:ld.name,year:ld.year,mc:ld.members.length}];setMyTeams(u);db.sv("my-teams",u);}
+    }}
+  })();},[]);
+
+  const cL=l=>{setLang(l);db.sv("drift-lang",l);};const cT=t=>{setTheme(t);db.sv("drift-theme",t);};
+
+  const create=(name,year,ww)=>{const nt={id:gid(),name,year,members:[],createdAt:new Date().toISOString(),locked:false,w7:ww==="7"};setTeam(nt);setScreen("ws");window.location.hash=`team=${nt.id}`;const u=[...myTeams,{id:nt.id,name,year,mc:0}];setMyTeams(u);db.sv(`team:${nt.id}`,nt,true);db.sv("my-teams",u);};
+
+  const join=async(code,onErr)=>{let id=code;const m=code.match(/team=([a-z0-9]+)/i);if(m)id=m[1];id=id.replace(/[^a-z0-9]/gi,"");const ld=await db.ld(`team:${id}`,true);if(ld){setTeam(ld);setScreen("ws");window.location.hash=`team=${id}`;if(!myTeams.find(x=>x.id===id)){const u=[...myTeams,{id,name:ld.name,year:ld.year,mc:ld.members.length}];setMyTeams(u);db.sv("my-teams",u);}}else onErr(t.nf);};
+
+  const open=async id=>{const ld=await db.ld(`team:${id}`,true);if(ld){setTeam(ld);setScreen("ws");window.location.hash=`team=${id}`;}else{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);}};
+
+  const update=u=>{setTeam(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>x.id===u.id?{...x,name:u.name,year:u.year,mc:u.members.length}:x);setMyTeams(ut);db.sv("my-teams",ut);};
+
+  const goHome=()=>{setTeam(null);setScreen("home");window.location.hash="";};
+
+  if(screen==="ws"&&team) {
+    // Check for special view modes via hash params
+    const hash = window.location.hash;
+    const viewMatch = hash.match(/view=(badge|json|print|tsv)/i);
+    if (viewMatch) {
+      const vw = viewMatch[1].toLowerCase();
+      if (vw === "badge") return <ErrorBoundary><div style={{minHeight:"100vh",background:th.bg}}><BadgeView team={team} th={th} t={t}/></div></ErrorBoundary>;
+      if (vw === "print") return <ErrorBoundary><PrintView team={team} th={th} t={t}/></ErrorBoundary>;
+      if (vw === "tsv") {
+        const tsv = generateTSV(team,t);
+        return <ErrorBoundary><div style={{minHeight:"100vh",background:th.bg,padding:20,fontFamily:FM}}>
+          <div style={{marginBottom:12,textAlign:"center"}}>
+            <div style={{fontSize:14,fontWeight:700,color:th.tx,marginBottom:4}}>{t.sheetsTitle}</div>
+            <div style={{fontSize:11,color:th.t3}}>{t.sheetsSub}</div>
+          </div>
+          <pre style={{background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rSm,padding:20,fontSize:12,color:th.tx,overflow:"auto",maxHeight:"80vh",whiteSpace:"pre-wrap",backdropFilter:G.blur}}>{tsv}</pre>
+        </div></ErrorBoundary>;
+      }
+      if (vw === "json") {
+        const jsonData = JSON.stringify({
+          name: team.name, year: team.year, members: team.members.map(m => ({
+            name: m.name, country: m.country,
+            days: (m.days || []).sort(),
+            daysCount: (m.days || []).length,
+          })),
+          generatedAt: new Date().toISOString(),
+        }, null, 2);
+        return <ErrorBoundary><div style={{minHeight:"100vh",background:th.bg,padding:20,fontFamily:FM}}>
+          <pre style={{background:th.sf,border:`1px solid ${th.bd}`,borderRadius:12,padding:20,fontSize:12,color:th.tx,overflow:"auto",maxHeight:"90vh",whiteSpace:"pre-wrap"}}>{jsonData}</pre>
+        </div></ErrorBoundary>;
+      }
+    }
+    return <ErrorBoundary><WS team={team} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
+  }
+  const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);db.del("team:"+id,true);};
+  return <ErrorBoundary><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
+}
