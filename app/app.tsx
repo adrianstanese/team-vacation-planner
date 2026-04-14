@@ -2359,44 +2359,88 @@ function GlobeView({th,members}) {
   const ref = useRef(null);
   const initRef = useRef(false);
   useEffect(() => {
-    if(!ref.current || initRef.current) return;
+    if(!ref.current || initRef.current || !window.THREE) return;
     initRef.current = true;
+    var T = window.THREE;
     var w = ref.current.offsetWidth, h = 280;
-    var scene = new window.THREE.Scene();
-    var camera = new window.THREE.PerspectiveCamera(45, w/h, 0.1, 1000);
-    camera.position.z = 2.5;
-    var renderer = new window.THREE.WebGLRenderer({antialias:true,alpha:true});
+    var scene = new T.Scene();
+    var camera = new T.PerspectiveCamera(45, w/h, 0.1, 1000);
+    camera.position.z = 2.8;
+    var renderer = new T.WebGLRenderer({antialias:true,alpha:true});
     renderer.setSize(w, h);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     ref.current.appendChild(renderer.domElement);
-    var geo = new window.THREE.SphereGeometry(1, 48, 48);
+
+    // Globe group — everything rotates together
+    var globe = new T.Group();
+    scene.add(globe);
+
     var isDark = th.bg === "#0B0F1A" || th.bg === "#0e1117";
-    var mat = new window.THREE.MeshPhongMaterial({color:isDark?0x1a1a3e:0xE8E6E1,emissive:isDark?0x0a0a2e:0xf5f3ff,transparent:true,opacity:0.85,wireframe:false});
-    var sphere = new window.THREE.Mesh(geo, mat);
-    scene.add(sphere);
-    var wf = new window.THREE.Mesh(new window.THREE.SphereGeometry(1.002,32,32),new window.THREE.MeshBasicMaterial({color:isDark?0x4f46e5:0x8B5CF6,wireframe:true,transparent:true,opacity:0.12}));
-    scene.add(wf);
-    var light = new window.THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(5,3,5);
-    scene.add(light);
-    scene.add(new window.THREE.AmbientLight(0x404040, 0.5));
-    var countryCoords = {RO:[45.9,24.9],BG:[42.7,25.5],DE:[51.2,10.4],FR:[46.2,2.2],ES:[40.5,-3.7],IT:[41.9,12.5],GB:[55.4,-3.4],PT:[39.4,-8.2],HU:[47.2,19.0],NL:[52.1,5.3],SE:[60.1,18.6],AT:[47.5,13.3],CH:[46.8,8.2],PL:[51.9,19.1],CZ:[49.8,15.5],GR:[39.1,21.8],HR:[45.1,15.2],IE:[53.4,-8.2],DK:[56.3,9.5],FI:[61.9,25.7],NO:[60.5,8.5],BE:[50.5,4.5],SK:[48.7,19.7],SI:[46.2,14.9],EE:[58.6,25.0],LV:[56.9,24.1],LT:[55.2,23.9],LU:[49.8,6.1],RS:[44.0,21.0],BA:[43.9,17.7],MK:[41.5,21.7],ME:[42.7,19.4],AL:[41.2,20.2],UA:[48.4,31.2],MD:[47.4,28.8],US:[37.1,-95.7],CA:[56.1,-106.3],AU:[-25.3,133.8],AE:[23.4,53.8],SA:[23.9,45.1],BH:[26.0,50.6],CL:[-35.7,-71.5],BR:[-14.2,-51.9],MA:[31.8,-7.1],KZ:[48.0,68.0],TR:[38.9,35.2],BY:[53.7,27.9],NZ:[-40.9,174.9]};
-    var usedCountries = {};
-    (members||[]).forEach(function(m){if(m.country)usedCountries[m.country]=(usedCountries[m.country]||0)+1;});
-    Object.entries(usedCountries).forEach(function([cc,cnt]){
-      var ll=countryCoords[cc];if(!ll)return;
-      var lat=ll[0]*Math.PI/180,lng=ll[1]*Math.PI/180;
-      var x=Math.cos(lat)*Math.cos(lng),y=Math.sin(lat),z=Math.cos(lat)*Math.sin(lng);
-      var dg=new window.THREE.SphereGeometry(0.025+cnt*0.008,8,8);
-      var dm=new window.THREE.MeshBasicMaterial({color:0x8B5CF6});
-      var dot=new window.THREE.Mesh(dg,dm);
-      dot.position.set(x,y,z);
-      scene.add(dot);
+
+    // Solid sphere
+    var sphereMat = new T.MeshPhongMaterial({
+      color: isDark ? 0x1e1e3f : 0xeeedf5,
+      emissive: isDark ? 0x0f0f2a : 0xf8f7ff,
+      shininess: 20, transparent: true, opacity: 0.9
     });
-    var animate=function(){requestAnimationFrame(animate);sphere.rotation.y+=0.002;wf.rotation.y+=0.002;scene.children.forEach(function(c2){if(c2!==sphere&&c2!==wf&&c2.type==="Mesh"&&c2.geometry.type==="SphereGeometry"&&c2.geometry.parameters.radius<0.1){var r=sphere.rotation.y;var p=c2.position.clone();var cos=Math.cos(r),sin=Math.sin(r);c2.position.x=p.x*cos+p.z*sin;c2.position.z=-p.x*sin+p.z*cos;}});renderer.render(scene,camera);};
+    globe.add(new T.Mesh(new T.SphereGeometry(1, 64, 64), sphereMat));
+
+    // Wireframe overlay — latitude/longitude lines
+    var wfMat = new T.MeshBasicMaterial({color: isDark ? 0x6366f1 : 0x8B5CF6, wireframe: true, transparent: true, opacity: 0.08});
+    globe.add(new T.Mesh(new T.SphereGeometry(1.003, 24, 24), wfMat));
+
+    // Lighting
+    var dl = new T.DirectionalLight(0xffffff, 0.9); dl.position.set(5, 3, 5); scene.add(dl);
+    scene.add(new T.AmbientLight(isDark ? 0x303050 : 0x606060, 0.6));
+
+    // Country dot positions
+    var CC = {RO:[45.9,24.9],BG:[42.7,25.5],DE:[51.2,10.4],FR:[46.2,2.2],ES:[40.5,-3.7],IT:[41.9,12.5],GB:[55.4,-3.4],PT:[39.4,-8.2],HU:[47.2,19.0],NL:[52.1,5.3],SE:[60.1,18.6],AT:[47.5,13.3],CH:[46.8,8.2],PL:[51.9,19.1],CZ:[49.8,15.5],GR:[39.1,21.8],HR:[45.1,15.2],IE:[53.4,-8.2],DK:[56.3,9.5],FI:[61.9,25.7],NO:[60.5,8.5],BE:[50.5,4.5],SK:[48.7,19.7],SI:[46.2,14.9],EE:[58.6,25.0],LV:[56.9,24.1],LT:[55.2,23.9],LU:[49.8,6.1],RS:[44.0,21.0],BA:[43.9,17.7],MK:[41.5,21.7],ME:[42.7,19.4],AL:[41.2,20.2],UA:[48.4,31.2],MD:[47.4,28.8],US:[37.1,-95.7],CA:[56.1,-106.3],AU:[-25.3,133.8],AE:[23.4,53.8],SA:[23.9,45.1],BH:[26.0,50.6],CL:[-35.7,-71.5],BR:[-14.2,-51.9],MA:[31.8,-7.1],KZ:[48.0,68.0],TR:[38.9,35.2],BY:[53.7,27.9],NZ:[-40.9,174.9]};
+
+    // Count members per country
+    var used = {};
+    (members||[]).forEach(function(m){if(m.country)used[m.country]=(used[m.country]||0)+1;});
+
+    // Place dots ON the globe group so they rotate with it
+    Object.entries(used).forEach(function([cc,cnt]){
+      var ll = CC[cc]; if(!ll) return;
+      var lat = ll[0] * Math.PI / 180;
+      var lng = -ll[1] * Math.PI / 180; // negate for correct orientation
+      var R = 1.02; // slightly above surface
+      var x = R * Math.cos(lat) * Math.cos(lng);
+      var y = R * Math.sin(lat);
+      var z = R * Math.cos(lat) * Math.sin(lng);
+      var size = 0.02 + Math.min(cnt, 10) * 0.008;
+      var dotMat = new T.MeshBasicMaterial({color: 0x8B5CF6});
+      var dot = new T.Mesh(new T.SphereGeometry(size, 12, 12), dotMat);
+      dot.position.set(x, y, z);
+      globe.add(dot); // child of globe = rotates with it
+
+      // Glow ring
+      var ringGeo = new T.RingGeometry(size * 1.4, size * 2, 16);
+      var ringMat = new T.MeshBasicMaterial({color: 0x8B5CF6, transparent: true, opacity: 0.25, side: T.DoubleSide});
+      var ring = new T.Mesh(ringGeo, ringMat);
+      ring.position.set(x, y, z);
+      ring.lookAt(0, 0, 0);
+      globe.add(ring);
+    });
+
+    // Slow rotation animation
+    var raf;
+    var animate = function() {
+      raf = requestAnimationFrame(animate);
+      globe.rotation.y += 0.001; // very slow
+      renderer.render(scene, camera);
+    };
     animate();
-    return function(){renderer.dispose();};
-  },[]);
+
+    return function() {
+      cancelAnimationFrame(raf);
+      renderer.dispose();
+      if(ref.current && renderer.domElement.parentNode === ref.current) {
+        ref.current.removeChild(renderer.domElement);
+      }
+    };
+  }, []);
   return <div ref={ref} style={{width:"100%",height:280,borderRadius:16,overflow:"hidden"}}/>;
 }
 
