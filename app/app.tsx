@@ -459,6 +459,9 @@ const CSS_ANIMS = `
 @keyframes floatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(2deg); } }
 @keyframes floatB { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px) rotate(-1.5deg); } }
 @keyframes floatC { 0%,100% { transform: translateY(-4px) rotate(1deg); } 50% { transform: translateY(-16px) rotate(-2deg); } }
+@keyframes borderOrbit { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+.tvp-glow-border { position: relative; }
+.tvp-glow-border::before { content: ""; position: absolute; inset: -2px; border-radius: 22px; padding: 2px; background: linear-gradient(90deg, #6366F1, #818CF8, #A78BFA, #C084FC, #818CF8, #6366F1); background-size: 300% 100%; animation: borderOrbit 4s ease infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; z-index: 1; }
 @keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(99,102,241,.15); } 50% { box-shadow: 0 0 20px rgba(99,102,241,.35); } }
 @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 .tvp-fade { animation: fadeIn .3s ease-out both; }
@@ -2735,10 +2738,10 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
 
       {!mode&&<div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:24}}>
         {[
-          {m:"create",i:"plus",grad:"linear-gradient(135deg, rgba(129,140,248,0.15), rgba(99,102,241,0.1))",glowColor:"rgba(99,102,241,0.2)",iconGrad:"linear-gradient(135deg, #818CF8, #6366F1)",tt:t.crt,st:t.crSub},
+          {m:"create",i:"plus",grad:"linear-gradient(135deg, rgba(129,140,248,0.15), rgba(99,102,241,0.1))",glowColor:"rgba(99,102,241,0.2)",iconGrad:"linear-gradient(135deg, #818CF8, #6366F1)",tt:t.crt,st:t.crSub,glow:true},
           {m:"join",i:"link",grad:"linear-gradient(135deg, rgba(52,211,153,0.12), rgba(16,185,129,0.08))",glowColor:"rgba(16,185,129,0.18)",iconGrad:"linear-gradient(135deg, #34D399, #10B981)",tt:t.jnt,st:t.jnSub},
         ].map(o=>
-          <button key={o.m} onClick={()=>{setMode(o.m);setErr(null);}} style={{
+          <button key={o.m} className={o.glow?"tvp-glow-border":""} onClick={()=>{setMode(o.m);setErr(null);}} style={{
             background:o.grad,
             backdropFilter:"blur(20px) saturate(1.8)",
             WebkitBackdropFilter:"blur(20px) saturate(1.8)",
