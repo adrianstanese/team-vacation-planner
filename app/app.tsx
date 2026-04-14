@@ -3038,6 +3038,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
       return{...mm,approved:!wasApproved};
     }),log:addLogEntry(team,(m?m.name:"Member")+(wasApproved?" approval revoked":" approved"))});
   };
+  const reorderMember=function(fromIdx,toIdx){if(fromIdx===toIdx)return;var ms=[...team.members];var moved=ms.splice(fromIdx,1)[0];ms.splice(toIdx,0,moved);updateWithHistory({...team,members:ms});};
   const approveAll=function(){
     updateWithHistory({...team,members:team.members.map(function(mm){
       if(mm.id===team.approver)return mm;
