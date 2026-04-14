@@ -1,3 +1,4 @@
+import "./globals.css";
 import type { Metadata, Viewport } from "next";
 
 const SITE_URL = "https://vacationplanner.team";
