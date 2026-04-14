@@ -2425,6 +2425,7 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
         <div style={{width:56,height:56,borderRadius:16,background:th.gd,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:`0 8px 40px ${th.ac}50, inset 0 1px 0 rgba(255,255,255,0.3)`}}><Ic n="sun" s={26} c="#fff"/></div>
         <h1 style={{margin:"0 0 8px",fontSize:28,fontWeight:800,color:th.tx,letterSpacing:-.6}}>{t.brand}</h1>
         <p style={{margin:0,fontSize:15,color:th.t2,lineHeight:1.6}}>{a.hero}</p>
+        {typeof window!=="undefined"&&window.THREE&&<GlobeView th={th} members={EU_C.map(function(x){return {country:x.c};})}/>}
       </div>
       <Section icon="arrow" title={a.howTitle}>
         <div style={{marginBottom:8}}><strong style={{color:th.tx}}>1. {a.s1}</strong> — {a.s1d}</div>
@@ -2991,6 +2992,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
       })}
     </div>
   
+    {typeof window!=="undefined"&&window.THREE&&<div style={{marginTop:16,borderRadius:12,overflow:"hidden",border:"1px solid "+th.gbd,background:th.gbg}}><GlobeView th={th} members={team.members}/></div>}
     <TeamWorldMap team={team} th={th} t={t}/>
   </div>;
 }
