@@ -790,21 +790,45 @@ function generatePDFReport(team, t) {
 
 function generateApprovedPDF(team, t) {
   var yr = team.year || CY;
-  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  var monthsFull = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var MO = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var moShort = MO.map(function(m){return m.slice(0,3);});
   var approverMember = team.approver ? team.members.find(function(m){return m.id===team.approver;}) : null;
-  var approverName = approverMember ? approverMember.name : "Team Manager";
+  var approverName = approverMember ? approverMember.name : (t.approverLabel||"Approver");
   var today = new Date();
-  var dateStr = today.toLocaleDateString("en-GB", {day:"numeric",month:"long",year:"numeric"});
+  var dateStr = today.getDate()+" "+MO[today.getMonth()]+" "+today.getFullYear();
 
-  // Filter ONLY approved members who have days
   var approvedMembers = team.members.filter(function(m){
     return m.approved===true && (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length > 0;
   });
   var totalApproved = 0;
   approvedMembers.forEach(function(m){ totalApproved += (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length; });
 
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Approved Vacations - '+team.name+' '+yr+'</title>';
+  // Translated labels
+  var lbl = {
+    title: t.approvalCert || "Approved Vacation Schedule",
+    subtitle: t.offToday ? (t.approvalCert||"Official record of approved time off") : "Official record of approved time off",
+    badge: t.approved || "Approved",
+    members: t.mbs || "Members",
+    approvedDays: (t.approved||"Approved")+" "+(t.dys||"Days"),
+    avg: (t.avgDays || "Avg / Person"),
+    sectionTitle: (t.approved||"Approved")+" "+(t.dys||"Days"),
+    member: t.mb || "Member",
+    country: t.co || "Country",
+    days: t.dys || "Days",
+    periods: t.timeline || "Periods",
+    calTitle: (t.cal||"Calendar")+" — "+(t.approved||"Approved"),
+    weekend: t.we2 || t.sa || "Weekend",
+    holiday: t.holiday || t.hol || "Holiday",
+    certText: t.approvalCert || "Approval Certification",
+    approver: t.approverLabel || "Approver",
+    ackBy: t.mbs || "Team Member",
+    date: t.today || "Date",
+    generated: t.printBtn ? t.printBtn.split("/")[0].trim() : "Generated",
+    pto: t.pto || "PTO",
+    confirm: ""
+  };
+
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+team.name+' '+yr+'</title>';
   html += '<style>';
   html += '@page{size:A4;margin:12mm 14mm}';
   html += 'body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;margin:0;padding:0;color:#1a1a2e;font-size:9px;line-height:1.4}';
@@ -827,9 +851,10 @@ function generateApprovedPDF(team, t) {
   html += '.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:0}';
   html += '.cl{text-align:center;font-size:6px;color:#9ca3af;font-weight:700}';
   html += '.cd{text-align:center;font-size:7px;padding:2px 0;border-radius:0;color:#374151}';
-  html += '.cw{color:#d1d5db;background:#fafafa}';
+  html += '.cw{color:#c9c9c9;background:#f5f5f5}';
   html += '.ch{background:#fef2f2;color:#dc2626;font-weight:700}';
-  html += '.cv{color:#fff;font-weight:800;border-radius:2px;outline:1.5px solid rgba(0,0,0,.15)}';
+  html += '.cv{color:#fff;font-weight:800;border-radius:2px;background:#dc2626;outline:1.5px solid #b91c1c}';
+  html += '.cv2{color:#fff;font-weight:800;border-radius:2px;outline:1.5px solid rgba(0,0,0,.2)}';
   html += '.ft{border-top:1.5px solid #4f46e5;padding-top:8px;margin-top:10px}';
   html += '.sg{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:8px}';
   html += '.sb{border-top:1px solid #1a1a2e;padding-top:4px;margin-top:30px}';
@@ -839,39 +864,36 @@ function generateApprovedPDF(team, t) {
   html += '.wm{text-align:center;margin-top:8px;font-size:7px;color:#d1d5db;letter-spacing:.5px}';
   html += '</style></head><body>';
 
-  // Header — compact
+  // Header
   html += '<div class="hdr">';
-  html += '<h1>'+team.name+' — Approved Vacation Schedule '+yr+'</h1>';
-  html += '<p class="sub">Official record of approved time off · Generated '+dateStr+'</p>';
-  html += '<span class="badge">✓ Approved</span>';
+  html += '<h1>'+team.name+' — '+lbl.title+' '+yr+'</h1>';
+  html += '<p class="sub">'+dateStr+'</p>';
+  html += '<span class="badge">✓ '+lbl.badge+'</span>';
   html += '</div>';
 
-  // Stats row
+  // Stats
   html += '<div class="stats">';
-  html += '<div><div class="stat-n">'+approvedMembers.length+'</div><div class="stat-l">Members</div></div>';
-  html += '<div><div class="stat-n">'+totalApproved+'</div><div class="stat-l">Approved Days</div></div>';
-  html += '<div><div class="stat-n">'+Math.round(totalApproved/(approvedMembers.length||1))+'</div><div class="stat-l">Avg / Person</div></div>';
+  html += '<div><div class="stat-n">'+approvedMembers.length+'</div><div class="stat-l">'+lbl.members+'</div></div>';
+  html += '<div><div class="stat-n">'+totalApproved+'</div><div class="stat-l">'+lbl.approvedDays+'</div></div>';
+  html += '<div><div class="stat-n">'+Math.round(totalApproved/(approvedMembers.length||1))+'</div><div class="stat-l">'+lbl.avg+'</div></div>';
   html += '</div>';
 
-  // Member table — ONLY approved members
-  html += '<div class="sect">Approved Vacation Days</div>';
-  html += '<table><tr><th>Member</th><th>Country</th><th style="text-align:center">Days</th><th style="text-align:center">PTO</th><th>Periods</th></tr>';
+  // Table
+  html += '<div class="sect">'+lbl.sectionTitle+'</div>';
+  html += '<table><tr><th>'+lbl.member+'</th><th>'+lbl.country+'</th><th style="text-align:center">'+lbl.days+'</th><th style="text-align:center">'+lbl.pto+'</th><th>'+lbl.periods+'</th></tr>';
   approvedMembers.forEach(function(m,i) {
     var days = (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).sort();
     var co = EU_C.find(function(x){return x.c===m.country;});
     var mc = MC[team.members.indexOf(m)%MC.length];
-
-    // Build period ranges (group consecutive/close days)
     var ranges = []; var rStart = null; var rPrev = null;
     days.forEach(function(d){
       var p = d.split("-"); var dt = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
       if(!rPrev){ rStart=d; rPrev=dt; return; }
       var diff = (dt - rPrev) / 86400000;
       if(diff <= 3) { rPrev=dt; }
-      else { ranges.push(rStart===fmtD2(rPrev)?fmtD(rStart):fmtD(rStart)+" – "+fmtD2(rPrev)); rStart=d; rPrev=dt; }
+      else { ranges.push(rStart===_fD2(rPrev,moShort)?_fD(rStart,moShort):_fD(rStart,moShort)+" – "+_fD2(rPrev,moShort)); rStart=d; rPrev=dt; }
     });
-    if(rStart) ranges.push(rStart===fmtD2(rPrev)?fmtD(rStart):fmtD(rStart)+" – "+fmtD2(rPrev));
-
+    if(rStart) ranges.push(rStart===_fD2(rPrev,moShort)?_fD(rStart,moShort):_fD(rStart,moShort)+" – "+_fD2(rPrev,moShort));
     var ptoStr = m.pto ? days.length+"/"+m.pto : "–";
     html += '<tr>';
     html += '<td><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+mc.d+';margin-right:4px;vertical-align:middle"></span><strong>'+m.name+'</strong></td>';
@@ -883,59 +905,50 @@ function generateApprovedPDF(team, t) {
   });
   html += '</table>';
 
-  // Year calendar — showing ONLY approved members' days
-  html += '<div class="sect">Year Calendar — Approved Members Only</div>';
+  // Calendar
+  var dayLabels = [t.mo||"M",t.tu||"T",t.we2||"W",t.th||"T",t.fr||"F",t.sa||"S",t.su||"S"];
+  html += '<div class="sect">'+lbl.calTitle+'</div>';
   html += '<div class="cal">';
   var holSet2 = {};
   approvedMembers.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){holSet2[h]=true;}); });
-
   for(var mo=0;mo<12;mo++){
-    html += '<div class="cmo"><div class="cmt">'+monthsFull[mo]+'</div><div class="cg">';
-    var dL = ["M","T","W","T","F","S","S"];
-    for(var dl=0;dl<7;dl++) html += '<div class="cl">'+dL[dl]+'</div>';
-    var fd = fdm(yr,mo);
-    var dm = dim(yr,mo);
+    html += '<div class="cmo"><div class="cmt">'+MO[mo]+'</div><div class="cg">';
+    for(var dl=0;dl<7;dl++) html += '<div class="cl">'+dayLabels[dl]+'</div>';
+    var fd = fdm(yr,mo); var dm = dim(yr,mo);
     for(var bl=0;bl<fd;bl++) html += '<div></div>';
     for(var d=1;d<=dm;d++){
-      var key=dk(yr,mo,d);
-      var dow2=(fd+d-1)%7;
-      var isWe3=dow2>=5;
-      var isHol2=!!holSet2[key];
+      var key=dk(yr,mo,d); var dow2=(fd+d-1)%7; var isWe3=dow2>=5; var isHol2=!!holSet2[key];
       var who2=[];
       approvedMembers.forEach(function(m){if((m.days||[]).indexOf(key)>=0)who2.push(team.members.indexOf(m));});
-      var cls2="cd";
-      var sty2="";
+      var cls2="cd"; var sty2="";
       if(isWe3) cls2+=" cw";
       if(isHol2 && who2.length===0) cls2+=" ch";
-      if(who2.length===1){cls2+=" cv";sty2="background:"+MC[who2[0]%MC.length].d;}
-      else if(who2.length===2){cls2+=" cv";sty2="background:linear-gradient(135deg,"+MC[who2[0]%MC.length].d+" 50%,"+MC[who2[1]%MC.length].d+" 50%)";}
-      else if(who2.length>=3){cls2+=" cv";sty2="background:#dc2626";}
+      if(who2.length===1){cls2+=" cv";sty2="background:"+MC[who2[0]%MC.length].d+";outline-color:"+MC[who2[0]%MC.length].d;}
+      else if(who2.length>=2){cls2+=" cv";sty2="background:#dc2626;outline-color:#991b1b";}
       html += '<div class="'+cls2+'"'+(sty2?' style="'+sty2+'"':'')+'>'+d+(who2.length>1?'<span style="display:block;font-size:5px;line-height:1;margin-top:-1px;font-weight:900">'+who2.length+'</span>':'')+'</div>';
     }
     html += '</div></div>';
   }
   html += '</div>';
 
-  // Color legend
+  // Legend
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;padding:4px 8px;background:#f9fafb;border-radius:4px;border:1px solid #e5e7eb">';
   approvedMembers.forEach(function(m){
     var mc = MC[team.members.indexOf(m)%MC.length];
     html += '<span style="display:flex;align-items:center;gap:3px;font-size:8px;font-weight:600"><span style="width:10px;height:10px;border-radius:2px;background:'+mc.d+';display:inline-block;outline:1px solid rgba(0,0,0,.1)"></span>'+m.name+'</span>';
   });
   html += '<span style="display:flex;align-items:center;gap:3px;font-size:8px;color:#9ca3af">|</span>';
-  html += '<span style="display:flex;align-items:center;gap:3px;font-size:7px;color:#6b7280"><span style="width:10px;height:10px;border-radius:2px;background:#fafafa;border:1px solid #e5e7eb;display:inline-block"></span>Weekend</span>';
-  html += '<span style="display:flex;align-items:center;gap:3px;font-size:7px;color:#6b7280"><span style="width:10px;height:10px;border-radius:2px;background:#fef2f2;border:1px solid #fecaca;display:inline-block"></span>Holiday</span>';
+  html += '<span style="display:flex;align-items:center;gap:3px;font-size:7px;color:#6b7280"><span style="width:10px;height:10px;border-radius:2px;background:#f5f5f5;border:1px solid #e5e7eb;display:inline-block"></span>'+lbl.weekend+'</span>';
+  html += '<span style="display:flex;align-items:center;gap:3px;font-size:7px;color:#6b7280"><span style="width:10px;height:10px;border-radius:2px;background:#fef2f2;border:1px solid #fecaca;display:inline-block"></span>'+lbl.holiday+'</span>';
   html += '</div>';
 
-  // Approval footer — compact
+  // Footer
   html += '<div class="ft">';
-  html += '<p style="font-size:8px;color:#374151;margin:0 0 4px">I confirm that the vacation days listed above have been reviewed and approved for <strong>'+team.name+'</strong> for '+yr+'. This serves as the official record of approved time off.</p>';
   html += '<div class="sg">';
-  html += '<div><div class="sb"><div class="sn">'+approverName+'</div><div class="sr">Approver</div><div class="sl">Date: '+dateStr+'</div></div></div>';
-  html += '<div><div class="sb"><div class="sn">Acknowledged by</div><div class="sr">Team Member</div><div class="sl">Date: _______________</div></div></div>';
+  html += '<div><div class="sb"><div class="sn">'+approverName+'</div><div class="sr">'+lbl.approver+'</div><div class="sl">'+lbl.date+': '+dateStr+'</div></div></div>';
+  html += '<div><div class="sb"><div class="sn">&nbsp;</div><div class="sr">'+lbl.ackBy+'</div><div class="sl">'+lbl.date+': _______________</div></div></div>';
   html += '</div></div>';
-
-  html += '<div class="wm">Generated by Team Vacation Planner · vacationplanner.team · '+dateStr+'</div>';
+  html += '<div class="wm">Team Vacation Planner · vacationplanner.team · '+dateStr+'</div>';
   html += '</body></html>';
 
   var w = window.open("", "_blank");
@@ -945,9 +958,8 @@ function generateApprovedPDF(team, t) {
   setTimeout(function(){w.print();}, 500);
 }
 
-function fmtD2(dt) { var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return dt.getDate()+" "+months[dt.getMonth()]; }
-
-function fmtD(d) { var p = d.split("-"); var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return parseInt(p[2])+" "+months[parseInt(p[1])-1]; }
+function _fD(d, mo) { var p = d.split("-"); return parseInt(p[2])+" "+mo[parseInt(p[1])-1]; }
+function _fD2(dt, mo) { return dt.getDate()+" "+mo[dt.getMonth()]; }
 
 
 // ─── Print Report (opens formatted view in new window with print dialog) ──
