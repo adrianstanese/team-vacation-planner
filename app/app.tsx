@@ -1910,7 +1910,7 @@ function CountrySelect({value,onChange,th,t}) {
 }
 
 // ─── Calendar with Drag Selection ────────────────────────────────
-function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,holSet,w7,approvalMode,team,setCommentDay}) {
+function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,holSet,w7,approvalMode,team,setCommentDay=null}) {
   const days=dim(year,month);const first=fdm(year,month);const cells=[];for(let i=0;i<first;i++)cells.push(null);for(let d=1;d<=days;d++)cells.push(d);
   const am=members.find(m=>m.id===activeId);const ai=am?members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
   const dragRef=useRef(null);
@@ -1987,7 +1987,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           if(!isA && hasUnapprovedMember && mh.length>0) { pendingStripe = "repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(245,158,11,.12) 3px,rgba(245,158,11,.12) 6px)"; }
 
           return <div key={day}
-            onMouseDown={e=>{e.preventDefault();handleMouseDown(day);}} onContextMenu={function(e){e.preventDefault();if(setCommentDay)setCommentDay(dk(year,month,day));}}
+            onMouseDown={e=>{e.preventDefault();handleMouseDown(day);}} onContextMenu={function(e){e.preventDefault();if(typeof setCommentDay==="function")setCommentDay(dk(year,month,day));}}
             onMouseEnter={()=>handleMouseEnter(day)}
             title={isHol?holName(key):mh.length>0?mh.map(function(m){return m.name}).join(", "):""}
             style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:(we&&!w7)||!activeId?"default":"pointer",
@@ -1996,7 +1996,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
               boxShadow:vacShadow}}>
             <span style={{fontSize:compact?11:12,fontWeight:isTd?700:vacWeight,color:isTd&&mh.length===0?th.ac:vacColor,fontFamily:F,lineHeight:1}}>{day}</span>
             {showCount>0&&<span style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:"#fff",color:"#EF4444",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #EF4444"}}>{showCount}</span>}
-            {team&&team.comments&&team.comments[key]&&<span onClick={function(e){e.stopPropagation();setCommentDay(key);}} style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50)",width:4,height:4,borderRadius:"50%",background:"#8B5CF6"}}/>}
+            {team&&team.comments&&team.comments[key]&&setCommentDay&&<span onClick={function(e){e.stopPropagation();setCommentDay(key);}} style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50)",width:4,height:4,borderRadius:"50%",background:"#8B5CF6"}}/>}
           </div>;
         })}
       </div>
@@ -2851,23 +2851,7 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
     <VisitCounter th={th}/>
     <TeamStats th={th} t={t}/>
     
-    {commentDay&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setCommentDay(null)}>
-      <div onClick={e=>e.stopPropagation()} style={{background:th.bg,borderRadius:16,maxWidth:360,width:"100%",padding:20,boxShadow:th.sl}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <h3 style={{margin:0,fontSize:15,fontWeight:700,color:th.tx,fontFamily:F}}>{commentDay}</h3>
-          <button onClick={()=>setCommentDay(null)} style={{background:"none",border:"none",cursor:"pointer"}}><Ic n="x" s={16} c={th.t2}/></button>
-        </div>
-        {(team.comments&&team.comments[commentDay]||[]).map(function(cm,ci){return <div key={ci} style={{padding:"6px 8px",background:th.sh,borderRadius:8,marginBottom:4,fontSize:12}}>
-          <div style={{fontWeight:600,color:th.tx}}>{cm.by} <span style={{fontWeight:400,color:th.t3,fontSize:10}}>{new Date(cm.at).toLocaleString()}</span></div>
-          <div style={{color:th.t2,marginTop:2}}>{cm.t}</div>
-        </div>;})}
-        <div style={{display:"flex",gap:6,marginTop:8}}>
-          <input value={commentText} onChange={e=>setCommentText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&commentText.trim())addComment(commentDay,commentText.trim());}} placeholder={t.addComment||"Add a comment..."} style={{flex:1,padding:"6px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
-          <button onClick={()=>{if(commentText.trim())addComment(commentDay,commentText.trim());}} disabled={!commentText.trim()} style={{padding:"6px 14px",borderRadius:8,border:"none",background:commentText.trim()?th.ac:"#D1D5DB",color:"#fff",fontSize:12,fontWeight:600,cursor:commentText.trim()?"pointer":"default",fontFamily:F}}>Post</button>
-        </div>
-      </div>
-    </div>}
-
+    
     {holBr&&<HolBrowser onClose={()=>setHolBr(false)} th={th} t={t} year={yr}/>}
     {contact&&<ContactModal onClose={()=>setContact(false)} th={th} t={t}/>}
   </div>;
