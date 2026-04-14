@@ -2111,7 +2111,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <div style={{display:"flex",alignItems:"center",gap:8}}>
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
-      <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div>
+      <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:4}}>{m.name}{isApprover&&<span title="Approver" style={{fontSize:11}}>👑</span>}</div>
       <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}{(m.pending||[]).length>0?<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" +"+((m.pending||[]).length)+"⏳"}</span>:""}</div>
       {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>m.pto?"#EF4444":dc>m.pto*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/m.pto*100))+"%",transition:"width .3s"}}/></div>}
     </div>
@@ -2141,10 +2141,10 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
         <span>{workingDaysRemaining(m,yr)} work days left</span>
         <span>{getAllHolidays(m,yr).length} holidays</span>
       </div>}
-      {approvalMode&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,marginTop:2}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,marginTop:2}}>
         <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>Role</span>
-        <button onClick={function(e){e.stopPropagation();onSetApprover();}} style={{flex:1,padding:"3px 8px",borderRadius:4,border:"1px solid "+(isApprover?th.ac:th.gbd),background:isApprover?th.al:"transparent",color:isApprover?th.ac:th.t3,fontSize:10,fontWeight:isApprover?700:500,cursor:"pointer",fontFamily:F}}>{isApprover?"Approver ✓":"Set as Approver"}</button>
-      </div>}
+        <button onClick={function(e){e.stopPropagation();onSetApprover();}} style={{flex:1,padding:"4px 8px",borderRadius:6,border:isApprover?"1.5px solid #10B981":"1px solid "+th.gbd,background:isApprover?"#ECFDF5":"transparent",color:isApprover?"#059669":th.t3,fontSize:10,fontWeight:isApprover?700:500,cursor:"pointer",fontFamily:F,display:"flex",alignItems:"center",justifyContent:"center",gap:4,transition:"all .2s"}}>{isApprover?"👑 Approver":"Set as Approver"}</button>
+      </div>
       {(m.pending||[]).length>0&&<div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,marginTop:4,padding:"4px 8px",background:"#FEF3C7",borderRadius:6,border:"1px solid #FDE68A"}}>
         <span style={{color:"#92400E",fontWeight:700}}>{(m.pending||[]).length} pending</span>
         <button onClick={function(e){e.stopPropagation();onApproveAll();}} style={{marginLeft:"auto",padding:"2px 8px",borderRadius:4,border:"none",background:"#10B981",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:F}}>Approve All</button>
@@ -2680,7 +2680,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   },[]);
   const[showSh,setShowSh]=useState(false);const[view,setView]=useState("cal");const[toast,setToast]=useState(null);
   const[mob,setMob]=useState(window.innerWidth<768);const[sb,setSb]=useState(window.innerWidth>=768);const[settings,setSettings]=useState(false);const[holBr,setHolBr]=useState(false);
-  const[threshold,setThreshold]=useState(team.threshold||2);const[approvalMode,setApprovalMode]=useState(team.approvalMode||false);
+  const[threshold,setThreshold]=useState(team.threshold||2);const approvalMode=!!team.approver;
   const[showOptimizer,setShowOptimizer]=useState(null); // member id
   const[showCSVImport,setShowCSVImport]=useState(false);
   const[csvText,setCsvText]=useState("");
@@ -2722,7 +2722,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const setApprover=(memberId)=>{updateWithHistory({...team,approver:memberId||null});};
 }),...{log:addLogEntry(team,(member.name||"Member")+" removed "+key)}});return;}
     if(inPending){updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:pds.filter(function(x){return x!==key;})};}),...{log:addLogEntry(team,(member.name||"Member")+" cancelled pending "+key)}});return;}
-    if(approvalMode&&team.approver&&team.approver!==aId){updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:[].concat(pds,[key])};}),...{log:addLogEntry(team,(member.name||"Member")+" requested "+key)}});flash("Pending approval");return;}
+    if(approvalMode&&team.approver&&team.approver!==aId){updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:[].concat(pds,[key])};}),...{log:addLogEntry(team,(member.name||"Member")+" requested "+key)}});flash("⏳ Pending approval from "+(team.members.find(function(x){return x.id===team.approver;})||{name:"approver"}).name);return;}
     updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,days:[].concat(ds,[key])};}),...{log:addLogEntry(team,(member.name||"Member")+" added "+key)}});};
   const toggleLock=()=>updateWithHistory({...team,locked:!team.locked,log:addLogEntry(team,team.locked?"Board unlocked":"Board locked")});
 
@@ -2774,12 +2774,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
           <option value={2}>2+</option><option value={3}>3+</option><option value={4}>4+</option><option value={5}>5+</option>
         </select>
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11}}>
-        <span style={{color:th.t2,fontWeight:600}}>Approval</span>
-        <button onClick={function(){var v=!approvalMode;setApprovalMode(v);updateWithHistory({...team,approvalMode:v});}} style={{width:32,height:18,borderRadius:9,border:"none",cursor:"pointer",background:approvalMode?th.ac:th.sh,position:"relative",transition:"background .2s"}}>
-          <div style={{width:14,height:14,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:approvalMode?16:2,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
-        </button>
-      </div>
+
     </div>}
 
     {/* View tabs */}
