@@ -459,7 +459,6 @@ const CSS_ANIMS = `
 @keyframes floatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(2deg); } }
 @keyframes floatB { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px) rotate(-1.5deg); } }
 @keyframes floatC { 0%,100% { transform: translateY(-4px) rotate(1deg); } 50% { transform: translateY(-16px) rotate(-2deg); } }
-
 @keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(99,102,241,.15); } 50% { box-shadow: 0 0 20px rgba(99,102,241,.35); } }
 @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 .tvp-fade { animation: fadeIn .3s ease-out both; }
@@ -2735,11 +2734,10 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
       <p style={{fontSize:15,color:th.t2,margin:"0 0 32px",lineHeight:1.5}}>{t.tag1}<br/>{t.tag2}</p>
 
       {!mode&&<div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:24}}>
-        {/* Create Team with orbiting glow */}
-        <div onClick={()=>{setMode("create");setErr(null);}} style={{position:"relative",borderRadius:22,padding:2,cursor:"pointer",overflow:"hidden",marginBottom:0}}>
-          <div style={{position:"absolute",inset:-20,background:"conic-gradient(from 0deg, transparent 0%, transparent 30%, #818CF8 40%, #A78BFA 50%, #6366F1 55%, transparent 65%, transparent 100%)",animation:"glowSpin 3s linear infinite",borderRadius:"50%",zIndex:0}}/>
-          <div style={{position:"relative",zIndex:1,background:"linear-gradient(135deg, rgba(129,140,248,0.15), rgba(99,102,241,0.1))",backdropFilter:"blur(20px) saturate(1.8)",WebkitBackdropFilter:"blur(20px) saturate(1.8)",border:"1px solid rgba(255,255,255,0.45)",borderRadius:20,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(99,102,241,0.2), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";}}>
-            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #818CF8, #6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(99,102,241,0.2)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="plus" s={22} c="#fff"/></div>
+        {/* Create Team with glow border */}
+        <div className={_m?"tvp-glowcard":undefined} onClick={()=>{setMode("create");setErr(null);}} style={{borderRadius:20,cursor:"pointer"}}>
+          <div style={{background:"linear-gradient(135deg, rgba(242,240,255,0.95), rgba(237,233,254,0.9))",borderRadius:18.5,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(99,102,241,0.15), 0 1px 3px rgba(0,0,0,0.04)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={function(e){e.currentTarget.style.transform="translateY(0) scale(1)";}}>
+            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #818CF8, #6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(99,102,241,0.25)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="plus" s={22} c="#fff"/></div>
             <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.crt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{t.crSub}</div></div>
           </div>
         </div>
