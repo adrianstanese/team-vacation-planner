@@ -698,8 +698,8 @@ function generatePDFReport(team, t) {
       html += '<div class="tl-row"><div class="tl-name">'+m.name+'</div><div class="tl-bar">';
       for(var d=1;d<=daysInMonth;d++){
         var key = dk(yr,mo,d);
-        var has = (m.days||[]).indexOf(key) >= 0;
-        html += '<div class="tl-day" style="background:'+(has?c.d:'#f3f4f6')+'"></div>';
+        var has = (m.days||[]).indexOf(key) >= 0; var isPending = (m.pending||[]).indexOf(key) >= 0;
+        html += '<div class="tl-day" style="background:'+(has?c.d:(isPending?c.d+'80':'#f3f4f6'))+(isPending?';background-image:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.4) 2px,rgba(255,255,255,.4) 4px)':'')+'"></div>';
       }
       html += '</div></div>';
     });
@@ -877,10 +877,10 @@ function printReport(team, t) {
       html += '<div class="tl-row"><div class="tl-name">'+m.name+'</div><div class="tl-bar">';
       for(var d2=1;d2<=daysInMonth;d2++){
         var key=dk(yr,mo,d2);
-        var has=(m.days||[]).indexOf(key)>=0;
+        var has=(m.days||[]).indexOf(key)>=0;var isPnd=(m.pending||[]).indexOf(key)>=0;
         var isHol2=!!allHols[key];
         var isWe2=isWe(yr,mo,d2);
-        html += '<div class="tl-day" style="background:'+(has?c.d:isHol2?'#fecaca':isWe2?'#f3f4f6':'#f9fafb')+'"></div>';
+        html += '<div class="tl-day" style="background:'+(has?c.d:isPnd?c.d+'60':isHol2?'#fecaca':isWe2?'#f3f4f6':'#f9fafb')+(isPnd?';background-image:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px)':'')+'"></div>';
       }
       html += '</div></div>';
     });
@@ -1698,7 +1698,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
         {cells.map((day,i)=>{
           if(!day) return <div key={`e${i}`}/>;
           const we=isWe(year,month,day);const key=dk(year,month,day);
-          const mh=members.filter(m=>(m.days||[]).includes(key));const isA=(am&&am.days||[]).includes(key);
+          const mh=members.filter(m=>(m.days||[]).includes(key));const isA=(am&&am.days||[]).includes(key);const isPendingA=(am&&(am.pending||[]).includes(key));const hasPending=members.some(function(m){return (m.pending||[]).includes(key);});
           const isTd=year===CY&&month===CM&&day===CD;
           const past=new Date(year,month,day)<new Date(CY,CM,CD);
           const isHol=(holSet&&holSet.has(key));
@@ -1733,13 +1733,16 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           if(mh.length===0 && !isHol && !we && !isA) { vacBg = "transparent"; vacColor = th.tx; }
           if(mh.length===0 && !isHol && we && w7 && !isA) { vacBg = "transparent"; vacColor = th.tx; }
           if(isTd) vacBorder = "2px solid " + th.ac;
+          var pendingStripe = "";
+          if(isPendingA) { vacBg = ac.d + "40"; vacColor = ac.d; pendingStripe = "repeating-linear-gradient(45deg,transparent,transparent 3px," + ac.d + "18 3px," + ac.d + "18 6px)"; }
+          else if(hasPending && mh.length===0 && !isA) { pendingStripe = "repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(245,158,11,.12) 3px,rgba(245,158,11,.12) 6px)"; }
 
           return <div key={day}
             onMouseDown={e=>{e.preventDefault();handleMouseDown(day);}}
             onMouseEnter={()=>handleMouseEnter(day)}
             title={isHol?holName(key):mh.length>0?mh.map(function(m){return m.name}).join(", "):""}
             style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:(we&&!w7)||!activeId?"default":"pointer",
-              background:vacBg, border:vacBorder, transition:"background .1s",
+              background:vacBg, backgroundImage:pendingStripe||"none", border:vacBorder, transition:"background .1s",
               opacity:past&&mh.length===0&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
               boxShadow:vacShadow}}>
             <span style={{fontSize:compact?11:12,fontWeight:isTd?700:vacWeight,color:isTd&&mh.length===0?th.ac:vacColor,fontFamily:F,lineHeight:1}}>{day}</span>
@@ -1931,7 +1934,7 @@ function ConflictAlerts({team,threshold,th,t}) {
 }
 
 // ─── Member Row ──────────────────────────────────────────────────
-function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,yr,onExportICS,onOptimize,th,t,locked}){
+function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,onApproveAll,onRejectAll}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const[h,setH]=useState(false);const dc=(m.days||[]).length||0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
@@ -1949,7 +1952,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div>
-      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}</div>
+      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}{(m.pending||[]).length>0?<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" +"+((m.pending||[]).length)+"⏳"}</span>:""}</div>
       {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>m.pto?"#EF4444":dc>m.pto*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/m.pto*100))+"%",transition:"width .3s"}}/></div>}
     </div>
     {(h||isActive)&&!locked&&<div style={{display:"flex",gap:1,flexShrink:0}}>
@@ -1977,6 +1980,15 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
       {yr&&m.country&&<div style={{fontSize:10,color:th.t3,display:"flex",justifyContent:"space-between"}}>
         <span>{workingDaysRemaining(m,yr)} work days left</span>
         <span>{getAllHolidays(m,yr).length} holidays</span>
+      </div>}
+      {approvalMode&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,marginTop:2}}>
+        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>Role</span>
+        <button onClick={function(e){e.stopPropagation();onSetApprover();}} style={{flex:1,padding:"3px 8px",borderRadius:4,border:"1px solid "+(isApprover?th.ac:th.gbd),background:isApprover?th.al:"transparent",color:isApprover?th.ac:th.t3,fontSize:10,fontWeight:isApprover?700:500,cursor:"pointer",fontFamily:F}}>{isApprover?"Approver ✓":"Set as Approver"}</button>
+      </div>}
+      {(m.pending||[]).length>0&&<div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,marginTop:4,padding:"4px 8px",background:"#FEF3C7",borderRadius:6,border:"1px solid #FDE68A"}}>
+        <span style={{color:"#92400E",fontWeight:700}}>{(m.pending||[]).length} pending</span>
+        <button onClick={function(e){e.stopPropagation();onApproveAll();}} style={{marginLeft:"auto",padding:"2px 8px",borderRadius:4,border:"none",background:"#10B981",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:F}}>Approve All</button>
+        <button onClick={function(e){e.stopPropagation();onRejectAll();}} style={{padding:"2px 8px",borderRadius:4,border:"none",background:"#EF4444",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:F}}>Reject</button>
       </div>}
     </div>}
   </div>;
@@ -2540,7 +2552,18 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const setCo=(id,cc)=>{const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
   const setPto=(id,val)=>{updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
   const setRegion=(id,val)=>{updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
-  const tog=(y,m,d)=>{if(!aId||locked)return;const key=dk(y,m,d);const adding2=!(am&&am.days||[]).includes(key);updateWithHistory({...team,members:team.members.map(mm=>{if(mm.id!==aId)return mm;const ds=mm.days||[];return{...mm,days:ds.includes(key)?ds.filter(x=>x!==key):[...ds,key]};}),log:addLogEntry(team,`${(am&&am.name)||"Member"} ${adding2?"added":"removed"} ${key}`)});};
+  const tog=(y,m,d)=>{if(!aId||locked)return;const key=dk(y,m,d);
+    const member=team.members.find(function(x){return x.id===aId;});if(!member)return;
+    const ds=member.days||[];const pds=member.pending||[];
+    const inDays=ds.indexOf(key)>=0;const inPending=pds.indexOf(key)>=0;
+    if(inDays){updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,days:ds.filter(function(x){return x!==key;})};
+  const approvePending=(memberId,dayKey)=>{updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==memberId)return mm;var p=(mm.pending||[]);var d=(mm.days||[]);if(dayKey){return{...mm,pending:p.filter(function(x){return x!==dayKey;}),days:d.concat([dayKey])};}return{...mm,pending:[],days:d.concat(p)};}),...{log:addLogEntry(team,"Approved "+(dayKey||"all pending")+" for "+(team.members.find(function(x){return x.id===memberId;})||{}).name)}});};
+  const rejectPending=(memberId,dayKey)=>{updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==memberId)return mm;var p=(mm.pending||[]);if(dayKey){return{...mm,pending:p.filter(function(x){return x!==dayKey;})};}return{...mm,pending:[]};}),...{log:addLogEntry(team,"Rejected "+(dayKey||"all pending")+" for "+(team.members.find(function(x){return x.id===memberId;})||{}).name)}});};
+  const setApprover=(memberId)=>{updateWithHistory({...team,approver:memberId||null});};
+}),...{log:addLogEntry(team,(member.name||"Member")+" removed "+key)}});return;}
+    if(inPending){updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:pds.filter(function(x){return x!==key;})};}),...{log:addLogEntry(team,(member.name||"Member")+" cancelled pending "+key)}});return;}
+    if(approvalMode&&team.approver&&team.approver!==aId){updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,pending:[].concat(pds,[key])};}),...{log:addLogEntry(team,(member.name||"Member")+" requested "+key)}});flash("Pending approval");return;}
+    updateWithHistory({...team,members:team.members.map(function(mm){if(mm.id!==aId)return mm;return{...mm,days:[].concat(ds,[key])};}),...{log:addLogEntry(team,(member.name||"Member")+" added "+key)}});};
   const toggleLock=()=>updateWithHistory({...team,locked:!team.locked,log:addLogEntry(team,team.locked?"Board unlocked":"Board locked")});
 
   const am=team.members.find(m=>m.id===aId);const ai=am?team.members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
@@ -2624,7 +2647,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
             </select>}
             <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>setAdding(false)}>{t.can}</Btn></div>
           </div>}
-          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)}/>)}
+          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} onApproveAll={()=>approvePending(m.id)} onRejectAll={()=>rejectPending(m.id)}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}
