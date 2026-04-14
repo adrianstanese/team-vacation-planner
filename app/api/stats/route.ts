@@ -10,8 +10,8 @@ export async function GET() {
       SELECT 
         COUNT(*)::int as teams,
         COALESCE(SUM(jsonb_array_length(data->'members')), 0)::int as members
-      FROM "Team"
-      WHERE "expiresAt" > NOW()
+      FROM teams
+      WHERE expires_at > NOW()
     `;
     return NextResponse.json({
       teams: rows[0]?.teams || 0,
