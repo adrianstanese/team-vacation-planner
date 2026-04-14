@@ -2153,7 +2153,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
       </div>}
       <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,marginTop:2}}>
         <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>Role</span>
-        <button onClick={function(e){e.stopPropagation();onSetApprover();}} style={{flex:1,padding:"4px 8px",borderRadius:6,border:isApprover?"1.5px solid #10B981":"1px solid "+th.gbd,background:isApprover?"#ECFDF5":"transparent",color:isApprover?"#059669":th.t3,fontSize:10,fontWeight:isApprover?700:500,cursor:"pointer",fontFamily:F,display:"flex",alignItems:"center",justifyContent:"center",gap:4,transition:"all .2s"}}>{isApprover?"👑 "+(t.approverLabel||"Approver"):{t.setApprover}}</button>
+        <button onClick={function(e){e.stopPropagation();onSetApprover();}} style={{flex:1,padding:"4px 8px",borderRadius:6,border:isApprover?"1.5px solid #10B981":"1px solid "+th.gbd,background:isApprover?"#ECFDF5":"transparent",color:isApprover?"#059669":th.t3,fontSize:10,fontWeight:isApprover?700:500,cursor:"pointer",fontFamily:F,display:"flex",alignItems:"center",justifyContent:"center",gap:4,transition:"all .2s"}}>{isApprover?"👑 "+(t.approverLabel||"Approver"):(t.setApprover||"Set as Approver")}</button>
       </div>
       {isApprover&&approvalMode&&allMembers&&allMembers.length>1&&<div style={{marginTop:6,paddingTop:6,borderTop:"1px solid "+th.gbd}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
@@ -2232,7 +2232,7 @@ function ShareModal({teamId,teamName,onClose,th,t}){
       </div>
       {/* Tabs */}
       <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
-        {[{k:"link",i:"link",l:t.cl},{k:"qr",i:"grid",l:"QR"},{k:"ical",i:"calendar",l:{t.subscribe}},{k:"widget",i:"bar",l:{t.widget}},{k:"embed",i:"code",l:t.embed}].map(o=> <button key={o.k} onClick={()=>setTab(o.k)} style={{padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",border:o.k===tab?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:o.k===tab?th.al:"transparent",color:o.k===tab?th.ac:th.t2,display:"flex",alignItems:"center",gap:4}}><Ic n={o.i} s={13} c={o.k===tab?th.ac:th.t3}/>{o.l}</button>)}
+        {[{k:"link",i:"link",l:t.cl},{k:"qr",i:"grid",l:"QR"},{k:"ical",i:"calendar",l:t.subscribe},{k:"widget",i:"bar",l:t.widget},{k:"embed",i:"code",l:t.embed}].map(o=> <button key={o.k} onClick={()=>setTab(o.k)} style={{padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",border:o.k===tab?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:o.k===tab?th.al:"transparent",color:o.k===tab?th.ac:th.t2,display:"flex",alignItems:"center",gap:4}}><Ic n={o.i} s={13} c={o.k===tab?th.ac:th.t3}/>{o.l}</button>)}
       </div>
       {tab==="link"&&<Fragment>
         <p style={{margin:"0 0 10px",fontSize:13,color:th.t2}}>{t.shs} {teamName}</p>
@@ -2248,7 +2248,7 @@ function ShareModal({teamId,teamName,onClose,th,t}){
         <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>iCal Subscribe URL</p>
         <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>Add this URL to Google Calendar, Outlook, or Apple Calendar. It updates automatically when vacations change.</p>
         <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{"webcal://" + window.location.host + window.location.pathname + "?team=" + teamId + "&view=ics"}</div>
-        <Btn th={th} onClick={()=>copy("webcal://" + window.location.host + window.location.pathname + "?team=" + teamId + "&view=ics")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center",marginBottom:8}}>{cp?t.cp:{t.copySubURL}}</Btn>
+        <Btn th={th} onClick={()=>copy("webcal://" + window.location.host + window.location.pathname + "?team=" + teamId + "&view=ics")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center",marginBottom:8}}>{cp?t.cp:t.copySubURL}</Btn>
         <div style={{fontSize:11,color:th.t3,lineHeight:1.6}}>
           <div style={{marginBottom:4}}><strong style={{color:th.tx}}>Google Calendar:</strong> Settings → Add calendar → From URL → paste</div>
           <div style={{marginBottom:4}}><strong style={{color:th.tx}}>Outlook:</strong> Add calendar → Subscribe from web → paste</div>
@@ -2259,7 +2259,7 @@ function ShareModal({teamId,teamName,onClose,th,t}){
         <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>Mini Dashboard Widget</p>
         <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>A compact 300x200px widget showing who is out this week. Perfect for Notion, company wikis, or office TV screens.</p>
         <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{"<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"220\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>"}</div>
-        <Btn th={th} onClick={()=>copy("<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"220\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center"}}>{cp?t.cp:{t.copyWidget}}</Btn>
+        <Btn th={th} onClick={()=>copy("<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"220\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center"}}>{cp?t.cp:t.copyWidget}</Btn>
       </Fragment>}
       {tab==="embed"&&<Fragment>
         <p style={{margin:"0 0 10px",fontSize:13,color:th.t2}}>Paste this code into any website to embed the team calendar:</p>
@@ -2770,7 +2770,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const am=team.members.find(m=>m.id===aId);const ai=am?team.members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
   const allM=Array.from({length:12},(_,i)=>({year:yr,month:i}));
 
-  const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:"Log"},{k:"analytics",i:"bar",l:{t.analytics||"Analytics"}}];
+  const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:"Log"},{k:"analytics",i:"bar",l:t.analytics||"Analytics"}];
 
   return <div style={{minHeight:"100vh",background:th.bg,fontFamily:F,display:"flex",flexDirection:"column"}}>
     <header style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"0 12px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
@@ -3156,4 +3156,3 @@ export default function App(){
   const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);};
   return <ErrorBoundary><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
 }
-// v7-arabic
