@@ -268,8 +268,9 @@ function computeHolidays(cc, year) {
       all.push(dFmt(year, mawlid.getMonth()+1, mawlid.getDate()));
     }
   }
-  if(cc==="SA"){h.push(year+"-02-22");h.push(year+"-09-23");}
 
+  
+  if(cc==="SA"){all.push(dFmt(year,2,22));all.push(dFmt(year,9,23));}
 
   return [...new Set(all)].sort();
 }
@@ -461,6 +462,7 @@ const CSS_ANIMS = `
 @keyframes floatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(2deg); } }
 @keyframes floatB { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px) rotate(-1.5deg); } }
 @keyframes floatC { 0%,100% { transform: translateY(-4px) rotate(1deg); } 50% { transform: translateY(-16px) rotate(-2deg); } }
+@keyframes glowSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(99,102,241,.15); } 50% { box-shadow: 0 0 20px rgba(99,102,241,.35); } }
 @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 .tvp-fade { animation: fadeIn .3s ease-out both; }
@@ -562,7 +564,6 @@ const fdm=(y,m)=>{const d=new Date(y,m,1).getDay();return d===0?6:d-1;};
 const dk=(y,m,d)=>`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
 const pk=k=>{const[y,m,d]=k.split("-").map(Number);return{y,m:m-1,d};};
 const isWe=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
-const isWeCC=(y,m,d,cc)=>{const w=new Date(y,m,d).getDay();if(cc&&SUN_THU.indexOf(cc)>=0)return w===5||w===6;return w===0||w===6;};
 const N=new Date(),CY=N.getFullYear(),CM=N.getMonth(),CD=N.getDate();
 
 // ─── Storage (hybrid: API for teams, localStorage for prefs, window.storage for artifact sandbox) ───
@@ -1936,8 +1937,8 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
   const dragRef=useRef(null);
   const dayLabels=[t.mo,t.tu,t.we2,t.th,t.fr,t.sa,t.su];
 
-  const[popDay,setPopDay]=useState(null);const handleMouseDown=(day)=>{if(!activeId||(isWeCC(year,month,day,am&&am.country)&&!w7))return;setPopDay(day);setTimeout(function(){setPopDay(null);},200);dragRef.current={start:day,days:new Set([day]),adding:!(am&&am.days||[]).includes(dk(year,month,day))};onToggle(year,month,day);};
-  const handleMouseEnter=(day)=>{if(!dragRef.current||!activeId||(isWeCC(year,month,day,am&&am.country)&&!w7))return;const{start,days:dragDays,adding}=dragRef.current;const lo=Math.min(start,day),hi=Math.max(start,day);const newDays=new Set();for(let d=lo;d<=hi;d++){if(!isWe(year,month,d)||w7)newDays.add(d);}const toProcess=[...newDays].filter(d=>!dragDays.has(d));toProcess.forEach(d=>{const key=dk(year,month,d);const hasDayAlready=(am&&am.days||[]).includes(key);if((adding&&!hasDayAlready)||(!adding&&hasDayAlready))onToggle(year,month,d);});dragRef.current.days=newDays;};
+  const[popDay,setPopDay]=useState(null);const handleMouseDown=(day)=>{if(!activeId||(isWe(year,month,day)&&!w7))return;setPopDay(day);setTimeout(function(){setPopDay(null);},200);dragRef.current={start:day,days:new Set([day]),adding:!(am&&am.days||[]).includes(dk(year,month,day))};onToggle(year,month,day);};
+  const handleMouseEnter=(day)=>{if(!dragRef.current||!activeId||(isWe(year,month,day)&&!w7))return;const{start,days:dragDays,adding}=dragRef.current;const lo=Math.min(start,day),hi=Math.max(start,day);const newDays=new Set();for(let d=lo;d<=hi;d++){if(!isWe(year,month,d)||w7)newDays.add(d);}const toProcess=[...newDays].filter(d=>!dragDays.has(d));toProcess.forEach(d=>{const key=dk(year,month,d);const hasDayAlready=(am&&am.days||[]).includes(key);if((adding&&!hasDayAlready)||(!adding&&hasDayAlready))onToggle(year,month,d);});dragRef.current.days=newDays;};
   const handleMouseUp=()=>{dragRef.current=null;};
 
   useEffect(()=>{const up=()=>{dragRef.current=null;};window.addEventListener("mouseup",up);return()=>window.removeEventListener("mouseup",up);},[]);
@@ -1953,7 +1954,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1}} onMouseLeave={handleMouseUp}>
         {cells.map((day,i)=>{
           if(!day) return <div key={`e${i}`}/>;
-          const we=isWeCC(year,month,day,am&&am.country);const key=dk(year,month,day);
+          const we=isWe(year,month,day);const key=dk(year,month,day);
           const mh=members.filter(m=>(m.days||[]).includes(key));const isA=(am&&am.days||[]).includes(key);const isUnapproved=approvalMode&&am&&!am.approved&&am.id!==(typeof team!=="undefined"?team.approver:null);
           const isTd=year===CY&&month===CM&&day===CD;
           const past=new Date(year,month,day)<new Date(CY,CM,CD);
@@ -2719,7 +2720,7 @@ function TodayHolidays({th,t}) {
 function FadeIn({children,delay}){var ref=useRef(null);var[vis,setVis]=useState(false);useEffect(function(){if(!ref.current)return;var obs=new IntersectionObserver(function(en){if(en[0].isIntersecting){setVis(true);obs.disconnect();}},{threshold:0.1});obs.observe(ref.current);return function(){obs.disconnect();};},[]);return <div ref={ref} style={{opacity:vis?1:0,transform:vis?"none":"translateY(16px)",transition:"opacity .5s ease "+(delay||0)+"ms,transform .5s ease "+(delay||0)+"ms"}}>{children}</div>;}
 function fireConfetti(){var cv=document.createElement("canvas");cv.style.cssText="position:fixed;inset:0;z-index:9999;pointer-events:none";document.body.appendChild(cv);var ctx=cv.getContext("2d");cv.width=window.innerWidth;cv.height=window.innerHeight;var P=[];var cols=["#8B5CF6","#6366F1","#EC4899","#F59E0B","#10B981","#3B82F6"];for(var i=0;i<80;i++)P.push({x:cv.width/2,y:cv.height/2,vx:(Math.random()-.5)*12,vy:Math.random()*-14-4,s:Math.random()*6+3,c:cols[i%6],l:1,d:Math.random()*.015+.008,r:Math.random()*360});(function draw(){ctx.clearRect(0,0,cv.width,cv.height);var alive=false;P.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=.35;p.l-=p.d;p.r+=p.vx;if(p.l>0){alive=true;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r*Math.PI/180);ctx.globalAlpha=p.l;ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();}});if(alive)requestAnimationFrame(draw);else cv.remove();})();}
 function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,lang,setLang,theme,setTheme}){
-  const[name,setName]=useState("");const[scrY,setScrY]=useState(0);useEffect(function(){var h=function(){setScrY(window.scrollY);};window.addEventListener("scroll",h,{passive:true});return function(){window.removeEventListener("scroll",h);};},[]);const[_m,_sM]=useState(false);useEffect(function(){_sM(true);},[]);const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
+  const[name,setName]=useState("");const[scrY,setScrY]=useState(0);useEffect(function(){var h=function(){setScrY(window.scrollY);};window.addEventListener("scroll",h,{passive:true});return function(){window.removeEventListener("scroll",h);};},[]);const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
   const YRS=Array.from({length:10},(_,i)=>2026+i);
 
   if(about) return <AboutPage th={th} t={t} onBack={()=>setAbout(false)} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>;
@@ -2737,20 +2738,34 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
       <p style={{fontSize:15,color:th.t2,margin:"0 0 32px",lineHeight:1.5}}>{t.tag1}<br/>{t.tag2}</p>
 
       {!mode&&<div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:24}}>
-        {/* Create Team with glow border */}
-        <div className={_m?"tvp-glowcard":undefined} onClick={()=>{setMode("create");setErr(null);}} style={{borderRadius:20,cursor:"pointer"}}>
-          <div style={{background:"linear-gradient(135deg, rgba(242,240,255,0.95), rgba(237,233,254,0.9))",borderRadius:18.5,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(99,102,241,0.15), 0 1px 3px rgba(0,0,0,0.04)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={function(e){e.currentTarget.style.transform="translateY(0) scale(1)";}}>
-            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #818CF8, #6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(99,102,241,0.25)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="plus" s={22} c="#fff"/></div>
+        {/* Create Team with orbiting glow */}
+        <div onClick={()=>{setMode("create");setErr(null);}} style={{position:"relative",borderRadius:22,padding:2,cursor:"pointer",overflow:"hidden",marginBottom:0}}>
+          <div style={{position:"absolute",inset:-20,background:"conic-gradient(from 0deg, transparent 0%, transparent 30%, #818CF8 40%, #A78BFA 50%, #6366F1 55%, transparent 65%, transparent 100%)",animation:"glowSpin 3s linear infinite",borderRadius:"50%",zIndex:0}}/>
+          <div style={{position:"relative",zIndex:1,background:"linear-gradient(135deg, rgba(129,140,248,0.15), rgba(99,102,241,0.1))",backdropFilter:"blur(20px) saturate(1.8)",WebkitBackdropFilter:"blur(20px) saturate(1.8)",border:"1px solid rgba(255,255,255,0.45)",borderRadius:20,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(99,102,241,0.2), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";}}>
+            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #818CF8, #6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(99,102,241,0.2)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="plus" s={22} c="#fff"/></div>
             <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.crt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{t.crSub}</div></div>
           </div>
         </div>
-        {/* Join Team with green glow */}
-        <div className={_m?"tvp-glowcard-green":undefined} onClick={()=>{setMode("join");setErr(null);}} style={{borderRadius:20,cursor:"pointer"}}>
-          <div style={{background:"linear-gradient(135deg, rgba(240,255,248,0.95), rgba(220,252,238,0.9))",borderRadius:18.5,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(16,185,129,0.15), 0 1px 3px rgba(0,0,0,0.04)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={function(e){e.currentTarget.style.transform="translateY(0) scale(1)";}}>
-            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #34D399, #10B981)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(16,185,129,0.25)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="link" s={22} c="#fff"/></div>
-            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.jnt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{t.jnSub}</div></div>
-          </div>
-        </div>
+        {/* Join Team */}
+        {[
+          {m:"join",i:"link",grad:"linear-gradient(135deg, rgba(52,211,153,0.12), rgba(16,185,129,0.08))",glowColor:"rgba(16,185,129,0.18)",iconGrad:"linear-gradient(135deg, #34D399, #10B981)",tt:t.jnt,st:t.jnSub},
+        ].map(o=>
+          <button key={o.m} onClick={()=>{setMode(o.m);setErr(null);}} style={{
+            background:o.grad,
+            backdropFilter:"blur(20px) saturate(1.8)",
+            WebkitBackdropFilter:"blur(20px) saturate(1.8)",
+            border:"1px solid rgba(255,255,255,0.45)",
+            borderRadius:20,padding:"20px 22px",cursor:"pointer",textAlign:"left",
+            display:"flex",alignItems:"center",gap:16,
+            transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",
+            boxShadow:`0 2px 16px ${o.glowColor}, 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)`,
+            fontFamily:F,position:"relative",overflow:"hidden",
+          }}
+          onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";e.currentTarget.style.boxShadow=`0 8px 32px ${o.glowColor}, 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)`;}}
+          onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";e.currentTarget.style.boxShadow=`0 2px 16px ${o.glowColor}, 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)`;}}>
+            <div style={{width:44,height:44,borderRadius:14,background:o.iconGrad,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 4px 16px ${o.glowColor}`,border:"1px solid rgba(255,255,255,0.3)"}}><Ic n={o.i} s={22} c="#fff"/></div>
+            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{o.tt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{o.st}</div></div>
+          </button>)}
       </div>}
 
       {mode==="create"&&<div style={{background:th.gbg,borderRadius:G.rSm,padding:24,border:`1px solid ${th.gbd}`,boxShadow:th.sm,marginBottom:24,textAlign:"left",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
@@ -2803,12 +2818,23 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
       </div>}
 
       {/* Country Holidays */}
-      <div className={_m?"tvp-glowcard-amber":undefined} onClick={()=>setHolBr(true)} style={{borderRadius:20,cursor:"pointer",width:"100%",marginTop:8}}>
-          <div style={{background:"linear-gradient(135deg, rgba(255,251,235,0.95), rgba(254,243,199,0.9))",borderRadius:18.5,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(245,158,11,0.15), 0 1px 3px rgba(0,0,0,0.04)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={function(e){e.currentTarget.style.transform="translateY(0) scale(1)";}}>
-            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #FBBF24, #F59E0B)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(245,158,11,0.25)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="flag" s={22} c="#fff"/></div>
-            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.ch}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>2026–2035 · 55 countries</div></div>
-          </div>
-        </div>
+      <button onClick={()=>setHolBr(true)} style={{
+        width:"100%",marginTop:8,
+        background:"linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.08))",
+        backdropFilter:"blur(20px) saturate(1.8)",
+        WebkitBackdropFilter:"blur(20px) saturate(1.8)",
+        border:"1px solid rgba(255,255,255,0.45)",
+        borderRadius:20,padding:"20px 22px",cursor:"pointer",textAlign:"left",
+        display:"flex",alignItems:"center",gap:16,
+        transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",
+        boxShadow:"0 2px 16px rgba(245,158,11,0.12), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)",
+        fontFamily:F,
+      }}
+      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";e.currentTarget.style.boxShadow="0 8px 32px rgba(245,158,11,0.18), 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)";}}
+      onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";e.currentTarget.style.boxShadow="0 2px 16px rgba(245,158,11,0.12), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)";}}>
+        <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #F59E0B, #EF4444)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(245,158,11,0.25)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="flag" s={22} c="#fff"/></div>
+        <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.ch}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>2026–2035 · 55 countries</div></div>
+      </button>
     </div>
     <TodayHolidays th={th} t={t}/>
     <div style={{marginTop:40,fontSize:11,color:th.t3}}>{t.bf}</div>
