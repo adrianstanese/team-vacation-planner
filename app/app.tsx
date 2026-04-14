@@ -2279,25 +2279,43 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
 // ─── Holiday Browser ─────────────────────────────────────────────
 function HolBrowser({onClose,th,t,year}){
   const[sel,setSel]=useState(null);
+  const[q,setQ]=useState("");
+  const[sort,setSort]=useState("az");
   const co=sel?EU_C.find(c=>c.c===sel):null;
   const hols=sel?computeHolidays(sel,year).map(h=>({date:h,name:holName(h)})).sort((a,b)=>a.date.localeCompare(b.date)):[];
+  const maxHol=17;
+
+  var filtered=EU_C.filter(function(c2){return !q||c2.n.toLowerCase().indexOf(q.toLowerCase())>=0;});
+  if(sort==="most") filtered=filtered.slice().sort(function(a,b){return computeHolidays(b.c,year).length-computeHolidays(a.c,year).length;});
 
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
     <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:540,width:"100%",maxHeight:"80vh",display:"flex",flexDirection:"column",boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      <div style={{padding:"16px 20px",borderBottom:`1px solid ${th.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{padding:"16px 20px",borderBottom:"1px solid "+th.bd,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           {sel&&<button onClick={()=>setSel(null)} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><Ic n="chevL" s={18} c={th.t2}/></button>}
-          <h3 style={{margin:0,fontSize:17,fontWeight:700,color:th.tx,fontFamily:F}}>{sel?`${co.f} ${co.n}`:t.ch} {year}</h3>
+          <h3 style={{margin:0,fontSize:17,fontWeight:700,color:th.tx,fontFamily:F}}>{sel?co.f+" "+co.n:t.ch} {year}</h3>
         </div>
         <button onClick={onClose} style={{background:th.sh,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={15} c={th.t2}/></button>
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"10px 14px"}}>
-        {!sel?<div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:5}}>
-          {EU_C.map(c=>{const cnt=computeHolidays(c.c,year).length;return <button key={c.c} onClick={()=>setSel(c.c)} style={{background:th.sf,border:`1px solid ${th.bd}`,borderRadius:8,padding:"8px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:6,textAlign:"left",fontFamily:F,transition:"all .15s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=th.ac} onMouseLeave={e=>e.currentTarget.style.borderColor=th.bd}>
-            <span style={{fontSize:18}}>{c.f}</span>
-            <div><div style={{fontSize:12,fontWeight:600,color:th.tx}}>{c.n}</div><div style={{fontSize:10,color:th.t3}}>{cnt} {t.hol}</div></div>
-          </button>;})}
-        </div>:<div style={{display:"flex",flexDirection:"column",gap:3}}>
+        {!sel?<Fragment>
+          <div style={{display:"flex",gap:6,marginBottom:10,alignItems:"center"}}>
+            <input value={q} onChange={function(e){setQ(e.target.value);}} placeholder={t.search||"Search countries..."} style={{flex:1,padding:"7px 12px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F,outline:"none"}}/>
+            <div style={{display:"flex",borderRadius:6,overflow:"hidden",border:"1px solid "+th.gbd}}>
+              <button onClick={function(){setSort("az");}} style={{padding:"5px 10px",fontSize:10,fontWeight:700,background:sort==="az"?th.ac:"transparent",color:sort==="az"?"#fff":th.t3,border:"none",cursor:"pointer",fontFamily:F}}>A-Z</button>
+              <button onClick={function(){setSort("most");}} style={{padding:"5px 10px",fontSize:10,fontWeight:700,background:sort==="most"?th.ac:"transparent",color:sort==="most"?"#fff":th.t3,border:"none",cursor:"pointer",fontFamily:F,borderLeft:"1px solid "+th.gbd}}>↓ {t.hol}</button>
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:3}}>
+            {filtered.map(function(c2){var cnt=computeHolidays(c2.c,year).length;var pct=Math.round(cnt/maxHol*100);return <button key={c2.c} onClick={function(){setSel(c2.c);setQ("");}} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:th.sf,border:"1px solid "+th.gbd,cursor:"pointer",fontFamily:F,transition:"all .15s",textAlign:"left",width:"100%"}} onMouseEnter={function(e){e.currentTarget.style.borderColor=th.ac;e.currentTarget.style.background=th.al;}} onMouseLeave={function(e){e.currentTarget.style.borderColor=th.gbd;e.currentTarget.style.background=th.sf;}}>
+              <span style={{fontSize:18,flexShrink:0}}>{c2.f}</span>
+              <span style={{flex:1,fontSize:13,fontWeight:600,color:th.tx,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c2.n}</span>
+              <div style={{width:50,height:4,borderRadius:2,background:th.sh,flexShrink:0,overflow:"hidden"}}><div style={{width:pct+"%",height:"100%",borderRadius:2,background:th.ac,transition:"width .3s"}}/></div>
+              <span style={{fontSize:11,fontWeight:700,color:th.ac,fontFamily:FM,minWidth:20,textAlign:"right"}}>{cnt}</span>
+            </button>;})}
+          </div>
+          {filtered.length===0&&<div style={{textAlign:"center",padding:20,color:th.t3,fontSize:13}}>{t.nf||"No results"}</div>}
+        </Fragment>:<div style={{display:"flex",flexDirection:"column",gap:3}}>
           {(()=>{const wk=hols.filter(h=>{const p=pk(h.date);return new Date(p.y,p.m,p.d).getDay()!==0&&new Date(p.y,p.m,p.d).getDay()!==6;}).length;return <div style={{padding:"8px 12px",background:th.al,borderRadius:8,marginBottom:6,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
             <span style={{fontSize:12,fontWeight:600,color:th.ac}}>{hols.length} {t.hol}</span>
             <span style={{fontSize:12,color:"#065F46",fontWeight:600,background:"#D1FAE5",padding:"2px 6px",borderRadius:8}}>{wk} {t.wk}</span>
