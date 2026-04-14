@@ -2652,10 +2652,10 @@ function AnalyticsDashboard({team,yr,th,t}) {
     <h3 style={{fontSize:16,fontWeight:750,color:th.tx,marginBottom:14,fontFamily:F}}>Team Analytics {yr}</h3>
 
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:20}}>
-      {card({t.totalVacDays}, totalDays, members.length + " members")}
-      {card({t.overlapDays}, overlapDays, "2+ members out", "#EF4444")}
-      {card({t.peakMonth}, (t.M||EN_MO)[topMoIdx], monthly[topMoIdx] + " days")}
-      {card({t.avgDays}, totalDays>0?Math.round(totalDays/members.length):0)}
+      {card(t.totalVacDays, totalDays, members.length + " members")}
+      {card(t.overlapDays, overlapDays, "2+ members out", "#EF4444")}
+      {card(t.peakMonth, (t.M||EN_MO)[topMoIdx], monthly[topMoIdx] + " days")}
+      {card(t.avgDays, totalDays>0?Math.round(totalDays/members.length):0)}
     </div>
 
     <div style={{background:th.gbg,borderRadius:G.rSm,border:"1px solid "+th.gbd,padding:16,marginBottom:20,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
