@@ -819,17 +819,17 @@ function generateApprovedPDF(team, t) {
   html += 'th{background:#f5f3ff;color:#312e81;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 6px;text-align:left;border-bottom:1.5px solid #c7d2fe}';
   html += 'td{padding:4px 6px;border-bottom:1px solid #f3f4f6;font-size:9px;vertical-align:middle}';
   html += 'tr:nth-child(even){background:#faf9ff}';
-  html += '.chip{display:inline-block;padding:1px 6px;border-radius:4px;font-size:7.5px;font-weight:600;margin:0 2px;color:#4f46e5;background:#ede9fe}';
+  html += '.chip{display:inline-block;padding:2px 7px;border-radius:4px;font-size:7.5px;font-weight:700;margin:1px 2px;white-space:nowrap}';
   html += '.sect{font-size:10px;font-weight:700;color:#312e81;border-bottom:1px solid #e5e7eb;padding-bottom:3px;margin:10px 0 6px}';
   html += '.cal{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}';
   html += '.cmo{border:1px solid #e5e7eb;border-radius:5px;padding:4px}';
   html += '.cmt{font-size:8px;font-weight:700;text-align:center;color:#312e81;margin-bottom:2px}';
   html += '.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:0}';
   html += '.cl{text-align:center;font-size:6px;color:#9ca3af;font-weight:700}';
-  html += '.cd{text-align:center;font-size:7px;padding:1.5px 0;border-radius:2px;color:#9ca3af}';
-  html += '.cw{color:#d1d5db}';
-  html += '.ch{background:#fef2f2;color:#dc2626;font-weight:600}';
-  html += '.cv{color:#fff;font-weight:800;border-radius:3px}';
+  html += '.cd{text-align:center;font-size:7px;padding:2px 0;border-radius:0;color:#374151}';
+  html += '.cw{color:#d1d5db;background:#fafafa}';
+  html += '.ch{background:#fef2f2;color:#dc2626;font-weight:700}';
+  html += '.cv{color:#fff;font-weight:800;border-radius:2px;outline:1.5px solid rgba(0,0,0,.15)}';
   html += '.ft{border-top:1.5px solid #4f46e5;padding-top:8px;margin-top:10px}';
   html += '.sg{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:8px}';
   html += '.sb{border-top:1px solid #1a1a2e;padding-top:4px;margin-top:30px}';
@@ -878,7 +878,7 @@ function generateApprovedPDF(team, t) {
     html += '<td>'+(co?co.f+" "+co.n:"–")+'</td>';
     html += '<td style="text-align:center;font-weight:700;color:'+mc.d+'">'+days.length+'</td>';
     html += '<td style="text-align:center">'+ptoStr+'</td>';
-    html += '<td>'+ranges.map(function(r){return '<span class="chip">'+r+'</span>';}).join("")+'</td>';
+    html += '<td>'+ranges.map(function(r){return '<span class="chip" style="color:'+mc.d+';background:'+mc.d+'12;border:1px solid '+mc.d+'30">'+r+'</span>';}).join("")+'</td>';
     html += '</tr>';
   });
   html += '</table>';
@@ -910,18 +910,21 @@ function generateApprovedPDF(team, t) {
       if(who2.length===1){cls2+=" cv";sty2="background:"+MC[who2[0]%MC.length].d;}
       else if(who2.length===2){cls2+=" cv";sty2="background:linear-gradient(135deg,"+MC[who2[0]%MC.length].d+" 50%,"+MC[who2[1]%MC.length].d+" 50%)";}
       else if(who2.length>=3){cls2+=" cv";sty2="background:#dc2626";}
-      html += '<div class="'+cls2+'"'+(sty2?' style="'+sty2+'"':'')+'>'+d+'</div>';
+      html += '<div class="'+cls2+'"'+(sty2?' style="'+sty2+'"':'')+'>'+d+(who2.length>1?'<span style="display:block;font-size:5px;line-height:1;margin-top:-1px;font-weight:900">'+who2.length+'</span>':'')+'</div>';
     }
     html += '</div></div>';
   }
   html += '</div>';
 
   // Color legend
-  html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px">';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;padding:4px 8px;background:#f9fafb;border-radius:4px;border:1px solid #e5e7eb">';
   approvedMembers.forEach(function(m){
     var mc = MC[team.members.indexOf(m)%MC.length];
-    html += '<span style="display:flex;align-items:center;gap:3px;font-size:8px"><span style="width:8px;height:8px;border-radius:2px;background:'+mc.d+';display:inline-block"></span>'+m.name+'</span>';
+    html += '<span style="display:flex;align-items:center;gap:3px;font-size:8px;font-weight:600"><span style="width:10px;height:10px;border-radius:2px;background:'+mc.d+';display:inline-block;outline:1px solid rgba(0,0,0,.1)"></span>'+m.name+'</span>';
   });
+  html += '<span style="display:flex;align-items:center;gap:3px;font-size:8px;color:#9ca3af">|</span>';
+  html += '<span style="display:flex;align-items:center;gap:3px;font-size:7px;color:#6b7280"><span style="width:10px;height:10px;border-radius:2px;background:#fafafa;border:1px solid #e5e7eb;display:inline-block"></span>Weekend</span>';
+  html += '<span style="display:flex;align-items:center;gap:3px;font-size:7px;color:#6b7280"><span style="width:10px;height:10px;border-radius:2px;background:#fef2f2;border:1px solid #fecaca;display:inline-block"></span>Holiday</span>';
   html += '</div>';
 
   // Approval footer — compact
