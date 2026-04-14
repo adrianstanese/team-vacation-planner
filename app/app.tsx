@@ -790,153 +790,149 @@ function generatePDFReport(team, t) {
 
 function generateApprovedPDF(team, t) {
   var yr = team.year || CY;
-  var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var monthsFull = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var approverMember = team.approver ? team.members.find(function(m){return m.id===team.approver;}) : null;
   var approverName = approverMember ? approverMember.name : "Team Manager";
   var today = new Date();
   var dateStr = today.toLocaleDateString("en-GB", {day:"numeric",month:"long",year:"numeric"});
 
+  // Filter ONLY approved members who have days
+  var approvedMembers = team.members.filter(function(m){
+    return m.approved===true && (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length > 0;
+  });
+  var totalApproved = 0;
+  approvedMembers.forEach(function(m){ totalApproved += (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length; });
+
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Approved Vacations - '+team.name+' '+yr+'</title>';
   html += '<style>';
-  html += '@page{size:A4;margin:20mm 25mm}';
-  html += 'body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;margin:0;padding:40px 50px;color:#1a1a2e;font-size:11px;line-height:1.5}';
-  html += '.header{text-align:center;border-bottom:3px solid #312e81;padding-bottom:20px;margin-bottom:28px}';
-  html += '.logo{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px}';
-  html += '.logo svg{width:24px;height:24px}';
-  html += 'h1{font-size:22px;margin:0 0 3px;color:#1a1a2e;letter-spacing:-.5px;font-weight:800}';
-  html += 'h2{font-size:16px;margin:0 0 2px;color:#312e81;font-weight:700}';
-  html += '.subtitle{font-size:12px;color:#6b7280;margin:0}';
-  html += '.badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}';
-  html += '.badge-approved{background:#dcfce7;color:#166534;border:1px solid #86efac}';
-  html += '.section{margin-bottom:24px}';
-  html += '.section-title{font-size:13px;font-weight:700;color:#312e81;border-bottom:1.5px solid #e5e7eb;padding-bottom:6px;margin-bottom:12px}';
-  html += 'table{width:100%;border-collapse:collapse;margin-bottom:10px}';
-  html += 'th{background:#f5f3ff;color:#312e81;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;text-align:left;border-bottom:2px solid #c7d2fe}';
-  html += 'td{padding:8px 10px;border-bottom:1px solid #f3f4f6;font-size:11px;vertical-align:top}';
+  html += '@page{size:A4;margin:12mm 14mm}';
+  html += 'body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;margin:0;padding:0;color:#1a1a2e;font-size:9px;line-height:1.4}';
+  html += '.hdr{text-align:center;border-bottom:2.5px solid #4f46e5;padding-bottom:10px;margin-bottom:10px}';
+  html += 'h1{font-size:17px;margin:0;color:#1a1a2e;font-weight:800;letter-spacing:-.3px}';
+  html += '.sub{font-size:10px;color:#6b7280;margin:2px 0 0}';
+  html += '.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;background:#dcfce7;color:#166534;border:1px solid #86efac;margin-top:6px}';
+  html += '.stats{display:flex;justify-content:center;gap:24px;margin:10px 0;padding:8px 0;background:#f5f3ff;border-radius:6px}';
+  html += '.stat-n{font-size:16px;font-weight:800;color:#4f46e5;text-align:center}';
+  html += '.stat-l{font-size:7px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;text-align:center;font-weight:600}';
+  html += 'table{width:100%;border-collapse:collapse;margin-bottom:8px}';
+  html += 'th{background:#f5f3ff;color:#312e81;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:5px 6px;text-align:left;border-bottom:1.5px solid #c7d2fe}';
+  html += 'td{padding:4px 6px;border-bottom:1px solid #f3f4f6;font-size:9px;vertical-align:middle}';
   html += 'tr:nth-child(even){background:#faf9ff}';
-  html += '.chip{display:inline-block;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:600;margin:1px 2px;white-space:nowrap}';
-  html += '.period{color:#4f46e5;background:#ede9fe}';
-  html += '.stat{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700}';
-  html += '.cal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}';
-  html += '.cal-month{border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#fff}';
-  html += '.cal-title{font-size:10px;font-weight:700;text-align:center;color:#312e81;margin-bottom:4px;padding-bottom:3px;border-bottom:1px solid #f3f4f6}';
-  html += '.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}';
-  html += '.cal-lbl{text-align:center;font-size:7px;color:#9ca3af;font-weight:700}';
-  html += '.cal-d{text-align:center;font-size:8px;padding:2px 0;border-radius:3px;color:#6b7280}';
-  html += '.cal-we{color:#d1d5db}';
-  html += '.cal-hol{background:#fef2f2;color:#dc2626;font-weight:600}';
-  html += '.cal-v{color:#fff;font-weight:800;border-radius:4px}';
-  html += '.footer{margin-top:40px;border-top:2px solid #312e81;padding-top:20px}';
-  html += '.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:20px}';
-  html += '.sig-box{border-top:1.5px solid #1a1a2e;padding-top:8px;margin-top:50px}';
-  html += '.sig-label{font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;font-weight:600}';
-  html += '.sig-name{font-size:13px;font-weight:700;color:#1a1a2e;margin-top:2px}';
-  html += '.sig-role{font-size:10px;color:#6b7280}';
-  html += '.watermark{text-align:center;margin-top:30px;font-size:8px;color:#d1d5db;letter-spacing:1px}';
-  html += '.total-box{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1px solid #c7d2fe;border-radius:10px;padding:14px 18px;display:flex;justify-content:space-around;margin-bottom:20px}';
-  html += '.total-item{text-align:center}';
-  html += '.total-num{font-size:22px;font-weight:800;color:#4f46e5}';
-  html += '.total-lbl{font-size:9px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px}';
+  html += '.chip{display:inline-block;padding:1px 6px;border-radius:4px;font-size:7.5px;font-weight:600;margin:0 2px;color:#4f46e5;background:#ede9fe}';
+  html += '.sect{font-size:10px;font-weight:700;color:#312e81;border-bottom:1px solid #e5e7eb;padding-bottom:3px;margin:10px 0 6px}';
+  html += '.cal{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}';
+  html += '.cmo{border:1px solid #e5e7eb;border-radius:5px;padding:4px}';
+  html += '.cmt{font-size:8px;font-weight:700;text-align:center;color:#312e81;margin-bottom:2px}';
+  html += '.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:0}';
+  html += '.cl{text-align:center;font-size:6px;color:#9ca3af;font-weight:700}';
+  html += '.cd{text-align:center;font-size:7px;padding:1.5px 0;border-radius:2px;color:#9ca3af}';
+  html += '.cw{color:#d1d5db}';
+  html += '.ch{background:#fef2f2;color:#dc2626;font-weight:600}';
+  html += '.cv{color:#fff;font-weight:800;border-radius:3px}';
+  html += '.ft{border-top:1.5px solid #4f46e5;padding-top:8px;margin-top:10px}';
+  html += '.sg{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:8px}';
+  html += '.sb{border-top:1px solid #1a1a2e;padding-top:4px;margin-top:30px}';
+  html += '.sn{font-size:10px;font-weight:700;color:#1a1a2e}';
+  html += '.sr{font-size:8px;color:#6b7280}';
+  html += '.sl{font-size:7px;color:#9ca3af;text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-top:2px}';
+  html += '.wm{text-align:center;margin-top:8px;font-size:7px;color:#d1d5db;letter-spacing:.5px}';
   html += '</style></head><body>';
 
-  // Header
-  html += '<div class="header">';
-  html += '<div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>';
-  html += '<h1>'+team.name+'</h1>';
-  html += '<h2>Approved Vacation Schedule '+yr+'</h2>';
-  html += '<p class="subtitle">Official record of approved time off &middot; Generated '+dateStr+'</p>';
-  html += '<div style="margin-top:10px"><span class="badge badge-approved">✓ Approved</span></div>';
+  // Header — compact
+  html += '<div class="hdr">';
+  html += '<h1>'+team.name+' — Approved Vacation Schedule '+yr+'</h1>';
+  html += '<p class="sub">Official record of approved time off · Generated '+dateStr+'</p>';
+  html += '<span class="badge">✓ Approved</span>';
   html += '</div>';
 
-  // Summary stats
-  var totalApproved = 0; var memberCount = 0;
-  team.members.forEach(function(m){ var d = (m.days||[]).filter(function(x){return x.startsWith(String(yr));}); if(d.length>0){totalApproved+=d.length; memberCount++;} });
-  html += '<div class="total-box">';
-  html += '<div class="total-item"><div class="total-num">'+memberCount+'</div><div class="total-lbl">Members</div></div>';
-  html += '<div class="total-item"><div class="total-num">'+totalApproved+'</div><div class="total-lbl">Approved Days</div></div>';
-  html += '<div class="total-item"><div class="total-num">'+Math.round(totalApproved/(memberCount||1))+'</div><div class="total-lbl">Avg per Person</div></div>';
+  // Stats row
+  html += '<div class="stats">';
+  html += '<div><div class="stat-n">'+approvedMembers.length+'</div><div class="stat-l">Members</div></div>';
+  html += '<div><div class="stat-n">'+totalApproved+'</div><div class="stat-l">Approved Days</div></div>';
+  html += '<div><div class="stat-n">'+Math.round(totalApproved/(approvedMembers.length||1))+'</div><div class="stat-l">Avg / Person</div></div>';
   html += '</div>';
 
-  // Member table with approved days only
-  html += '<div class="section"><div class="section-title">Approved Vacation Days by Member</div>';
-  html += '<table><tr><th style="width:25%">Member</th><th style="width:20%">Country / Region</th><th style="width:8%;text-align:center">Days</th><th style="width:10%;text-align:center">PTO</th><th>Approved Periods</th></tr>';
-  team.members.forEach(function(m,i) {
-    if(!m.approved && approverMember) return;
+  // Member table — ONLY approved members
+  html += '<div class="sect">Approved Vacation Days</div>';
+  html += '<table><tr><th>Member</th><th>Country</th><th style="text-align:center">Days</th><th style="text-align:center">PTO</th><th>Periods</th></tr>';
+  approvedMembers.forEach(function(m,i) {
     var days = (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).sort();
-    if(days.length===0) return;
     var co = EU_C.find(function(x){return x.c===m.country;});
-    var regionName = "";
-    if(m.region && REGIONS[m.country]) { REGIONS[m.country].forEach(function(r){if(r.id===m.region) regionName=r.n;}); }
-    // Build period ranges
-    var ranges = []; var start = null; var prev = null;
-    days.forEach(function(d){
-      if(!prev){ start=d; prev=d; return; }
-      var pd = new Date(prev); pd.setDate(pd.getDate()+1);
-      var pd2 = new Date(prev); pd2.setDate(pd2.getDate()+3);
-      var nd = new Date(d);
-      if(nd <= pd2 && nd >= pd) { prev=d; }
-      else { ranges.push(start===prev?fmtD(start):fmtD(start)+" – "+fmtD(prev)); start=d; prev=d; }
-    });
-    if(start) ranges.push(start===prev?fmtD(start):fmtD(start)+" – "+fmtD(prev));
+    var mc = MC[team.members.indexOf(m)%MC.length];
 
-    var c = MC[i%MC.length];
-    var ptoStr = m.pto ? days.length+"/"+m.pto : "—";
-    var ptoColor = m.pto && days.length > m.pto ? "#dc2626" : "#4f46e5";
+    // Build period ranges (group consecutive/close days)
+    var ranges = []; var rStart = null; var rPrev = null;
+    days.forEach(function(d){
+      var p = d.split("-"); var dt = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+      if(!rPrev){ rStart=d; rPrev=dt; return; }
+      var diff = (dt - rPrev) / 86400000;
+      if(diff <= 3) { rPrev=dt; }
+      else { ranges.push(rStart===fmtD2(rPrev)?fmtD(rStart):fmtD(rStart)+" – "+fmtD2(rPrev)); rStart=d; rPrev=dt; }
+    });
+    if(rStart) ranges.push(rStart===fmtD2(rPrev)?fmtD(rStart):fmtD(rStart)+" – "+fmtD2(rPrev));
+
+    var ptoStr = m.pto ? days.length+"/"+m.pto : "–";
     html += '<tr>';
-    html += '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+c.d+';margin-right:6px;vertical-align:middle"></span><strong>'+m.name+'</strong></td>';
-    html += '<td>'+(co?co.f+" "+co.n:"—")+(regionName?" <span style=\"font-size:9px;color:#7c3aed\">·  "+regionName+"</span>":"")+'</td>';
-    html += '<td style="text-align:center"><strong style="color:'+c.d+';font-size:14px">'+days.length+'</strong></td>';
-    html += '<td style="text-align:center"><span style="color:'+ptoColor+';font-weight:700">'+ptoStr+'</span></td>';
-    html += '<td>'+ranges.map(function(r){return '<span class="chip period">'+r+'</span>';}).join(" ")+'</td>';
+    html += '<td><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:'+mc.d+';margin-right:4px;vertical-align:middle"></span><strong>'+m.name+'</strong></td>';
+    html += '<td>'+(co?co.f+" "+co.n:"–")+'</td>';
+    html += '<td style="text-align:center;font-weight:700;color:'+mc.d+'">'+days.length+'</td>';
+    html += '<td style="text-align:center">'+ptoStr+'</td>';
+    html += '<td>'+ranges.map(function(r){return '<span class="chip">'+r+'</span>';}).join("")+'</td>';
     html += '</tr>';
   });
-  html += '</table></div>';
+  html += '</table>';
 
-  // Year calendar grid showing ONLY approved days
-  html += '<div class="section"><div class="section-title">Year Calendar — Approved Days Only</div>';
-  html += '<div class="cal-grid">';
-  var holSet = {};
-  team.members.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){holSet[h]=true;}); });
+  // Year calendar — showing ONLY approved members' days
+  html += '<div class="sect">Year Calendar — Approved Members Only</div>';
+  html += '<div class="cal">';
+  var holSet2 = {};
+  approvedMembers.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){holSet2[h]=true;}); });
 
   for(var mo=0;mo<12;mo++){
-    html += '<div class="cal-month"><div class="cal-title">'+months[mo]+'</div><div class="cal-days">';
-    var dayLabels = ["M","T","W","T","F","S","S"];
-    for(var dl=0;dl<7;dl++) html += '<div class="cal-lbl">'+dayLabels[dl]+'</div>';
-    var firstDay = fdm(yr,mo);
-    var daysInMo = dim(yr,mo);
-    for(var bl=0;bl<firstDay;bl++) html += '<div></div>';
-    for(var d=1;d<=daysInMo;d++){
+    html += '<div class="cmo"><div class="cmt">'+monthsFull[mo]+'</div><div class="cg">';
+    var dL = ["M","T","W","T","F","S","S"];
+    for(var dl=0;dl<7;dl++) html += '<div class="cl">'+dL[dl]+'</div>';
+    var fd = fdm(yr,mo);
+    var dm = dim(yr,mo);
+    for(var bl=0;bl<fd;bl++) html += '<div></div>';
+    for(var d=1;d<=dm;d++){
       var key=dk(yr,mo,d);
-      var dow=(firstDay+d-1)%7;
-      var isWe2=dow>=5;
-      var isHol=!!holSet[key];
-      var who=[];
-      team.members.forEach(function(m,i){if((m.days||[]).indexOf(key)>=0)who.push(i);});
-      var cls="cal-d";
-      var sty="";
-      if(isWe2) cls+=" cal-we";
-      if(isHol && who.length===0) cls+=" cal-hol";
-      if(who.length===1){cls+=" cal-v";sty="background:"+MC[who[0]%MC.length].d;}
-      else if(who.length===2){cls+=" cal-v";sty="background:linear-gradient(135deg,"+MC[who[0]%MC.length].d+" 50%,"+MC[who[1]%MC.length].d+" 50%)";}
-      else if(who.length>=3){cls+=" cal-v";sty="background:#dc2626";}
-      html += '<div class="'+cls+'"'+(sty?' style="'+sty+'"':'')+'>'+d+'</div>';
+      var dow2=(fd+d-1)%7;
+      var isWe3=dow2>=5;
+      var isHol2=!!holSet2[key];
+      var who2=[];
+      approvedMembers.forEach(function(m){if((m.days||[]).indexOf(key)>=0)who2.push(team.members.indexOf(m));});
+      var cls2="cd";
+      var sty2="";
+      if(isWe3) cls2+=" cw";
+      if(isHol2 && who2.length===0) cls2+=" ch";
+      if(who2.length===1){cls2+=" cv";sty2="background:"+MC[who2[0]%MC.length].d;}
+      else if(who2.length===2){cls2+=" cv";sty2="background:linear-gradient(135deg,"+MC[who2[0]%MC.length].d+" 50%,"+MC[who2[1]%MC.length].d+" 50%)";}
+      else if(who2.length>=3){cls2+=" cv";sty2="background:#dc2626";}
+      html += '<div class="'+cls2+'"'+(sty2?' style="'+sty2+'"':'')+'>'+d+'</div>';
     }
     html += '</div></div>';
   }
+  html += '</div>';
+
+  // Color legend
+  html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px">';
+  approvedMembers.forEach(function(m){
+    var mc = MC[team.members.indexOf(m)%MC.length];
+    html += '<span style="display:flex;align-items:center;gap:3px;font-size:8px"><span style="width:8px;height:8px;border-radius:2px;background:'+mc.d+';display:inline-block"></span>'+m.name+'</span>';
+  });
+  html += '</div>';
+
+  // Approval footer — compact
+  html += '<div class="ft">';
+  html += '<p style="font-size:8px;color:#374151;margin:0 0 4px">I confirm that the vacation days listed above have been reviewed and approved for <strong>'+team.name+'</strong> for '+yr+'. This serves as the official record of approved time off.</p>';
+  html += '<div class="sg">';
+  html += '<div><div class="sb"><div class="sn">'+approverName+'</div><div class="sr">Approver</div><div class="sl">Date: '+dateStr+'</div></div></div>';
+  html += '<div><div class="sb"><div class="sn">Acknowledged by</div><div class="sr">Team Member</div><div class="sl">Date: _______________</div></div></div>';
   html += '</div></div>';
 
-  // Approval signature block
-  html += '<div class="footer">';
-  html += '<div class="section-title">Approval Certification</div>';
-  html += '<p style="font-size:11px;color:#374151;line-height:1.7;margin:0 0 8px">I hereby confirm that the vacation days listed in this document have been reviewed and approved for the <strong>'+team.name+'</strong> team for the year <strong>'+yr+'</strong>. This schedule has been agreed upon by all parties and serves as the official record of approved time off.</p>';
-  html += '<div class="sig-grid">';
-  html += '<div><div class="sig-box"><div class="sig-name">'+approverName+'</div><div class="sig-role">Approver</div><div class="sig-label" style="margin-top:4px">Date: '+dateStr+'</div></div></div>';
-  html += '<div><div class="sig-box"><div class="sig-name">Team Member</div><div class="sig-role">Acknowledgement</div><div class="sig-label" style="margin-top:4px">Date: _______________</div></div></div>';
-  html += '</div></div>';
-
-  // Watermark
-  html += '<div class="watermark">Generated by Team Vacation Planner &middot; vacationplanner.team &middot; '+dateStr+'</div>';
-
+  html += '<div class="wm">Generated by Team Vacation Planner · vacationplanner.team · '+dateStr+'</div>';
   html += '</body></html>';
 
   var w = window.open("", "_blank");
@@ -945,6 +941,8 @@ function generateApprovedPDF(team, t) {
   w.focus();
   setTimeout(function(){w.print();}, 500);
 }
+
+function fmtD2(dt) { var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return dt.getDate()+" "+months[dt.getMonth()]; }
 
 function fmtD(d) { var p = d.split("-"); var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; return parseInt(p[2])+" "+months[parseInt(p[1])-1]; }
 
