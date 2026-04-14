@@ -1,4 +1,3 @@
-"use client";
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -443,6 +442,22 @@ M:["Януари","Февруари","Март","Април","Май","Юни","
 };
 
 // ─── Themes (Liquid Glass) ────────────────────────────────────────
+
+// ─── CSS Animations ──────────────────────────────────────────
+const CSS_ANIMS = `
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeSlide { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pulse { 0%,100% { opacity: .4; } 50% { opacity: .8; } }
+@keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(99,102,241,.15); } 50% { box-shadow: 0 0 20px rgba(99,102,241,.35); } }
+@keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+.tvp-fade { animation: fadeIn .3s ease-out both; }
+.tvp-slide { animation: fadeSlide .25s ease-out both; }
+.tvp-pop { animation: popIn .2s ease-out both; }
+.tvp-skel { animation: pulse 1.5s ease-in-out infinite; border-radius: 6px; }
+.tvp-glow { animation: glow 3s ease-in-out infinite; }
+.tvp-botnav { position:fixed; bottom:0; left:0; right:0; z-index:95; display:flex; justify-content:space-around; padding:6px 0 env(safe-area-inset-bottom,8px); }
+`;
+
 const G={blur:"blur(16px) saturate(1.4)",r:24,rSm:18,rXs:14,hi:"0 1px 8px rgba(99,102,241,0.06)",hiStrong:"0 2px 16px rgba(99,102,241,0.1)"};
 const TH={
 light:{bg:"linear-gradient(145deg, #FEF7FF 0%, #F0F4FF 50%, #F0FFF4 100%)",sf:"rgba(255,255,255,0.85)",sh:"rgba(237,233,254,0.5)",sa:"rgba(243,232,255,0.5)",bd:"rgba(147,51,234,0.08)",bl:"rgba(147,51,234,0.05)",tx:"#4C1D95",t2:"#6D28D9",t3:"#A78BFA",ti:"#FFF",ac:"#7C3AED",ah:"#6D28D9",al:"rgba(124,58,237,0.08)",am:"#C4B5FD",wm:"#F59E0B",wl:"rgba(245,158,11,0.06)",sd:G.hi,sm:G.hiStrong,sl:"0 12px 40px rgba(99,102,241,0.12)",gd:"linear-gradient(135deg,#818CF8,#6366F1)",hc:"rgba(239,68,68,0.08)",ht:"#E11D48",gbg:"rgba(255,255,255,0.7)",gbd:"rgba(147,51,234,0.1)"},
@@ -1929,7 +1944,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <CountrySelect value={m.country} onChange={onCountryChange} th={th} t={t}/>
   </div>;
 
-  return <div onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:isActive?c.b:h?th.sh:"transparent",borderRadius:8,cursor:"pointer",border:isActive?`1.5px solid ${c.d}40`:"1.5px solid transparent",transition:"all .15s"}}>
+  return <div onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:isActive?c.b:h?th.sh:"transparent",borderRadius:8,cursor:"pointer",border:isActive?`1.5px solid ${c.d}40`:"1.5px solid transparent",boxShadow:isActive?th.gwAc:"none",transition:"all .15s"}}>
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.name}</div>
@@ -2011,7 +2026,7 @@ function ShareModal({teamId,teamName,onClose,th,t}){
   const copy=(text)=>{try{navigator.clipboard.writeText(text);}catch(e){};setCp(true);setTimeout(()=>setCp(false),2500);};
 
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,padding:28,maxWidth:480,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,width:"100%",boxShadow:th.sl}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,padding:28,maxWidth:480,animation:"popIn .25s ease-out",backdropFilter:G.blur,WebkitBackdropFilter:G.blur,width:"100%",boxShadow:th.sl}}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
         <h3 style={{margin:0,fontSize:18,fontWeight:700,color:th.tx}}>{t.sht}</h3>
         <button onClick={onClose} style={{background:th.sh,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={15} c={th.t2}/></button>
@@ -2198,7 +2213,7 @@ function ContactModal({onClose, th, t}) {
   };
 
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,padding:28,maxWidth:480,width:"100%",boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+    <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,padding:28,maxWidth:480,animation:"popIn .25s ease-out",width:"100%",boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -2371,8 +2386,123 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
 }
 
 // ─── Workspace ───────────────────────────────────────────────────
+
+function Skeleton({th,w,h,r,mb}) {
+  return <div className="tvp-skel" style={{width:w||"100%",height:h||16,borderRadius:r||6,background:th.sh,marginBottom:mb||0}}/>;
+}
+function CalendarSkeleton({th}) {
+  return <div className="tvp-fade" style={{padding:20}}>
+    <Skeleton th={th} w={200} h={24} mb={16}/>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+      {[0,1,2,3,4,5].map(function(i){return <div key={i} style={{background:th.gbg,borderRadius:G.rSm,border:"1px solid "+th.gbd,padding:14}}>
+        <Skeleton th={th} w={120} h={18} mb={10}/>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>
+          {Array.from({length:35}).map(function(_,j){return <Skeleton key={j} th={th} h={28} r={4}/>;})}
+        </div>
+      </div>;})}
+    </div>
+  </div>;
+}
+
+
+function AnalyticsDashboard({team,yr,th,t}) {
+  var members = team.members || [];
+  if (members.length === 0) return <div className="tvp-fade" style={{textAlign:"center",padding:40,color:th.t3}}>Add members to see analytics</div>;
+
+  // Per-member stats
+  var memberStats = members.map(function(m,i) {
+    var days = (m.days || []).filter(function(d){ return d.startsWith(String(yr)); });
+    var hols = getAllHolidays(m, yr);
+    var wd = workingDaysRemaining(m, yr);
+    return {name:m.name, days:days.length, hols:hols.length, wd:wd, pto:m.pto||0, color:MC[i%MC.length].d};
+  });
+
+  // Monthly distribution
+  var monthly = [];
+  for (var mo = 0; mo < 12; mo++) {
+    var prefix = yr + "-" + String(mo+1).padStart(2,"0");
+    var count = 0;
+    members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(d.startsWith(prefix)) count++; }); });
+    monthly.push(count);
+  }
+  var maxMo = Math.max.apply(null, monthly) || 1;
+
+  // Overlap analysis
+  var allDays = {};
+  members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
+  var overlapDays = Object.keys(allDays).filter(function(d){ return allDays[d].length >= 2; }).length;
+  var totalDays = 0; members.forEach(function(m){totalDays+=(m.days||[]).length;});
+
+  // Top vacation month
+  var topMoIdx = monthly.indexOf(Math.max.apply(null, monthly));
+
+  // Busiest member
+  var sorted = memberStats.slice().sort(function(a,b){return b.days-a.days;});
+
+  var card = function(title, value, sub, accent) {
+    return <div style={{background:th.gbg,borderRadius:G.rSm,border:"1px solid "+th.gbd,padding:"14px 16px",backdropFilter:G.blur,WebkitBackdropFilter:G.blur,boxShadow:th.gw}}>
+      <div style={{fontSize:11,color:th.t3,fontWeight:600,marginBottom:4}}>{title}</div>
+      <div style={{fontSize:24,fontWeight:800,color:accent||th.ac,fontFamily:FM}}>{value}</div>
+      {sub&&<div style={{fontSize:11,color:th.t3,marginTop:2}}>{sub}</div>}
+    </div>;
+  };
+
+  var EN_MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  return <div className="tvp-fade" style={{maxWidth:800}}>
+    <h3 style={{fontSize:16,fontWeight:750,color:th.tx,marginBottom:14,fontFamily:F}}>Team Analytics {yr}</h3>
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:20}}>
+      {card("Total Vacation Days", totalDays, members.length + " members")}
+      {card("Overlap Days", overlapDays, "2+ members out", "#EF4444")}
+      {card("Peak Month", (t.M||EN_MO)[topMoIdx], monthly[topMoIdx] + " days")}
+      {card("Avg Days/Person", totalDays>0?Math.round(totalDays/members.length):0)}
+    </div>
+
+    <div style={{background:th.gbg,borderRadius:G.rSm,border:"1px solid "+th.gbd,padding:16,marginBottom:20,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+      <div style={{fontSize:12,fontWeight:700,color:th.tx,marginBottom:10}}>Monthly Distribution</div>
+      <div style={{display:"flex",alignItems:"flex-end",gap:4,height:120}}>
+        {monthly.map(function(count,i) {
+          var pct = count > 0 ? Math.max(8, Math.round(count/maxMo*100)) : 0;
+          return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{count>0?count:""}</span>
+            <div style={{width:"100%",height:pct+"%",minHeight:count>0?8:2,background:count>0?"linear-gradient(180deg,"+th.ac+",#6366F1)":th.sh,borderRadius:3,transition:"height .5s"}}/>
+            <span style={{fontSize:8,color:th.t3,fontWeight:600}}>{EN_MO[i]}</span>
+          </div>;
+        })}
+      </div>
+    </div>
+
+    <div style={{background:th.gbg,borderRadius:G.rSm,border:"1px solid "+th.gbd,padding:16,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+      <div style={{fontSize:12,fontWeight:700,color:th.tx,marginBottom:10}}>Per Member Breakdown</div>
+      {sorted.map(function(s) {
+        var pct = s.pto > 0 ? Math.round(s.days/s.pto*100) : 0;
+        return <div key={s.name} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderBottom:"1px solid "+th.gbd}}>
+          <div style={{width:8,height:8,borderRadius:"50%",background:s.color,flexShrink:0}}/>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:12,fontWeight:600,color:th.tx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
+          </div>
+          <div style={{fontSize:20,fontWeight:800,color:s.color,fontFamily:FM,minWidth:36,textAlign:"right"}}>{s.days}</div>
+          <div style={{fontSize:10,color:th.t3,minWidth:50}}>
+            {s.pto>0?pct+"% of "+s.pto:s.days+" "+t.dys}
+          </div>
+          <div style={{width:60,height:6,borderRadius:3,background:th.sh,overflow:"hidden"}}>
+            <div style={{height:"100%",borderRadius:3,background:s.pto>0&&pct>100?"#EF4444":s.color,width:Math.min(100,s.pto>0?pct:(s.days>0?50:0))+"%",transition:"width .5s"}}/>
+          </div>
+        </div>;
+      })}
+    </div>
+  </div>;
+}
+
 function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
+
+  useEffect(()=>{
+    if(!document.getElementById("tvp-css")){
+      const s=document.createElement("style");s.id="tvp-css";s.textContent=CSS_ANIMS;document.head.appendChild(s);
+    }
+  },[]);
   const[showSh,setShowSh]=useState(false);const[view,setView]=useState("cal");const[toast,setToast]=useState(null);
   const[mob,setMob]=useState(window.innerWidth<768);const[sb,setSb]=useState(window.innerWidth>=768);const[settings,setSettings]=useState(false);const[holBr,setHolBr]=useState(false);
   const[threshold,setThreshold]=useState(team.threshold||2);const[approvalMode,setApprovalMode]=useState(team.approvalMode||false);
@@ -2413,7 +2543,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const am=team.members.find(m=>m.id===aId);const ai=am?team.members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
   const allM=Array.from({length:12},(_,i)=>({year:yr,month:i}));
 
-  const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:"Log"}];
+  const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:"Log"},{k:"analytics",i:"bar",l:"Analytics"}];
 
   return <div style={{minHeight:"100vh",background:th.bg,fontFamily:F,display:"flex",flexDirection:"column"}}>
     <header style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"0 12px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
@@ -2466,9 +2596,9 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
     </div>}
 
     {/* View tabs */}
-    <div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"6px 14px",display:"flex",gap:3,overflowX:"auto",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+    {!mob&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"6px 14px",display:"flex",gap:3,overflowX:"auto",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
       {views.map(v=> <button key={v.k} onClick={()=>setView(v.k)} style={{padding:"5px 10px",borderRadius:6,fontSize:11,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?`1.5px solid ${th.ac}`:`1px solid transparent`,background:v.k===view?th.al:"transparent",color:v.k===view?th.ac:th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?th.ac:th.t3}/>{v.l}</button>)}
-    </div>
+    </div>}
 
     <div style={{display:"flex",flex:1,overflow:"hidden"}}>
       {sb&&<aside style={{width:mob?"100%":240,minWidth:mob?"100%":240,background:th.gbg,borderRight:mob?"none":`1px solid ${th.gbd}`,display:"flex",flexDirection:"column",position:mob?"fixed":"relative",backdropFilter:G.blur,WebkitBackdropFilter:G.blur,top:mob?56:0,left:0,bottom:0,zIndex:mob?90:1,boxShadow:mob?"4px 0 24px rgba(0,0,0,.1)":"none"}}>
@@ -2496,7 +2626,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
         </div>
       </aside>}
 
-      <main style={{flex:1,overflow:"auto",padding:mob?"14px 10px":"20px 28px"}}>
+      <main key={view} className="tvp-fade" style={{flex:1,overflow:"auto",padding:mob?"14px 10px 80px":"20px 28px"}}>
         {/* Mobile action strip — visible only on portrait mobile */}
         {mob&&!sb&&<div style={{marginBottom:10,display:"flex",flexDirection:"column",gap:6}}>
           <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
@@ -2596,11 +2726,21 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
           })()}
         </Fragment>}
         <VisitCounter th={th}/>
-      </main>
+      
+        {view==="analytics"&&<AnalyticsDashboard team={team} yr={yr} th={th} t={t}/>}
+</main>
     </div>
 
     {mob&&sb&&<div onClick={()=>setSb(false)} style={{position:"fixed",inset:0,top:56,background:"rgba(0,0,0,.3)",zIndex:80}}/>}
     {showSh&&<ShareModal teamId={team.id} teamName={team.name} onClose={()=>setShowSh(false)} th={th} t={t}/>}
+    
+    {mob&&<div className="tvp-botnav" style={{background:th.gbg,borderTop:"1px solid "+th.gbd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+      {views.map(function(v){return <button key={v.k} onClick={function(){setView(v.k);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 8px",minWidth:48}}>
+        <Ic n={v.i} s={18} c={v.k===view?th.ac:th.t3}/>
+        <span style={{fontSize:9,fontWeight:v.k===view?700:500,color:v.k===view?th.ac:th.t3,fontFamily:F}}>{v.l}</span>
+      </button>;})}
+    </div>}
+
     {holBr&&<HolBrowser onClose={()=>setHolBr(false)} th={th} t={t} year={yr}/>}
 
     {/* Smart Optimizer Modal */}
