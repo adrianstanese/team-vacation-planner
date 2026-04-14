@@ -1,2 +1,33 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+@property --gla {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes glowRot {
+  to { --gla: 360deg; }
+}
+
+.tvp-glowcard {
+  padding: 1.5px;
+  background: conic-gradient(from var(--gla), transparent 50%, rgba(129,140,248,0.4) 70%, rgba(167,139,250,0.6) 75%, rgba(99,102,241,0.4) 80%, transparent 95%);
+  animation: glowRot 4s linear infinite;
+  border-radius: 20px;
+  position: relative;
+  cursor: pointer;
+}
+
+.tvp-glowcard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: conic-gradient(from var(--gla), transparent 50%, rgba(129,140,248,0.4) 70%, rgba(167,139,250,0.6) 75%, rgba(99,102,241,0.4) 80%, transparent 95%);
+  animation: glowRot 4s linear infinite;
+  filter: blur(12px);
+  opacity: 0.3;
+  z-index: -1;
+}
