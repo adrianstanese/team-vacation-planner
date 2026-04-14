@@ -1870,28 +1870,40 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           const past=new Date(year,month,day)<new Date(CY,CM,CD);
           const isHol=(holSet&&holSet.has(key));
 
-          // Team overview colors when no member is selected
+          // Team overview colors + overlap visibility
           var vacBg = "transparent", vacColor = th.tx, vacWeight = 400, vacBorder = "2px solid transparent", vacShadow = "none", showCount = 0;
+          var others = mh.filter(function(x){return !am || x.id!==am.id;});
           if(isA && ac) {
-            // Selected member view — solid fill
+            // Selected member's day — solid fill
             vacBg = ac.d; vacColor = "#fff"; vacWeight = 800; vacBorder = "2px solid " + ac.d; vacShadow = "0 2px 8px " + ac.d + "40";
-          } else if(mh.length === 1 && !isA) {
-            // 1 member — solid color
+            // If others also have this day, add a dot indicator
+            if(others.length>0) { showCount = others.length + 1; }
+          } else if(am && !isA && others.length > 0) {
+            // A member is selected but this isn't their day — show others faintly
+            if(others.length === 1) {
+              var mcF = MC[members.indexOf(others[0])%MC.length];
+              vacBg = mcF.d + "25"; vacColor = mcF.d; vacWeight = 600;
+            } else if(others.length === 2) {
+              var mcF1 = MC[members.indexOf(others[0])%MC.length];
+              var mcF2 = MC[members.indexOf(others[1])%MC.length];
+              vacBg = "linear-gradient(135deg," + mcF1.d + "25 50%," + mcF2.d + "25 50%)"; vacColor = th.t3; vacWeight = 600;
+            } else {
+              vacBg = "rgba(239,68,68,0.15)"; vacColor = "#EF4444"; vacWeight = 600; showCount = others.length;
+            }
+          } else if(!am && mh.length === 1) {
+            // No member selected, 1 person — solid color
             var mc1 = MC[members.indexOf(mh[0])%MC.length];
             vacBg = mc1.d; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 6px " + mc1.d + "35";
-          } else if(mh.length === 2 && !isA) {
-            // 2 members — two-color gradient
+          } else if(!am && mh.length === 2) {
             var mcA = MC[members.indexOf(mh[0])%MC.length];
             var mcB = MC[members.indexOf(mh[1])%MC.length];
             vacBg = "linear-gradient(135deg," + mcA.d + " 50%," + mcB.d + " 50%)"; vacColor = "#fff"; vacWeight = 800;
-          } else if(mh.length === 3 && !isA) {
-            // 3 members — three-color gradient
+          } else if(!am && mh.length === 3) {
             var mc3a = MC[members.indexOf(mh[0])%MC.length];
             var mc3b = MC[members.indexOf(mh[1])%MC.length];
             var mc3c = MC[members.indexOf(mh[2])%MC.length];
             vacBg = "linear-gradient(135deg," + mc3a.d + " 33%," + mc3b.d + " 33% 66%," + mc3c.d + " 66%)"; vacColor = "#fff"; vacWeight = 800;
-          } else if(mh.length >= 4 && !isA) {
-            // 4+ members — red warning with count
+          } else if(!am && mh.length >= 4) {
             vacBg = "#EF4444"; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 8px rgba(239,68,68,0.3)"; showCount = mh.length;
           }
 
@@ -2836,7 +2848,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
         <div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 7px",background:th.al,borderRadius:16,cursor:"pointer",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} onClick={()=>{try{navigator.clipboard.writeText(team.id)}catch(e){};flash(t.cp);}}><Ic n="copy" s={10} c={th.ac}/><span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{team.id.slice(0,8)}</span></div>
         <button onClick={()=>setSettings(!settings)} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
         <Btn th={th} v="secondary" sz="sm" icon="share" onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
-        {approvalMode&&team.members.some(function(m){return m.approved===true&&(m.days||[]).length>0;})&&<Btn th={th} sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{background:"#ECFDF5",color:"#059669",border:"1px solid #A7F3D0",fontWeight:700}}>{mob?"":"✓ "+(t.approvedPdf||"Approved PDF")}</Btn>}
+
       </div>
     </header>
 
@@ -2961,6 +2973,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
           <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>Share / QR</button>
           <button onClick={function(){printReport(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
           <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Import</button>
+          {approvalMode&&team.members.some(function(m){return m.approved===true&&(m.days||[]).length>0;})&&<button onClick={function(){generateApprovedPDF(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
         </div>}
 
         {view==="cal"&&team.members.length===0&&<div style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:40,marginBottom:12}}>🌴</div><h2 style={{margin:"0 0 6px",fontSize:20,fontWeight:700,color:th.tx}}>{t.et}</h2><p style={{margin:"0 0 20px",fontSize:14,color:th.t2,lineHeight:1.5}}>{t.es2}</p><Btn th={th} icon="plus" onClick={()=>{setSb(true);setTimeout(startAdd,150);}}>{t.af}</Btn></div>}
