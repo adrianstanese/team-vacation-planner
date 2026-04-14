@@ -2865,7 +2865,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>downloadTeamICS(team)}>Team .ics</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportCSV(team)}>CSV</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportXLSX(team)}>Excel</Btn>
-      {approvalMode&&team.members.some(function(m){return m.approved===true&&(m.days||[]).length>0;})&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>{t.approvedPdf}</Btn>}
+      {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>{t.approvedPdf}</Btn>}
       <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>Import</Btn>
       <div style={{width:1,height:20,background:th.bd}}/>
       <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}>
@@ -2973,7 +2973,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
           <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>Share / QR</button>
           <button onClick={function(){printReport(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
           <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Import</button>
-          {approvalMode&&team.members.some(function(m){return m.approved===true&&(m.days||[]).length>0;})&&<button onClick={function(){generateApprovedPDF(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
+          {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<button onClick={function(){generateApprovedPDF(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
         </div>}
 
         {view==="cal"&&team.members.length===0&&<div style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:40,marginBottom:12}}>🌴</div><h2 style={{margin:"0 0 6px",fontSize:20,fontWeight:700,color:th.tx}}>{t.et}</h2><p style={{margin:"0 0 20px",fontSize:14,color:th.t2,lineHeight:1.5}}>{t.es2}</p><Btn th={th} icon="plus" onClick={()=>{setSb(true);setTimeout(startAdd,150);}}>{t.af}</Btn></div>}
