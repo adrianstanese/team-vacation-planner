@@ -1,7 +1,4 @@
-i
-  // Saudi Arabia fixed holidays
-  if(cc==="SA"){h.push(y+"-02-22");h.push(y+"-09-23");}
-mport { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 
 // ═══════════════════════════════════════════════════════════════════
 // TEAM VACATION PLANNER v5
@@ -271,6 +268,8 @@ function computeHolidays(cc, year) {
       all.push(dFmt(year, mawlid.getMonth()+1, mawlid.getDate()));
     }
   }
+  if(cc==="SA"){h.push(y+"-02-22");h.push(y+"-09-23");}
+
 
   return [...new Set(all)].sort();
 }
