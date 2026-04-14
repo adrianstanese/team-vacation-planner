@@ -1905,7 +1905,7 @@ const LangDrop=({lang,set,th})=>{
     </select>
   </div>;
 };
-const ThPk=({theme,set,th})=><div style={{display:"flex",gap:3}}>{[{k:"light",i:"sun"},{k:"dark",i:"moon"},{k:"pink",i:"heart"}].map(o=><button key={o.k} onClick={()=>set(o.k)} style={{padding:"3px 8px",borderRadius:6,fontSize:11,fontWeight:600,fontFamily:F,cursor:"pointer",border:o.k===theme?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:o.k===theme?th.al:"transparent",color:o.k===theme?th.ac:th.t2,display:"flex",alignItems:"center",gap:3}}><Ic n={o.i} s={11} c={o.k===theme?th.ac:th.t3}/></button>)}</div>;
+const ThPk=({theme:t,set,th})=>{var ts=[{k:"light",bg:"#F2F1EE",ac:"#6366F1"},{k:"dark",bg:"#0B0F1A",ac:"#818CF8"},{k:"pink",bg:"#FFF0F5",ac:"#EC4899"}];return <div style={{display:"flex",gap:3}}>{ts.map(function(tm){return <button key={tm.k} onClick={function(){set(tm.k);}} title={tm.k} style={{width:24,height:16,borderRadius:4,border:t===tm.k?"1.5px solid "+th.ac:"1px solid "+th.bd,background:tm.bg,cursor:"pointer",position:"relative",overflow:"hidden",padding:0}}><div style={{position:"absolute",bottom:0,left:0,right:0,height:4,background:tm.ac}}/></button>;})}</div>;};
 
 // ─── Country Select ──────────────────────────────────────────────
 function CountrySelect({value,onChange,th,t}) {
@@ -1932,14 +1932,14 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
   const dragRef=useRef(null);
   const dayLabels=[t.mo,t.tu,t.we2,t.th,t.fr,t.sa,t.su];
 
-  const handleMouseDown=(day)=>{if(!activeId||(isWe(year,month,day)&&!w7))return;dragRef.current={start:day,days:new Set([day]),adding:!(am&&am.days||[]).includes(dk(year,month,day))};onToggle(year,month,day);};
+  const[popDay,setPopDay]=useState(null);const handleMouseDown=(day)=>{if(!activeId||(isWe(year,month,day)&&!w7))return;setPopDay(day);setTimeout(function(){setPopDay(null);},200);dragRef.current={start:day,days:new Set([day]),adding:!(am&&am.days||[]).includes(dk(year,month,day))};onToggle(year,month,day);};
   const handleMouseEnter=(day)=>{if(!dragRef.current||!activeId||(isWe(year,month,day)&&!w7))return;const{start,days:dragDays,adding}=dragRef.current;const lo=Math.min(start,day),hi=Math.max(start,day);const newDays=new Set();for(let d=lo;d<=hi;d++){if(!isWe(year,month,d)||w7)newDays.add(d);}const toProcess=[...newDays].filter(d=>!dragDays.has(d));toProcess.forEach(d=>{const key=dk(year,month,d);const hasDayAlready=(am&&am.days||[]).includes(key);if((adding&&!hasDayAlready)||(!adding&&hasDayAlready))onToggle(year,month,d);});dragRef.current.days=newDays;};
   const handleMouseUp=()=>{dragRef.current=null;};
 
   useEffect(()=>{const up=()=>{dragRef.current=null;};window.addEventListener("mouseup",up);return()=>window.removeEventListener("mouseup",up);},[]);
 
-  return <div style={{background:th.gbg,borderRadius:G.rSm,border:`1px solid ${th.gbd}`,overflow:"hidden",boxShadow:th.sd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-    <div style={{padding:compact?"8px 12px":"12px 16px",borderBottom:`1px solid ${th.bl}`,display:"flex",justifyContent:"space-between"}}>
+  return <div style={{background:th.gbg,borderRadius:G.rSm,border:`1px solid ${th.gbd}`,overflow:"hidden",animation:"popIn .3s ease-out",boxShadow:th.sd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+    <div style={{padding:compact?"8px 12px":"12px 16px",borderBottom:`1px solid ${th.bl}`,background:month>=5&&month<=7?"rgba(245,158,11,.035)":month===11||month<=1?"rgba(99,102,241,.035)":month>=2&&month<=4?"rgba(16,185,129,.03)":"rgba(249,115,22,.025)",display:"flex",justifyContent:"space-between"}}>
       <span style={{fontSize:compact?13:15,fontWeight:650,color:th.tx,fontFamily:F}}>{t.M[month]}</span>
     </div>
     <div style={{padding:compact?"6px":"8px 10px"}}>
@@ -2006,10 +2006,10 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
             onMouseDown={e=>{e.preventDefault();handleMouseDown(day);}} onContextMenu={function(e){e.preventDefault();if(typeof setCommentDay==="function")setCommentDay(dk(year,month,day));}}
             onMouseEnter={function(e){handleMouseEnter(day);if(activeId)e.currentTarget.style.transform="scale(1.1)";}}
             onMouseLeave={function(e){e.currentTarget.style.transform="";}} title={isHol?holName(key):mh.length>0?mh.map(function(m){return m.name}).join(", "):""}
-            style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:(we&&!w7)||!activeId?"default":"pointer",transition:"transform .12s",
+            style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:(we&&!w7)||!activeId?"default":"pointer",transition:"transform .12s",transform:day===popDay?"scale(1.15)":"",
               background:vacBg, backgroundImage:pendingStripe||"none", border:vacBorder, transition:"background .1s",
               opacity:past&&mh.length===0&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
-              boxShadow:vacShadow}}>
+              boxShadow:vacShadow+(th.bg==="#0B0F1A"&&(isA||mh.length>0)?",0 0 8px "+(isA&&ac?ac.d+"35":mh.length>0?MC[members.indexOf(mh[0])%MC.length].d+"25":""):"")}}>
             <span style={{fontSize:compact?11:12,fontWeight:isTd?700:vacWeight,color:isTd&&mh.length===0?th.ac:vacColor,fontFamily:F,lineHeight:1}}>{day}</span>
             {showCount>0&&<span style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:"#fff",color:"#EF4444",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #EF4444"}}>{showCount}</span>}
             {team&&team.comments&&team.comments[key]&&setCommentDay&&<span onClick={function(e){e.stopPropagation();setCommentDay(key);}} style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50)",width:4,height:4,borderRadius:"50%",background:"#8B5CF6"}}/>}
@@ -2200,6 +2200,7 @@ function ConflictAlerts({team,threshold,th,t}) {
 }
 
 // ─── Member Row ──────────────────────────────────────────────────
+function SmoothNum({val,style:s}){var[d,setD]=useState(val);var p=useRef(val);useEffect(function(){if(val===p.current)return;var f=p.current;p.current=val;var t0=performance.now();var go=function(now){var r=Math.min((now-t0)/300,1);setD(Math.round(f+(val-f)*r));if(r<1)requestAnimationFrame(go);};requestAnimationFrame(go);},[val]);return <span style={s}>{d}</span>;}
 function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const[h,setH]=useState(false);const dc=(m.days||[]).length||0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
@@ -2394,7 +2395,7 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
         <div style={{display:"flex",gap:8,alignItems:"center"}}><ThPk theme={theme} set={setTheme} th={th}/><LangDrop lang={lang} set={setLang} th={th}/></div>
       </div>
       <div style={{textAlign:"center",marginBottom:40}}>
-        <div style={{position:"relative",width:120,height:80,margin:"0 auto 20px"}}><div style={{position:"absolute",left:10,top:8,width:36,height:44,borderRadius:8,background:th.al,border:"1px solid "+th.gbd,animation:"floatA 4s ease-in-out infinite",boxShadow:"0 4px 16px rgba(139,92,246,.1)"}}><div style={{margin:"6px 4px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}}>{[1,0,1,0,1,0,1,1,0].map(function(v,i){return <div key={i} style={{width:6,height:4,borderRadius:1,background:v?"#8B5CF6":"transparent"}}/>;})}</div></div><div style={{position:"absolute",left:42,top:0,width:40,height:48,borderRadius:10,background:th.gd,animation:"floatB 5s ease-in-out infinite",boxShadow:"0 6px 24px "+th.ac+"40",display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="sun" s={20} c="#fff"/></div><div style={{position:"absolute",right:10,top:12,width:34,height:40,borderRadius:8,background:th.al,border:"1px solid "+th.gbd,animation:"floatC 3.5s ease-in-out infinite",boxShadow:"0 4px 16px rgba(139,92,246,.08)"}}><div style={{margin:"6px 4px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}}>{[0,1,0,1,0,1,0,0,1].map(function(v,i){return <div key={i} style={{width:6,height:4,borderRadius:1,background:v?"#10B981":"transparent"}}/>;})}</div></div></div>
+        <div style={{position:"relative",width:120,height:80,margin:"0 auto 20px",transform:"translateY("+(-scrY*0.06|0)+"px)"}}><div style={{position:"absolute",left:10,top:8,width:36,height:44,borderRadius:8,background:th.al,border:"1px solid "+th.gbd,animation:"floatA 4s ease-in-out infinite",boxShadow:"0 4px 16px rgba(139,92,246,.1)"}}><div style={{margin:"6px 4px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}}>{[1,0,1,0,1,0,1,1,0].map(function(v,i){return <div key={i} style={{width:6,height:4,borderRadius:1,background:v?"#8B5CF6":"transparent"}}/>;})}</div></div><div style={{position:"absolute",left:42,top:0,width:40,height:48,borderRadius:10,background:th.gd,animation:"floatB 5s ease-in-out infinite",boxShadow:"0 6px 24px "+th.ac+"40",display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="sun" s={20} c="#fff"/></div><div style={{position:"absolute",right:10,top:12,width:34,height:40,borderRadius:8,background:th.al,border:"1px solid "+th.gbd,animation:"floatC 3.5s ease-in-out infinite",boxShadow:"0 4px 16px rgba(139,92,246,.08)"}}><div style={{margin:"6px 4px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:2}}>{[0,1,0,1,0,1,0,0,1].map(function(v,i){return <div key={i} style={{width:6,height:4,borderRadius:1,background:v?"#10B981":"transparent"}}/>;})}</div></div></div>
         <h1 style={{margin:"0 0 8px",fontSize:28,fontWeight:800,color:th.tx,letterSpacing:-.6}}>{t.brand}</h1>
         <p style={{margin:0,fontSize:15,color:th.t2,lineHeight:1.6}}>{a.hero}</p>
               </div>
@@ -2692,9 +2693,10 @@ function TodayHolidays({th,t}) {
   </div>;
 }
 
+function FadeIn({children,delay}){var ref=useRef(null);var[vis,setVis]=useState(false);useEffect(function(){if(!ref.current)return;var obs=new IntersectionObserver(function(en){if(en[0].isIntersecting){setVis(true);obs.disconnect();}},{threshold:0.1});obs.observe(ref.current);return function(){obs.disconnect();};},[]);return <div ref={ref} style={{opacity:vis?1:0,transform:vis?"none":"translateY(16px)",transition:"opacity .5s ease "+(delay||0)+"ms,transform .5s ease "+(delay||0)+"ms"}}>{children}</div>;}
 function fireConfetti(){var cv=document.createElement("canvas");cv.style.cssText="position:fixed;inset:0;z-index:9999;pointer-events:none";document.body.appendChild(cv);var ctx=cv.getContext("2d");cv.width=window.innerWidth;cv.height=window.innerHeight;var P=[];var cols=["#8B5CF6","#6366F1","#EC4899","#F59E0B","#10B981","#3B82F6"];for(var i=0;i<80;i++)P.push({x:cv.width/2,y:cv.height/2,vx:(Math.random()-.5)*12,vy:Math.random()*-14-4,s:Math.random()*6+3,c:cols[i%6],l:1,d:Math.random()*.015+.008,r:Math.random()*360});(function draw(){ctx.clearRect(0,0,cv.width,cv.height);var alive=false;P.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=.35;p.l-=p.d;p.r+=p.vx;if(p.l>0){alive=true;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r*Math.PI/180);ctx.globalAlpha=p.l;ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();}});if(alive)requestAnimationFrame(draw);else cv.remove();})();}
 function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,lang,setLang,theme,setTheme}){
-  const[name,setName]=useState("");const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
+  const[name,setName]=useState("");const[scrY,setScrY]=useState(0);useEffect(function(){var h=function(){setScrY(window.scrollY);};window.addEventListener("scroll",h,{passive:true});return function(){window.removeEventListener("scroll",h);};},[]);const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
   const YRS=Array.from({length:10},(_,i)=>2026+i);
 
   if(about) return <AboutPage th={th} t={t} onBack={()=>setAbout(false)} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>;
@@ -2821,8 +2823,8 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
         {t.cl||"Copy Link"}
       </button>
     </div>
-    <VisitCounter th={th}/>
-    <TeamStats th={th} t={t}/>
+    <FadeIn delay={200}><VisitCounter th={th}/></FadeIn>
+    <FadeIn delay={350}><TeamStats th={th} t={t}/></FadeIn>
     
     
     {holBr&&<HolBrowser onClose={()=>setHolBr(false)} th={th} t={t} year={yr}/>}
@@ -3078,6 +3080,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
 
     {settings&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"8px 14px",display:"flex",gap:10,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,flexWrap:"wrap",justifyContent:"center",alignItems:"center"}}>
       <ThPk theme={theme} set={setTheme} th={th}/>
+      <div style={{display:"flex",gap:2,alignItems:"center"}}>{["#6366F1","#3B82F6","#0F766E","#16A34A","#D97706","#DC2626","#EC4899","#64748B"].map(function(col){return <button key={col} onClick={function(){updateWithHistory({...team,accentColor:col});}} style={{width:12,height:12,borderRadius:"50%",background:col,border:team.accentColor===col?"2px solid #fff":"1px solid transparent",cursor:"pointer",boxShadow:team.accentColor===col?"0 0 0 1.5px "+col:"none",padding:0}}/>;})}</div>
       <div style={{width:1,height:20,background:th.bd}}/>
       <LangDrop lang={lang} set={setLang} th={th}/>
       <div style={{width:1,height:20,background:th.bd}}/>
@@ -3187,6 +3190,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
         {view==="cal"&&!am&&team.members.length>0&&!locked&&<div style={{background:th.al,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:th.ac,fontWeight:500}}>{t.sel}</div>}
         {view==="cal"&&locked&&<div style={{background:th.wl,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#92400E",fontWeight:500,display:"flex",alignItems:"center",gap:6}}><Ic n="lock" s={14} c="#92400E"/>{t.locked}</div>}
 
+        {view==="cal"&&team.members.length>1&&<div style={{display:"flex",flexWrap:"wrap",gap:3,justifyContent:"center",marginBottom:8,padding:"5px 8px",background:th.gbg,borderRadius:8,border:"1px solid "+th.gbd}}>{team.members.map(function(m,i){var mc=MC[i%MC.length];var act=m.id===aId;return <button key={m.id} onClick={function(){setAId(m.id===aId?null:m.id);}} style={{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:5,border:act?"1.5px solid "+mc.d:"1px solid transparent",background:act?mc.b:"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:act?mc.t:th.t2,fontFamily:F}}><span style={{width:7,height:7,borderRadius:"50%",background:mc.d}}/>{m.name}</button>;})}</div>}
         {/* Export Pill Bar */}
         {view==="cal"&&team.members.length>0&&<div style={{padding:"8px 14px",background:th.sf,borderRadius:G.rXs,border:"1px solid "+th.bd,display:"flex",alignItems:"center",gap:4,flexWrap:"wrap",marginBottom:12}}>
           <span style={{fontSize:10,fontWeight:700,color:th.t3,marginRight:2}}>EXPORT:</span>
@@ -3233,7 +3237,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
               </div>;})}</div>;
           })()}
         </Fragment>}
-        <VisitCounter th={th}/>
+        <FadeIn delay={200}><VisitCounter th={th}/></FadeIn>
       
         {view==="analytics"&&<AnalyticsDashboard team={team} yr={yr} th={th} t={t}/>}
 </main>
