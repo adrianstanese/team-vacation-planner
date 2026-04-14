@@ -2121,7 +2121,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <div style={{display:"flex",alignItems:"center",gap:8}}>
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
-      <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:4}}>{m.name}{isApprover&&<span title="Approver" style={{fontSize:11}}>👑</span>}</div>
+      <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:4}}>{m.name}{isApprover&&<span title={t.approverLabel||"Approver"} style={{fontSize:11}}>👑</span>}</div>
       <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}{approvalMode&&!isApprover?(m.approved?<span style={{color:"#10B981",fontWeight:700,fontSize:9}}>{" ✓"}</span>:<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" ⏳"}</span>):""}</div>
       {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>m.pto?"#EF4444":dc>m.pto*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/m.pto*100))+"%",transition:"width .3s"}}/></div>}
     </div>
@@ -2770,7 +2770,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const am=team.members.find(m=>m.id===aId);const ai=am?team.members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
   const allM=Array.from({length:12},(_,i)=>({year:yr,month:i}));
 
-  const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:"Log"},{k:"analytics",i:"bar",l:t.analytics||"Analytics"}];
+  const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:t.activityLog||"Log"},{k:"analytics",i:"bar",l:t.analytics||"Analytics"}];
 
   return <div style={{minHeight:"100vh",background:th.bg,fontFamily:F,display:"flex",flexDirection:"column"}}>
     <header style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"0 12px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
