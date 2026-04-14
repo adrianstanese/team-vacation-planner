@@ -3073,8 +3073,8 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
                 var past=new Date(year,month,day)<new Date(CY,CM,CD);
 
                 return <div key={ci}
-                  onClick={function(){if(!we||team.w7)toggleDay(year,month,day);}}
-                  style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:6,cursor:(we&&!team.w7)||!aId?"default":"pointer",transition:"transform .12s",
+                  onClick={function(){toggleDay(year,month,day);}}
+                  style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:6,cursor:!aId?"default":"pointer",transition:"transform .12s",
                     background:isTrip?"#D97706":trippers.length>0?trippers[0].mc.b:isHol?"#DBEAFE":we?"transparent":"transparent",
                     color:isTrip?"#fff":trippers.length>0?trippers[0].mc.t:isHol?"#3B82F6":we?th.t3+"80":th.tx,
                     opacity:1,
