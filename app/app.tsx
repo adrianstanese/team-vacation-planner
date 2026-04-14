@@ -3002,7 +3002,8 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
   var tripDays=team.tripDays||{};
 
   var toggleDay=function(y2,m2,d2){
-    if(!aId)return;
+    console.log("TOGGLE",y2,m2,d2,"aId=",aId);
+    if(!aId){console.log("NO AID");return;}
     try{
     var key=dk(y2,m2,d2);
     var md=JSON.parse(JSON.stringify(team.tripDays||{}));
@@ -3038,7 +3039,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
 
     {/* Member selector */}
     <div style={{display:"flex",flexWrap:"wrap",gap:3,marginBottom:12,padding:"6px 8px",background:th.gbg,borderRadius:8,border:"1px solid "+th.gbd}}>
-      {team.members.map(function(m,i){var mc=MC[i%MC.length];var isA=m.id===aId;var dc=((tripDays[m.id]||[]).filter(function(d){return d.startsWith(String(yr));}).length);return <button key={m.id} onClick={function(){setAId(m.id===aId?null:m.id);}} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:6,border:isA?"1.5px solid #D97706":"1px solid transparent",background:isA?"#FAEEDA":"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:isA?"#D97706":th.t2,fontFamily:F,transition:"all .15s"}}><span style={{width:8,height:8,borderRadius:"50%",background:mc.d,flexShrink:0}}></span>{m.name}{dc>0&&<span style={{fontSize:9,color:"#D97706",fontFamily:FM,marginLeft:2}}>({dc})</span>}</button>;})}
+      {team.members.map(function(m,i){var mc=MC[i%MC.length];var isA=m.id===aId;var dc=((tripDays[m.id]||[]).filter(function(d){return d.startsWith(String(yr));}).length);return <button key={m.id} onClick={function(){console.log("SELECT MEMBER",m.id,m.name);setAId(m.id===aId?null:m.id);}} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:6,border:isA?"1.5px solid #D97706":"1px solid transparent",background:isA?"#FAEEDA":"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:isA?"#D97706":th.t2,fontFamily:F,transition:"all .15s"}}><span style={{width:8,height:8,borderRadius:"50%",background:mc.d,flexShrink:0}}></span>{m.name}{dc>0&&<span style={{fontSize:9,color:"#D97706",fontFamily:FM,marginLeft:2}}>({dc})</span>}</button>;})}
     </div>
 
     {!aId&&<div style={{padding:"10px 14px",background:"#FAEEDA",borderRadius:8,marginBottom:12,fontSize:12,color:"#D97706",fontWeight:500}}>{t.selTrip||"Select a member to mark business trip days"}</div>}
@@ -3073,7 +3074,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
                 var past=new Date(year,month,day)<new Date(CY,CM,CD);
 
                 return <div key={ci}
-                  onClick={function(){toggleDay(year,month,day);}}
+                  onClick={function(e){e.stopPropagation();console.log("TRIP CLICK",year,month,day,aId);toggleDay(year,month,day);}}
                   style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:6,cursor:!aId?"default":"pointer",transition:"transform .12s",
                     background:isTrip?"#D97706":trippers.length>0?trippers[0].mc.b:isHol?"#DBEAFE":we?"transparent":"transparent",
                     color:isTrip?"#fff":trippers.length>0?trippers[0].mc.t:isHol?"#3B82F6":we?th.t3+"80":th.tx,
