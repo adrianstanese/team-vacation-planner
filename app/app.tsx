@@ -459,9 +459,11 @@ const CSS_ANIMS = `
 @keyframes floatA { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(2deg); } }
 @keyframes floatB { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px) rotate(-1.5deg); } }
 @keyframes floatC { 0%,100% { transform: translateY(-4px) rotate(1deg); } 50% { transform: translateY(-16px) rotate(-2deg); } }
-@keyframes borderOrbit { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 .tvp-glow-border { position: relative; }
-.tvp-glow-border::before { content: ""; position: absolute; inset: -2px; border-radius: 22px; padding: 2px; background: linear-gradient(90deg, #6366F1, #818CF8, #A78BFA, #C084FC, #818CF8, #6366F1); background-size: 300% 100%; animation: borderOrbit 4s ease infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; z-index: 1; }
+.tvp-glow-border::before { content: ""; position: absolute; inset: 0; border-radius: 20px; padding: 2px; background: conic-gradient(from var(--angle, 0deg), transparent 40%, #818CF8 50%, #A78BFA 55%, #6366F1 60%, transparent 70%); animation: borderSpin 3s linear infinite; -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; z-index: 1; }
+@property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes borderSpin { to { --angle: 360deg; } }
+.tvp-glow-border::before { background: conic-gradient(from var(--angle), transparent 30%, #818CF8 45%, #A78BFA 50%, #6366F1 55%, transparent 70%); }
 @keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(99,102,241,.15); } 50% { box-shadow: 0 0 20px rgba(99,102,241,.35); } }
 @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 .tvp-fade { animation: fadeIn .3s ease-out both; }
