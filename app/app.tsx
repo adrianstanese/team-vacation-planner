@@ -2355,53 +2355,6 @@ function ShareModal({teamId,teamName,onClose,th,t}){
 // ─── Landing Page ────────────────────────────────────────────────
 // ─── About Page ──────────────────────────────────────────────────
 
-function GlobeView({th,members}) {
-  // Flat interactive world map with country dots
-  var CC={RO:[45.9,24.9],BG:[42.7,25.5],DE:[51.2,10.4],FR:[46.2,2.2],ES:[40.5,-3.7],IT:[41.9,12.5],GB:[55.4,-3.4],PT:[39.4,-8.2],HU:[47.2,19.0],NL:[52.1,5.3],SE:[60.1,18.6],AT:[47.5,13.3],CH:[46.8,8.2],PL:[51.9,19.1],CZ:[49.8,15.5],GR:[39.1,21.8],HR:[45.1,15.2],IE:[53.4,-8.2],DK:[56.3,9.5],FI:[61.9,25.7],NO:[60.5,8.5],BE:[50.5,4.5],SK:[48.7,19.7],SI:[46.2,14.9],EE:[58.6,25.0],LV:[56.9,24.1],LT:[55.2,23.9],LU:[49.8,6.1],RS:[44.0,21.0],BA:[43.9,17.7],MK:[41.5,21.7],ME:[42.7,19.4],AL:[41.2,20.2],UA:[48.4,31.2],MD:[47.4,28.8],US:[37.1,-95.7],CA:[56.1,-106.3],AU:[-25.3,133.8],AE:[23.4,53.8],SA:[23.9,45.1],BH:[26.0,50.6],CL:[-35.7,-71.5],BR:[-14.2,-51.9],MA:[31.8,-7.1],KZ:[48.0,68.0],TR:[38.9,35.2],BY:[53.7,27.9],NZ:[-40.9,174.9]};
-  var used={};
-  (members||[]).forEach(function(m){if(m.country)used[m.country]=(used[m.country]||0)+1;});
-  var entries=Object.entries(used);
-  if(entries.length===0)return null;
-  var maxCnt=Math.max.apply(null,entries.map(function(e){return e[1];}));
-
-  // Mercator projection: lat/lng -> x/y (0-700, 0-380)
-  function proj(lat,lng){
-    var x=((lng+180)/360)*700;
-    var latR=lat*Math.PI/180;
-    var y=(0.5-Math.log(Math.tan(Math.PI/4+latR/2))/(2*Math.PI))*380;
-    return [x,y];
-  }
-
-  var [hov,setHov]=useState(null);
-
-  return <div style={{position:"relative",width:"100%",borderRadius:12,overflow:"hidden",background:th.bg==="0B0F1A"||th.bg==="#0e1117"?"rgba(30,30,60,.4)":"rgba(139,92,246,.04)",border:"1px solid "+th.gbd,padding:"12px 0"}}>
-    <svg viewBox="0 0 700 380" style={{width:"100%",height:"auto",display:"block"}}>
-      {/* Grid lines */}
-      {[-60,-30,0,30,60].map(function(lat){var pts=[];for(var lng=-180;lng<=180;lng+=5){var p=proj(lat,lng);pts.push(p[0]+","+p[1]);}return <polyline key={"lat"+lat} points={pts.join(" ")} fill="none" stroke={th.gbd} strokeWidth="0.5" opacity="0.4"/>;})}
-      {[-150,-120,-90,-60,-30,0,30,60,90,120,150].map(function(lng){var pts=[];for(var lat=-70;lat<=80;lat+=5){var p=proj(lat,lng);pts.push(p[0]+","+p[1]);}return <polyline key={"lng"+lng} points={pts.join(" ")} fill="none" stroke={th.gbd} strokeWidth="0.5" opacity="0.4"/>;})}
-
-      {/* Country dots */}
-      {entries.map(function([cc,cnt]){
-        var ll=CC[cc];if(!ll)return null;
-        var p=proj(ll[0],ll[1]);
-        var r=4+Math.min(cnt,10)*2.5;
-        var co=EU_C.find(function(x){return x.c===cc;});
-        var label=co?(co.f+" "+co.n):cc;
-        return <g key={cc} onMouseEnter={function(){setHov(cc);}} onMouseLeave={function(){setHov(null);}} style={{cursor:"pointer"}}>
-          <circle cx={p[0]} cy={p[1]} r={r+4} fill="#8B5CF6" opacity="0.12">
-            <animate attributeName="r" values={(r+4)+","+(r+8)+","+(r+4)} dur="3s" repeatCount="indefinite"/>
-          </circle>
-          <circle cx={p[0]} cy={p[1]} r={r} fill="#8B5CF6" stroke="#fff" strokeWidth="1.5"/>
-          <text x={p[0]} y={p[1]+1} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize={cnt>9?"9":"8"} fontWeight="700" fontFamily="system-ui">{cnt>1?cnt:""}</text>
-          {hov===cc&&<g>
-            <rect x={p[0]-45} y={p[1]-r-26} width="90" height="20" rx="6" fill={th.tx} opacity="0.9"/>
-            <text x={p[0]} y={p[1]-r-14} textAnchor="middle" fill={th.bg} fontSize="9" fontWeight="600" fontFamily="system-ui">{label} ({cnt})</text>
-          </g>}
-        </g>;
-      })}
-    </svg>
-  </div>;
-}
 
 function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
   const a = ABOUT_TX[lang] || ABOUT_TX.en;
@@ -2428,8 +2381,7 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
         <div style={{width:56,height:56,borderRadius:16,background:th.gd,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:`0 8px 40px ${th.ac}50, inset 0 1px 0 rgba(255,255,255,0.3)`}}><Ic n="sun" s={26} c="#fff"/></div>
         <h1 style={{margin:"0 0 8px",fontSize:28,fontWeight:800,color:th.tx,letterSpacing:-.6}}>{t.brand}</h1>
         <p style={{margin:0,fontSize:15,color:th.t2,lineHeight:1.6}}>{a.hero}</p>
-        <GlobeView th={th} members={EU_C.map(function(x){return {country:x.c};})}/>
-      </div>
+              </div>
       <Section icon="arrow" title={a.howTitle}>
         <div style={{marginBottom:8}}><strong style={{color:th.tx}}>1. {a.s1}</strong> — {a.s1d}</div>
         <div style={{marginBottom:8}}><strong style={{color:th.tx}}>2. {t.am}</strong> — {a.s2d}</div>
@@ -2995,7 +2947,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
       })}
     </div>
   
-    <GlobeView th={th} members={team.members}/>
+    
     <TeamWorldMap team={team} th={th} t={t}/>
   </div>;
 }
