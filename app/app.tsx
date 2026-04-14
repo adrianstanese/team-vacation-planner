@@ -2014,6 +2014,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
             <span style={{fontSize:compact?11:12,fontWeight:isTd?700:vacWeight,color:isTd&&mh.length===0?th.ac:vacColor,fontFamily:F,lineHeight:1}}>{day}</span>
             {showCount>0&&<span style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:"#fff",color:"#EF4444",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #EF4444"}}>{showCount}</span>}
             {team&&team.comments&&team.comments[key]&&setCommentDay&&<span onClick={function(e){e.stopPropagation();setCommentDay(key);}} style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50)",width:4,height:4,borderRadius:"50%",background:"#8B5CF6"}}/>}
+            {_tripSet.has(key)&&<span style={{position:"absolute",bottom:1,right:1,width:5,height:5,borderRadius:"50%",background:"#D97706",border:"1px solid #fff",boxSizing:"border-box"}}/>}
           </div>;
         })}
       </div>
