@@ -31,3 +31,43 @@ body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
   opacity: 0.3;
   z-index: -1;
 }
+
+.tvp-glowcard-green {
+  padding: 1.5px;
+  background: conic-gradient(from var(--gla), transparent 50%, rgba(52,211,153,0.4) 70%, rgba(16,185,129,0.6) 75%, rgba(5,150,105,0.4) 80%, transparent 95%);
+  animation: glowRot 4s linear infinite;
+  border-radius: 20px;
+  position: relative;
+  cursor: pointer;
+}
+.tvp-glowcard-green::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: conic-gradient(from var(--gla), transparent 50%, rgba(52,211,153,0.4) 70%, rgba(16,185,129,0.6) 75%, rgba(5,150,105,0.4) 80%, transparent 95%);
+  animation: glowRot 4s linear infinite;
+  filter: blur(12px);
+  opacity: 0.3;
+  z-index: -1;
+}
+
+.tvp-glowcard-amber {
+  padding: 1.5px;
+  background: conic-gradient(from var(--gla), transparent 50%, rgba(251,191,36,0.4) 70%, rgba(245,158,11,0.6) 75%, rgba(217,119,6,0.4) 80%, transparent 95%);
+  animation: glowRot 4s linear infinite;
+  border-radius: 20px;
+  position: relative;
+  cursor: pointer;
+}
+.tvp-glowcard-amber::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: conic-gradient(from var(--gla), transparent 50%, rgba(251,191,36,0.4) 70%, rgba(245,158,11,0.6) 75%, rgba(217,119,6,0.4) 80%, transparent 95%);
+  animation: glowRot 4s linear infinite;
+  filter: blur(12px);
+  opacity: 0.3;
+  z-index: -1;
+}

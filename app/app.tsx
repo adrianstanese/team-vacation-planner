@@ -2741,26 +2741,13 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
             <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.crt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{t.crSub}</div></div>
           </div>
         </div>
-        {/* Join Team */}
-        {[
-          {m:"join",i:"link",grad:"linear-gradient(135deg, rgba(52,211,153,0.12), rgba(16,185,129,0.08))",glowColor:"rgba(16,185,129,0.18)",iconGrad:"linear-gradient(135deg, #34D399, #10B981)",tt:t.jnt,st:t.jnSub},
-        ].map(o=>
-          <button key={o.m} onClick={()=>{setMode(o.m);setErr(null);}} style={{
-            background:o.grad,
-            backdropFilter:"blur(20px) saturate(1.8)",
-            WebkitBackdropFilter:"blur(20px) saturate(1.8)",
-            border:"1px solid rgba(255,255,255,0.45)",
-            borderRadius:20,padding:"20px 22px",cursor:"pointer",textAlign:"left",
-            display:"flex",alignItems:"center",gap:16,
-            transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",
-            boxShadow:`0 2px 16px ${o.glowColor}, 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)`,
-            fontFamily:F,position:"relative",overflow:"hidden",
-          }}
-          onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";e.currentTarget.style.boxShadow=`0 8px 32px ${o.glowColor}, 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)`;}}
-          onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";e.currentTarget.style.boxShadow=`0 2px 16px ${o.glowColor}, 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)`;}}>
-            <div style={{width:44,height:44,borderRadius:14,background:o.iconGrad,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 4px 16px ${o.glowColor}`,border:"1px solid rgba(255,255,255,0.3)"}}><Ic n={o.i} s={22} c="#fff"/></div>
-            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{o.tt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{o.st}</div></div>
-          </button>)}
+        {/* Join Team with green glow */}
+        <div className={_m?"tvp-glowcard-green":undefined} onClick={()=>{setMode("join");setErr(null);}} style={{borderRadius:20,cursor:"pointer"}}>
+          <div style={{background:"linear-gradient(135deg, rgba(240,255,248,0.95), rgba(220,252,238,0.9))",borderRadius:18.5,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(16,185,129,0.15), 0 1px 3px rgba(0,0,0,0.04)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={function(e){e.currentTarget.style.transform="translateY(0) scale(1)";}}>
+            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #34D399, #10B981)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(16,185,129,0.25)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="link" s={22} c="#fff"/></div>
+            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.jnt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{t.jnSub}</div></div>
+          </div>
+        </div>
       </div>}
 
       {mode==="create"&&<div style={{background:th.gbg,borderRadius:G.rSm,padding:24,border:`1px solid ${th.gbd}`,boxShadow:th.sm,marginBottom:24,textAlign:"left",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
@@ -2813,23 +2800,12 @@ function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,l
       </div>}
 
       {/* Country Holidays */}
-      <button onClick={()=>setHolBr(true)} style={{
-        width:"100%",marginTop:8,
-        background:"linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.08))",
-        backdropFilter:"blur(20px) saturate(1.8)",
-        WebkitBackdropFilter:"blur(20px) saturate(1.8)",
-        border:"1px solid rgba(255,255,255,0.45)",
-        borderRadius:20,padding:"20px 22px",cursor:"pointer",textAlign:"left",
-        display:"flex",alignItems:"center",gap:16,
-        transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",
-        boxShadow:"0 2px 16px rgba(245,158,11,0.12), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)",
-        fontFamily:F,
-      }}
-      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";e.currentTarget.style.boxShadow="0 8px 32px rgba(245,158,11,0.18), 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)";}}
-      onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";e.currentTarget.style.boxShadow="0 2px 16px rgba(245,158,11,0.12), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)";}}>
-        <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #F59E0B, #EF4444)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(245,158,11,0.25)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="flag" s={22} c="#fff"/></div>
-        <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.ch}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>2026–2035 · 55 countries</div></div>
-      </button>
+      <div className={_m?"tvp-glowcard-amber":undefined} onClick={()=>setHolBr(true)} style={{borderRadius:20,cursor:"pointer",width:"100%",marginTop:8}}>
+          <div style={{background:"linear-gradient(135deg, rgba(255,251,235,0.95), rgba(254,243,199,0.9))",borderRadius:18.5,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(245,158,11,0.15), 0 1px 3px rgba(0,0,0,0.04)"}} onMouseEnter={function(e){e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={function(e){e.currentTarget.style.transform="translateY(0) scale(1)";}}>
+            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #FBBF24, #F59E0B)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(245,158,11,0.25)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="flag" s={22} c="#fff"/></div>
+            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.ch}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>2026–2035 · 55 countries</div></div>
+          </div>
+        </div>
     </div>
     <TodayHolidays th={th} t={t}/>
     <div style={{marginTop:40,fontSize:11,color:th.t3}}>{t.bf}</div>
