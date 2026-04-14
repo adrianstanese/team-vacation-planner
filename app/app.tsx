@@ -1820,6 +1820,23 @@ function Inp({value,onChange,placeholder,autoFocus,maxLength,onKeyDown,th}){
 const Toast=({message:m,visible:v})=>m?<div style={{position:"fixed",bottom:32,left:"50%",transform:"translateX(-50%) translateY("+(v?0:20)+"px)",background:"linear-gradient(135deg,#818CF8,#6366F1)",color:"#fff",padding:"12px 24px",borderRadius:50,fontSize:14,fontWeight:600,fontFamily:F,boxShadow:"0 8px 32px rgba(99,102,241,0.3)",opacity:v?1:0,transition:"all .3s",pointerEvents:"none",zIndex:9999,display:"flex",alignItems:"center",gap:8}}><Ic n="check" s={16} c="#FFF"/>{m}</div>:null;
 
 const LangPk=({lang,set,th})=><div style={{display:"flex",gap:3,flexWrap:"wrap",justifyContent:"center"}}>{Object.entries(LANGS).map(([k,v])=><button key={k} onClick={()=>set(k)} style={{padding:"3px 7px",borderRadius:6,fontSize:11,fontWeight:600,fontFamily:F,cursor:"pointer",border:k===lang?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:k===lang?th.al:"transparent",color:k===lang?th.ac:th.t2}}>{v.f}{v.l}</button>)}</div>;
+
+const LangDrop=({lang,set,th})=>{
+  const cur=LANGS[lang]||LANGS.en;
+  return <div style={{position:"relative",display:"inline-block"}}>
+    <select value={lang} onChange={function(e){set(e.target.value);}} style={{
+      appearance:"none",WebkitAppearance:"none",MozAppearance:"none",
+      padding:"4px 24px 4px 8px",borderRadius:8,fontSize:12,fontWeight:600,fontFamily:F,
+      cursor:"pointer",border:"1px solid "+th.gbd,background:th.gbg,color:th.tx,
+      backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",
+      backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E\")",
+      backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center",backgroundSize:"10px 6px",
+      transition:"border-color .2s"
+    }} onMouseEnter={function(e){e.currentTarget.style.borderColor=th.ac;}} onMouseLeave={function(e){e.currentTarget.style.borderColor=th.gbd;}}>
+      {Object.entries(LANGS).map(function([k,v]){return <option key={k} value={k}>{v.f+" "+v.l}</option>;})}
+    </select>
+  </div>;
+};
 const ThPk=({theme,set,th})=><div style={{display:"flex",gap:3}}>{[{k:"light",i:"sun"},{k:"dark",i:"moon"},{k:"pink",i:"heart"}].map(o=><button key={o.k} onClick={()=>set(o.k)} style={{padding:"3px 8px",borderRadius:6,fontSize:11,fontWeight:600,fontFamily:F,cursor:"pointer",border:o.k===theme?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:o.k===theme?th.al:"transparent",color:o.k===theme?th.ac:th.t2,display:"flex",alignItems:"center",gap:3}}><Ic n={o.i} s={11} c={o.k===theme?th.ac:th.t3}/></button>)}</div>;
 
 // ─── Country Select ──────────────────────────────────────────────
@@ -2302,7 +2319,7 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
     <div style={{maxWidth:640,margin:"0 auto",paddingTop:24}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:32}}>
         <button onClick={onBack} style={{display:"flex",alignItems:"center",gap:6,background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rXs,padding:"8px 14px",cursor:"pointer",fontFamily:F,fontSize:13,fontWeight:600,color:th.t2,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=th.ac} onMouseLeave={e=>e.currentTarget.style.borderColor=th.gbd}><Ic n="chevL" s={16} c={th.t2}/>{t.back}</button>
-        <div style={{display:"flex",gap:8}}><ThPk theme={theme} set={setTheme} th={th}/><LangPk lang={lang} set={setLang} th={th}/></div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}><ThPk theme={theme} set={setTheme} th={th}/><LangDrop lang={lang} set={setLang} th={th}/></div>
       </div>
       <div style={{textAlign:"center",marginBottom:40}}>
         <div style={{width:56,height:56,borderRadius:16,background:th.gd,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:`0 8px 40px ${th.ac}50, inset 0 1px 0 rgba(255,255,255,0.3)`}}><Ic n="sun" s={26} c="#fff"/></div>
@@ -2924,6 +2941,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
       <div style={{display:"flex",alignItems:"center",gap:3}}>
         <ThPk theme={theme} set={setTheme} th={th}/>
         <div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 7px",background:th.al,borderRadius:16,cursor:"pointer",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} onClick={()=>{try{navigator.clipboard.writeText(team.id)}catch(e){};flash(t.cp);}}><Ic n="copy" s={10} c={th.ac}/><span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{team.id.slice(0,8)}</span></div>
+        <LangDrop lang={lang} set={setLang} th={th}/>
         <button onClick={()=>setSettings(!settings)} style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
         <Btn th={th} v="secondary" sz="sm" icon="share" onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
 
@@ -2933,7 +2951,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
     {settings&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"8px 14px",display:"flex",gap:10,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,flexWrap:"wrap",justifyContent:"center",alignItems:"center"}}>
       <ThPk theme={theme} set={setTheme} th={th}/>
       <div style={{width:1,height:20,background:th.bd}}/>
-      <LangPk lang={lang} set={setLang} th={th}/>
+      <LangDrop lang={lang} set={setLang} th={th}/>
       <div style={{width:1,height:20,background:th.bd}}/>
       <Btn th={th} v="ghost" sz="sm" onClick={undo} disabled={!historyRef.current.length} style={{fontSize:11}}>↩ Undo</Btn>
       <Btn th={th} v="ghost" sz="sm" onClick={redo} disabled={!redoRef.current.length} style={{fontSize:11}}>↪ Redo</Btn>
