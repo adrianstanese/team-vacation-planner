@@ -1591,28 +1591,12 @@ function VisitCounter({ th }) {
 function TeamStats({ th, t }) {
   const [stats, setStats] = useState(null);
   useEffect(() => {
-    (async function() {
-      try {
-        if (!window.storage) return;
-        var result = await window.storage.list("team:", true);
-        if (!result || !result.keys) return;
-        var teamCount = result.keys.length;
-        var memberCount = 0;
-        for (var i = 0; i < Math.min(result.keys.length, 200); i++) {
-          try {
-            var td = await window.storage.get(result.keys[i], true);
-            if (td && td.value) {
-              var parsed = JSON.parse(td.value);
-              memberCount += (parsed.members || []).length;
-            }
-          } catch(e) {}
-        }
-        setStats({ teams: teamCount, members: memberCount });
-      } catch(e) {}
-    })();
+    fetch("/api/stats").then(function(r){return r.json();}).then(function(data){
+      if(data && (data.teams > 0 || data.members > 0)) setStats(data);
+    }).catch(function(){});
   }, []);
 
-  if (!stats || stats.teams === 0) return null;
+  if (!stats) return null;
 
   return <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 12 }}>
     <div style={{
@@ -1620,8 +1604,8 @@ function TeamStats({ th, t }) {
       background: th.gbg, borderRadius: 14, border: "1px solid " + th.gbd,
       backdropFilter: G.blur, WebkitBackdropFilter: G.blur,
     }}>
-      <Ic n="users" s={13} c={th.t3}/>
-      <span style={{ fontSize: 11, color: th.t3, fontWeight: 500 }}>{t.crt || "Teams"}:</span>
+      <Ic n="grid" s={13} c={th.t3}/>
+      <span style={{ fontSize: 11, color: th.t3, fontWeight: 500 }}>{t.mt || "Teams"}</span>
       <span style={{ fontSize: 13, fontWeight: 700, color: th.ac, fontFamily: FM }}>{stats.teams}</span>
     </div>
     <div style={{
@@ -1630,7 +1614,7 @@ function TeamStats({ th, t }) {
       backdropFilter: G.blur, WebkitBackdropFilter: G.blur,
     }}>
       <Ic n="users" s={13} c={th.t3}/>
-      <span style={{ fontSize: 11, color: th.t3, fontWeight: 500 }}>{t.mbs || "Members"}:</span>
+      <span style={{ fontSize: 11, color: th.t3, fontWeight: 500 }}>{t.mbs || "Members"}</span>
       <span style={{ fontSize: 13, fontWeight: 700, color: th.ac, fontFamily: FM }}>{stats.members}</span>
     </div>
   </div>;
