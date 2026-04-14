@@ -2284,6 +2284,7 @@ function ShareModal({teamId,teamName,onClose,th,t}){
 // ─── Landing Page ────────────────────────────────────────────────
 // ─── About Page ──────────────────────────────────────────────────
 function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
+  const a = ABOUT_TX[lang] || ABOUT_TX.en;
   const Section=({icon,title,children})=> <div style={{marginBottom:28}}>
     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
       <div style={{width:36,height:36,borderRadius:G.rXs,background:th.al,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ic n={icon} s={18} c={th.ac}/></div>
@@ -2298,92 +2299,46 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
   </div>;
 
   return <div style={{minHeight:"100vh",background:th.bg,fontFamily:F,padding:"0 20px 60px"}}>
-    {/* Header */}
     <div style={{maxWidth:640,margin:"0 auto",paddingTop:24}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:32}}>
         <button onClick={onBack} style={{display:"flex",alignItems:"center",gap:6,background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rXs,padding:"8px 14px",cursor:"pointer",fontFamily:F,fontSize:13,fontWeight:600,color:th.t2,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=th.ac} onMouseLeave={e=>e.currentTarget.style.borderColor=th.gbd}><Ic n="chevL" s={16} c={th.t2}/>{t.back}</button>
         <div style={{display:"flex",gap:8}}><ThPk theme={theme} set={setTheme} th={th}/><LangPk lang={lang} set={setLang} th={th}/></div>
       </div>
-
-      {/* Hero */}
       <div style={{textAlign:"center",marginBottom:40}}>
         <div style={{width:56,height:56,borderRadius:16,background:th.gd,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",boxShadow:`0 8px 40px ${th.ac}50, inset 0 1px 0 rgba(255,255,255,0.3)`}}><Ic n="sun" s={26} c="#fff"/></div>
-        <h1 style={{margin:"0 0 8px",fontSize:28,fontWeight:800,color:th.tx,letterSpacing:-.6}}>Team Vacation Planner</h1>
-        <p style={{margin:0,fontSize:15,color:th.t2,lineHeight:1.6}}>A beautiful, free, zero-login team vacation planning tool for teams up to 25. Built with Apple's Liquid Glass design language. 55 countries, 11 languages, 2026–2035.</p>
+        <h1 style={{margin:"0 0 8px",fontSize:28,fontWeight:800,color:th.tx,letterSpacing:-.6}}>{t.brand}</h1>
+        <p style={{margin:0,fontSize:15,color:th.t2,lineHeight:1.6}}>{a.hero}</p>
       </div>
-
-      {/* How It Works */}
-      <Section icon="arrow" title="How It Works">
-        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>1. Create a team</strong> — pick a name and year. You get an instant shareable link.</div>
-        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>2. {t.am}</strong> — enter each person's name and country. Their public holidays are automatically loaded.</div>
-        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>3. Pick vacation days</strong> — select a member, then click or drag across calendar dates. Weekends are excluded automatically.</div>
-        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>4. Share the link</strong> — anyone with the link can view and edit. No accounts, no passwords, no sign-ups.</div>
-        <div><strong style={{color:th.tx}}>5. Analyze & export</strong> — switch between views, download reports, and keep your team in sync.</div>
+      <Section icon="arrow" title={a.howTitle}>
+        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>1. {a.s1}</strong> — {a.s1d}</div>
+        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>2. {t.am}</strong> — {a.s2d}</div>
+        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>3. {a.s3}</strong> — {a.s3d}</div>
+        <div style={{marginBottom:8}}><strong style={{color:th.tx}}>4. {a.s4}</strong> — {a.s4d}</div>
+        <div><strong style={{color:th.tx}}>5. {a.s5}</strong> — {a.s5d}</div>
       </Section>
-
-      {/* Feature Categories */}
-      <Section icon="grid" title="Calendar & Planning">
-        <Feature emoji="📅" title="12-Month Calendar View" desc="Full-year overview with all team members color-coded. Click any day to toggle vacation. Today is highlighted."/>
-        <Feature emoji="👆" title="Drag-to-Select" desc="Click and drag across multiple days to select an entire vacation range in one motion. Automatically skips weekends."/>
-        <Feature emoji="🔄" title="Multi-Year Support (2026–2035)" desc="Holidays are computed algorithmically — Western & Orthodox Easter, moveable feasts, country-specific rules — for any year in the range."/>
-        <Feature emoji="🗓️" title="Quarterly Focus View" desc="Toggle Q1/Q2/Q3/Q4 to zoom into three months at a time with larger calendar cards for tactical planning."/>
-        <Feature emoji="🏛️" title="55 Countries with Regional Holidays" desc="Public holidays for 55 countries across Europe, Middle East, Americas, and Africa. Regional/state holidays for Spain (17 communities), Germany (16 states), Switzerland (6 cantons), Australia (6 states), and Canada (4 provinces)."/>
-        <Feature emoji="🟡" title="Holiday Clash Detector" desc="Warns when someone books vacation on their own country's public holiday — with a one-click button to remove wasted days."/>
-        <Feature emoji="☀️" title="Smart Vacation Optimizer" desc="Analyzes each member's country holidays and suggests optimal bridge days: 'Take 1 day off → get 4 days free.'"/>
+      <Section icon="grid" title={a.calTitle}>
+        <Feature emoji="📅" title={a.f1} desc={a.f1d}/><Feature emoji="👆" title={a.f2} desc={a.f2d}/><Feature emoji="🔄" title={a.f3} desc={a.f3d}/><Feature emoji="🗓️" title={a.f4} desc={a.f4d}/><Feature emoji="🏛️" title={a.f5} desc={a.f5d}/><Feature emoji="🟡" title={a.f6} desc={a.f6d}/><Feature emoji="☀️" title={a.f7} desc={a.f7d}/>
       </Section>
-
-      <Section icon="bar" title="Views & Analytics">
-        <Feature emoji="🔥" title="Heatmap View" desc="Color-intensity grid showing who's out each day. Blue = public holiday, red = vacation density, purple = both overlap."/>
-        <Feature emoji="📊" title="Timeline / Gantt View" desc="Horizontal bars per member showing vacation blocks across the year. Instant visual of team distribution."/>
-        <Feature emoji="📈" title="Coverage Dashboard" desc="Weekly bar chart of team availability percentage. Stats show average coverage, lowest week, and weeks under 70%."/>
-        <Feature emoji="🏳️" title="Team Holidays Summary" desc="Aggregated view of all public holidays affecting your team, with which members are impacted by each one."/>
-        <Feature emoji="📝" title="Activity Log" desc="Chronological feed of all changes — who added, removed, or modified vacation days, with relative timestamps."/>
+      <Section icon="bar" title={a.viewTitle}>
+        <Feature emoji="🔥" title={a.f8} desc={a.f8d}/><Feature emoji="📊" title={a.f9} desc={a.f9d}/><Feature emoji="📈" title={a.f10} desc={a.f10d}/><Feature emoji="🏳️" title={a.f11} desc={a.f11d}/><Feature emoji="📝" title={a.f12} desc={a.f12d}/>
       </Section>
-
-      <Section icon="share" title="Sharing & Collaboration">
-        <Feature emoji="🔗" title="Instant Share Link" desc="Every team gets a unique URL. Share it via chat, email, or scan the QR code."/>
-        <Feature emoji="📱" title="QR Code" desc="The share modal includes a QR code tab for in-office scanning — colleagues join with their phone camera."/>
-        <Feature emoji="🖼️" title="Embeddable Widget" desc="Generate an iframe code to embed the team calendar on any website, wiki, or intranet page."/>
-        <Feature emoji="🔒" title="Lock / Unlock Board" desc="Admin can lock the board to prevent edits during review periods. A lock icon shows in the header."/>
-        <Feature emoji="↩️" title="Undo / Redo" desc="Ctrl+Z and Ctrl+Shift+Z with 20-action history. Also available as buttons in the toolbar."/>
+      <Section icon="share" title={a.shareTitle}>
+        <Feature emoji="🔗" title={a.f13} desc={a.f13d}/><Feature emoji="📱" title={a.f14} desc={a.f14d}/><Feature emoji="🖼️" title={a.f15} desc={a.f15d}/><Feature emoji="🔒" title={a.f16} desc={a.f16d}/><Feature emoji="↩️" title={a.f17} desc={a.f17d}/>
       </Section>
-
-      <Section icon="users" title="Team Management">
-        <Feature emoji="📊" title="PTO Balance Tracker" desc="Set each member's total PTO allowance. A progress bar shows usage: green under 80%, amber 80-100%, red over limit."/>
-        <Feature emoji="📅" title="Working Days Counter" desc="See remaining working days per member — excluding weekends, public holidays, and booked vacation. Updates in real-time."/>
-        <Feature emoji="✅" title="Approval Workflow" desc="Toggle approval mode in settings. Designated approvers can review pending vacation requests before they become final."/>
-        <Feature emoji="🗺️" title="Regional Holiday Support" desc="Members in Spain, Germany, Switzerland, Australia, and Canada can select their specific region for accurate local holidays."/>
+      <Section icon="users" title={a.teamTitle}>
+        <Feature emoji="📊" title={a.f18} desc={a.f18d}/><Feature emoji="📅" title={a.f19} desc={a.f19d}/><Feature emoji="✅" title={a.f20} desc={a.f20d}/><Feature emoji="🗺️" title={a.f21} desc={a.f21d}/>
       </Section>
-
-      <Section icon="download" title="Export & Integration">
-        <Feature emoji="📥" title="ICS Calendar Export" desc="Download individual member or full team .ics files. Import into Google Calendar, Outlook, or Apple Calendar."/>
-        <Feature emoji="📄" title="PDF / HTML Report" desc="Downloadable annual report with member table, date chips, overlap analysis, and team summary."/>
-        <Feature emoji="📊" title="CSV Import & Export" desc="Bulk upload vacation data from spreadsheets or export the full team as CSV for HR systems."/>
-        <Feature emoji="📗" title="Excel (XLSX) Export" desc="SpreadsheetML file that opens natively in Excel with formatted columns — ready for payroll or HR."/>
-        <Feature emoji="📋" title="TSV / Google Sheets Feed" desc="Append &view=tsv to any team URL. Use Google Sheets IMPORTDATA() for a live auto-refreshing feed."/>
-        <Feature emoji="🖥️" title="JSON API" desc="Append &view=json to get structured data for dashboards, Slack bots, or any integration."/>
-        <Feature emoji="🔄" title="iCal Subscribe URL" desc="Add a webcal:// URL to Google Calendar, Outlook, or Apple Calendar. Vacations update automatically — no re-downloading."/>
-        <Feature emoji="📺" title="Mini Dashboard Widget" desc="A compact 320x220 embeddable widget showing who's out this week. Perfect for Notion pages, company wikis, or office TV screens."/>
+      <Section icon="download" title={a.expTitle}>
+        <Feature emoji="📥" title={a.f22} desc={a.f22d}/><Feature emoji="📄" title={a.f23} desc={a.f23d}/><Feature emoji="📊" title={a.f24} desc={a.f24d}/><Feature emoji="📗" title={a.f25} desc={a.f25d}/><Feature emoji="📋" title={a.f26} desc={a.f26d}/><Feature emoji="🖥️" title={a.f27} desc={a.f27d}/><Feature emoji="🔄" title={a.f28} desc={a.f28d}/><Feature emoji="📺" title={a.f29} desc={a.f29d}/>
       </Section>
-
-      <Section icon="globe" title="Design & Accessibility">
-        <Feature emoji="🌐" title="11 Languages" desc="English, French, German, Spanish, Portuguese, Romanian, Hungarian, Swedish, Italian, Bulgarian — all UI strings fully localized."/>
-        <Feature emoji="🎨" title="3 Themes with Liquid Glass" desc="Light, Dark, and Pink themes — all with Apple's Liquid Glass design: frosted translucent surfaces, blur, inner highlights."/>
-        <Feature emoji="🌙" title="Dark Mode Auto-Detection" desc="Respects your OS preference on first load. If your device is in dark mode, the app auto-selects the dark theme."/>
-        <Feature emoji="🖨️" title="Print-Optimized View" desc="Append &view=print for an A3 landscape year-at-a-glance — designed for office walls with clean ink-friendly styling."/>
-        <Feature emoji="📺" title="Mini Dashboard Badge" desc="Append &view=badge for a compact 'Who's in today' widget — ideal for TV screens or Slack channel topics."/>
-        <Feature emoji="📊" title="Visit Counter" desc="Anonymous timezone-based visit tracking by country, shown at the bottom of the landing page."/>
+      <Section icon="globe" title={a.designTitle}>
+        <Feature emoji="🌐" title={a.f30} desc={a.f30d}/><Feature emoji="🎨" title={a.f31} desc={a.f31d}/><Feature emoji="🌙" title={a.f32} desc={a.f32d}/><Feature emoji="🖨️" title={a.f33} desc={a.f33d}/><Feature emoji="📺" title={a.f34} desc={a.f34d}/><Feature emoji="📊" title={a.f35} desc={a.f35d}/>
       </Section>
-
-      <Section icon="flag" title="Data & Privacy">
-        <Feature emoji="🔐" title="No Login Required" desc="Zero accounts, zero passwords, zero email collection. The team link IS the access key."/>
-        <Feature emoji="⏰" title="24-Month Auto-Cleanup" desc="Teams are automatically deleted after 24 months of inactivity. Expired links redirect to the home page."/>
-        <Feature emoji="💾" title="Shared Storage" desc="Team data is persisted via the platform's shared storage API. Anyone with the link can access and edit."/>
+      <Section icon="flag" title={a.dataTitle}>
+        <Feature emoji="🔐" title={a.f36} desc={a.f36d}/><Feature emoji="⏰" title={a.f37} desc={a.f37d}/><Feature emoji="💾" title={a.f38} desc={a.f38d}/>
       </Section>
-
-      {/* Footer */}
       <div style={{textAlign:"center",marginTop:40,paddingTop:24,borderTop:`1px solid ${th.gbd}`}}>
-        <p style={{fontSize:12,color:th.t3,margin:0}}>Built with care for teams who value simplicity.</p>
+        <p style={{fontSize:12,color:th.t3,margin:0}}>{a.footer}</p>
         <button onClick={onBack} style={{marginTop:16,padding:"10px 28px",borderRadius:G.rXs,border:"none",background:th.ac,color:th.ti,fontSize:14,fontWeight:700,fontFamily:F,cursor:"pointer",boxShadow:`0 4px 20px ${th.ac}35`}}>← {t.back}</button>
       </div>
     </div>
@@ -2478,6 +2433,129 @@ function ContactModal({onClose, th, t}) {
   </div>;
 }
 
+
+
+const ABOUT_TX = {
+en:{
+hero:"A beautiful, free, zero-login team vacation planning tool for teams up to 25. Built with Apple's Liquid Glass design language. 55 countries, 11 languages, 2026–2035.",
+howTitle:"How It Works",
+s1:"Create a team",s1d:"pick a name and year. You get an instant shareable link.",
+s2d:"enter each person's name and country. Their public holidays are automatically loaded.",
+s3:"Pick vacation days",s3d:"select a member, then click or drag across calendar dates. Weekends are excluded automatically.",
+s4:"Share the link",s4d:"anyone with the link can view and edit. No accounts, no passwords, no sign-ups.",
+s5:"Analyze & export",s5d:"switch between views, download reports, and keep your team in sync.",
+calTitle:"Calendar & Planning",viewTitle:"Views & Analytics",shareTitle:"Sharing & Collaboration",
+teamTitle:"Team Management",expTitle:"Export & Integration",designTitle:"Design & Accessibility",dataTitle:"Data & Privacy",
+footer:"Built with care for teams who value simplicity.",
+f1:"12-Month Calendar View",f1d:"Full-year overview with all team members color-coded. Click any day to toggle vacation.",
+f2:"Drag-to-Select",f2d:"Click and drag across multiple days to select a range. Automatically skips weekends.",
+f3:"Multi-Year Support (2026–2035)",f3d:"Holidays computed algorithmically for any year in the range.",
+f4:"Quarterly Focus View",f4d:"Toggle Q1–Q4 to zoom into three months at a time.",
+f5:"55 Countries with Regional Holidays",f5d:"Public holidays for 55 countries. Regional holidays for Spain, Germany, Switzerland, Australia, Canada.",
+f6:"Holiday Clash Detector",f6d:"Warns when someone books vacation on their country's public holiday.",
+f7:"Smart Vacation Optimizer",f7d:"Suggests optimal bridge days for maximum time off.",
+f8:"Heatmap View",f8d:"Color-intensity grid showing daily absence density.",
+f9:"Timeline / Gantt View",f9d:"Horizontal bars showing vacation blocks per member.",
+f10:"Coverage Dashboard",f10d:"Weekly bar chart of team availability percentage.",
+f11:"Team Holidays Summary",f11d:"Aggregated public holidays affecting your team.",
+f12:"Activity Log",f12d:"Chronological feed of all changes with timestamps.",
+f13:"Instant Share Link",f13d:"Unique URL per team. Share via chat, email, or QR.",
+f14:"QR Code",f14d:"Scan to join — colleagues join with their phone camera.",
+f15:"Embeddable Widget",f15d:"Iframe code for any website, wiki, or intranet.",
+f16:"Lock / Unlock Board",f16d:"Admin can lock the board to prevent edits.",
+f17:"Undo / Redo",f17d:"Ctrl+Z / Ctrl+Shift+Z with 20-action history.",
+f18:"PTO Balance Tracker",f18d:"Set PTO allowance per member with visual progress bar.",
+f19:"Working Days Counter",f19d:"Remaining working days excluding weekends, holidays, and vacation.",
+f20:"Approval Workflow",f20d:"Approvers can review and approve vacation for each member.",
+f21:"Regional Holiday Support",f21d:"Members select their specific region for local holidays.",
+f22:"ICS Calendar Export",f22d:"Download .ics files for Google Calendar, Outlook, or Apple Calendar.",
+f23:"PDF / HTML Report",f23d:"Annual report with member table, overlap analysis, and summary.",
+f24:"CSV Import & Export",f24d:"Bulk upload from spreadsheets or export for HR systems.",
+f25:"Excel (XLSX) Export",f25d:"SpreadsheetML file ready for payroll or HR.",
+f26:"TSV / Google Sheets Feed",f26d:"Live auto-refreshing feed via IMPORTDATA().",
+f27:"JSON API",f27d:"Structured data for dashboards, Slack bots, or integrations.",
+f28:"iCal Subscribe URL",f28d:"Webcal URL that auto-updates when vacations change.",
+f29:"Mini Dashboard Widget",f29d:"Compact embeddable widget showing who's out this week.",
+f30:"11 Languages",f30d:"All UI strings fully localized across 11 languages.",
+f31:"3 Themes with Liquid Glass",f31d:"Light, Dark, and Pink with frosted translucent surfaces.",
+f32:"Dark Mode Auto-Detection",f32d:"Respects your OS preference on first load.",
+f33:"Print-Optimized View",f33d:"A3 landscape year-at-a-glance for office walls.",
+f34:"Mini Dashboard Badge",f34d:"Compact 'Who's in today' widget for TV screens.",
+f35:"Visit Counter",f35d:"Anonymous visit tracking by country.",
+f36:"No Login Required",f36d:"Zero accounts, zero passwords. The link IS the access key.",
+f37:"24-Month Auto-Cleanup",f37d:"Teams auto-deleted after 24 months of inactivity.",
+f38:"Shared Storage",f38d:"Team data persisted via shared storage API."
+},
+ro:{
+hero:"Un instrument gratuit și frumos de planificare a concediilor de echipă, fără autentificare, pentru echipe de până la 25 de persoane. Design Apple Liquid Glass. 55 de țări, 11 limbi, 2026–2035.",
+howTitle:"Cum funcționează",
+s1:"Creează o echipă",s1d:"alege un nume și un an. Primești instant un link partajabil.",
+s2d:"introdu numele și țara fiecărei persoane. Sărbătorile legale se încarcă automat.",
+s3:"Alege zilele de concediu",s3d:"selectează un membru, apoi dă click sau trage pe calendarul de date. Weekendurile sunt excluse automat.",
+s4:"Distribuie linkul",s4d:"oricine cu linkul poate vedea și edita. Fără conturi, fără parole.",
+s5:"Analizează și exportă",s5d:"comută între vizualizări, descarcă rapoarte și ține echipa sincronizată.",
+calTitle:"Calendar și Planificare",viewTitle:"Vizualizări și Analiză",shareTitle:"Partajare și Colaborare",
+teamTitle:"Managementul Echipei",expTitle:"Export și Integrare",designTitle:"Design și Accesibilitate",dataTitle:"Date și Confidențialitate",
+footer:"Construit cu grijă pentru echipele care prețuiesc simplitatea.",
+f1:"Calendar 12 Luni",f1d:"Prezentare anuală cu toți membrii codificați prin culori.",
+f2:"Selectare prin tragere",f2d:"Click și trage pentru a selecta mai multe zile. Weekendurile sunt omise.",
+f3:"Suport multi-an (2026–2035)",f3d:"Sărbătorile calculate algoritmic pentru orice an.",
+f4:"Vizualizare pe trimestru",f4d:"Comută Q1–Q4 pentru a focaliza pe trei luni.",
+f5:"55 de țări cu sărbători regionale",f5d:"Sărbători publice + regionale pentru Spania, Germania, Elveția, Australia, Canada.",
+f6:"Detector de conflicte",f6d:"Avertizează când cineva rezervă concediu pe o zi de sărbătoare.",
+f7:"Optimizator de concediu",f7d:"Sugerează zilele optime de punte pentru maxim de timp liber.",
+f8:"Heatmap",f8d:"Grilă de intensitate a absențelor zilnice.",
+f9:"Timeline / Gantt",f9d:"Bare orizontale cu blocurile de concediu per membru.",
+f10:"Panou de acoperire",f10d:"Grafic săptămânal al disponibilității echipei.",
+f11:"Sumar sărbători",f11d:"Vizualizare agregată a sărbătorilor care afectează echipa.",
+f12:"Jurnal de activitate",f12d:"Feed cronologic al tuturor modificărilor.",
+f13:"Link instant de partajare",f13d:"URL unic per echipă. Distribuie prin chat, email sau QR.",
+f14:"Cod QR",f14d:"Scanează pentru a te alătura — cu camera telefonului.",
+f15:"Widget încorporabil",f15d:"Cod iframe pentru orice site sau wiki.",
+f16:"Blocare / Deblocare",f16d:"Adminul poate bloca tabla pentru a preveni editările.",
+f17:"Anulare / Refacere",f17d:"Ctrl+Z / Ctrl+Shift+Z cu istoric de 20 acțiuni.",
+f18:"Tracker PTO",f18d:"Setează alocarea PTO cu bară de progres vizuală.",
+f19:"Contor zile lucrătoare",f19d:"Zile lucrătoare rămase fără weekenduri, sărbători și concedii.",
+f20:"Flux de aprobare",f20d:"Aprobatorii pot revizui și aproba concediul per membru.",
+f21:"Sărbători regionale",f21d:"Membrii selectează regiunea lor pentru sărbători locale precise.",
+f22:"Export ICS",f22d:"Descarcă .ics pentru Google Calendar, Outlook sau Apple Calendar.",
+f23:"Raport PDF / HTML",f23d:"Raport anual cu tabel, analiză suprapuneri și sumar.",
+f24:"Import & Export CSV",f24d:"Încărcare în masă sau export pentru sisteme HR.",
+f25:"Export Excel (XLSX)",f25d:"Fișier SpreadsheetML gata pentru salarizare sau HR.",
+f26:"Feed TSV / Google Sheets",f26d:"Feed live via IMPORTDATA().",
+f27:"API JSON",f27d:"Date structurate pentru dashboarduri sau integrări.",
+f28:"URL abonare iCal",f28d:"URL webcal care se actualizează automat.",
+f29:"Widget mini panou",f29d:"Widget compact cu cine este absent săptămâna aceasta.",
+f30:"11 Limbi",f30d:"Toate textele traduse complet în 11 limbi.",
+f31:"3 Teme cu Liquid Glass",f31d:"Light, Dark și Pink cu suprafețe translucide.",
+f32:"Detectare automată mod întunecat",f32d:"Respectă preferința sistemului de operare.",
+f33:"Vizualizare optimizată pentru tipărire",f33d:"Format A3 peisaj pentru birouri.",
+f34:"Widget compact",f34d:"Widget 'Cine este prezent azi' pentru ecrane TV.",
+f35:"Contor vizite",f35d:"Urmărire anonimă a vizitelor pe țară.",
+f36:"Fără autentificare",f36d:"Zero conturi, zero parole. Linkul ESTE cheia de acces.",
+f37:"Ștergere automată la 24 luni",f37d:"Echipele sunt șterse automat după 24 luni de inactivitate.",
+f38:"Stocare partajată",f38d:"Datele echipei sunt salvate via API de stocare partajată."
+},
+fr:{
+hero:"Un outil gratuit et élégant de planification des congés d'équipe, sans connexion. Pour équipes jusqu'à 25 personnes. 55 pays, 11 langues, 2026–2035.",
+howTitle:"Comment ça marche",s1:"Créez une équipe",s1d:"choisissez un nom et une année. Lien partageable instantané.",s2d:"entrez le nom et le pays de chaque personne. Les jours fériés se chargent automatiquement.",s3:"Choisissez les jours",s3d:"sélectionnez un membre, puis cliquez ou glissez sur le calendrier.",s4:"Partagez le lien",s4d:"tout le monde avec le lien peut voir et modifier. Sans compte ni mot de passe.",s5:"Analysez et exportez",s5d:"passez d'une vue à l'autre, téléchargez des rapports.",
+calTitle:"Calendrier et Planification",viewTitle:"Vues et Analytique",shareTitle:"Partage et Collaboration",teamTitle:"Gestion d'Équipe",expTitle:"Export et Intégration",designTitle:"Design et Accessibilité",dataTitle:"Données et Confidentialité",footer:"Conçu avec soin pour les équipes qui valorisent la simplicité.",
+f1:"Calendrier 12 Mois",f1d:"Vue annuelle avec membres codés par couleur.",f2:"Glisser pour sélectionner",f2d:"Cliquez et glissez. Weekends exclus automatiquement.",f3:"Multi-années (2026–2035)",f3d:"Jours fériés calculés algorithmiquement.",f4:"Vue trimestrielle",f4d:"Q1–Q4 pour focaliser sur trois mois.",f5:"55 pays + régions",f5d:"Jours fériés régionaux pour Espagne, Allemagne, Suisse, etc.",f6:"Détecteur de conflits",f6d:"Alerte si congé sur jour férié.",f7:"Optimiseur de congés",f7d:"Suggère les jours ponts optimaux.",f8:"Heatmap",f8d:"Grille d'intensité des absences.",f9:"Timeline / Gantt",f9d:"Barres horizontales par membre.",f10:"Tableau de couverture",f10d:"Graphique hebdomadaire de disponibilité.",f11:"Résumé des fériés",f11d:"Vue agrégée des fériés de l'équipe.",f12:"Journal d'activité",f12d:"Flux chronologique de toutes les modifications.",f13:"Lien de partage",f13d:"URL unique par équipe.",f14:"Code QR",f14d:"Scannez pour rejoindre.",f15:"Widget intégrable",f15d:"Code iframe pour tout site.",f16:"Verrouiller / Déverrouiller",f16d:"L'admin peut verrouiller le tableau.",f17:"Annuler / Refaire",f17d:"Ctrl+Z avec historique de 20 actions.",f18:"Suivi PTO",f18d:"Allocation PTO avec barre de progression.",f19:"Compteur jours ouvrés",f19d:"Jours restants hors weekends et fériés.",f20:"Flux d'approbation",f20d:"Les approbateurs valident les congés.",f21:"Fériés régionaux",f21d:"Sélection de la région pour fériés locaux.",f22:"Export ICS",f22d:"Fichiers .ics pour Google Calendar, Outlook.",f23:"Rapport PDF / HTML",f23d:"Rapport annuel avec tableau et analyse.",f24:"Import & Export CSV",f24d:"Import en masse ou export pour RH.",f25:"Export Excel",f25d:"Fichier SpreadsheetML prêt pour la paie.",f26:"Feed TSV / Google Sheets",f26d:"Feed live via IMPORTDATA().",f27:"API JSON",f27d:"Données structurées pour intégrations.",f28:"URL iCal",f28d:"URL webcal auto-actualisé.",f29:"Widget mini",f29d:"Widget compact des absences.",f30:"11 Langues",f30d:"Interface complètement traduite.",f31:"3 Thèmes Liquid Glass",f31d:"Light, Dark et Pink.",f32:"Détection mode sombre",f32d:"Respecte la préférence OS.",f33:"Vue imprimable",f33d:"Format A3 paysage.",f34:"Badge compact",f34d:"Widget 'Présent aujourd'hui'.",f35:"Compteur visites",f35d:"Suivi anonyme par pays.",f36:"Sans connexion",f36d:"Zéro compte, le lien est la clé.",f37:"Nettoyage auto 24 mois",f37d:"Suppression après inactivité.",f38:"Stockage partagé",f38d:"Données via API de stockage."
+},
+de:{
+hero:"Ein schönes, kostenloses Team-Urlaubsplanungstool ohne Anmeldung für Teams bis 25 Personen. 55 Länder, 11 Sprachen, 2026–2035.",
+howTitle:"So funktioniert es",s1:"Team erstellen",s1d:"Name und Jahr wählen. Sofort teilbarer Link.",s2d:"Namen und Land eingeben. Feiertage laden automatisch.",s3:"Urlaubstage wählen",s3d:"Mitglied auswählen, dann Tage im Kalender anklicken oder ziehen.",s4:"Link teilen",s4d:"Jeder mit dem Link kann sehen und bearbeiten.",s5:"Analysieren & exportieren",s5d:"Zwischen Ansichten wechseln, Berichte herunterladen.",
+calTitle:"Kalender & Planung",viewTitle:"Ansichten & Analytik",shareTitle:"Teilen & Zusammenarbeit",teamTitle:"Teamverwaltung",expTitle:"Export & Integration",designTitle:"Design & Barrierefreiheit",dataTitle:"Daten & Datenschutz",footer:"Mit Sorgfalt gebaut für Teams, die Einfachheit schätzen.",
+f1:"12-Monats-Kalender",f1d:"Jahresübersicht mit farbcodierten Mitgliedern.",f2:"Ziehen zum Auswählen",f2d:"Klicken und ziehen. Wochenenden automatisch übersprungen.",f3:"Mehrjahresunterstützung (2026–2035)",f3d:"Feiertage algorithmisch berechnet.",f4:"Quartalsansicht",f4d:"Q1–Q4 für drei Monate im Fokus.",f5:"55 Länder + Regionen",f5d:"Regionale Feiertage für Spanien, Deutschland, Schweiz, etc.",f6:"Feiertagskonflikt-Erkennung",f6d:"Warnung bei Urlaub an Feiertagen.",f7:"Urlaubs-Optimierer",f7d:"Vorschläge für optimale Brückentage.",f8:"Heatmap",f8d:"Farbintensität der täglichen Abwesenheiten.",f9:"Timeline / Gantt",f9d:"Horizontale Balken pro Mitglied.",f10:"Abdeckungs-Dashboard",f10d:"Wöchentliches Verfügbarkeitsdiagramm.",f11:"Feiertags-Zusammenfassung",f11d:"Aggregierte Teamfeiertage.",f12:"Aktivitätslog",f12d:"Chronologischer Feed aller Änderungen.",f13:"Sofortiger Teillink",f13d:"Einzigartige URL pro Team.",f14:"QR-Code",f14d:"Scannen zum Beitreten.",f15:"Einbettbares Widget",f15d:"Iframe-Code für jede Website.",f16:"Sperren / Entsperren",f16d:"Admin kann Board sperren.",f17:"Rückgängig / Wiederherstellen",f17d:"Ctrl+Z mit 20-Aktionen-Verlauf.",f18:"PTO-Tracker",f18d:"PTO-Zuteilung mit Fortschrittsbalken.",f19:"Arbeitstage-Zähler",f19d:"Verbleibende Arbeitstage.",f20:"Genehmigungsworkflow",f20d:"Genehmiger prüfen Urlaubsanträge.",f21:"Regionale Feiertage",f21d:"Regionswahl für lokale Feiertage.",f22:"ICS-Export",f22d:".ics-Dateien für Kalender-Apps.",f23:"PDF / HTML Bericht",f23d:"Jahresbericht mit Tabelle und Analyse.",f24:"CSV Import & Export",f24d:"Massenupload oder Export für HR.",f25:"Excel-Export",f25d:"SpreadsheetML für Gehaltsabrechnung.",f26:"TSV / Google Sheets",f26d:"Live-Feed via IMPORTDATA().",f27:"JSON API",f27d:"Strukturierte Daten für Integrationen.",f28:"iCal-Abo-URL",f28d:"Webcal-URL mit Auto-Update.",f29:"Mini-Widget",f29d:"Kompaktes Widget für Abwesenheiten.",f30:"11 Sprachen",f30d:"Komplett lokalisierte Oberfläche.",f31:"3 Themes mit Liquid Glass",f31d:"Light, Dark und Pink.",f32:"Dunkelmodus-Erkennung",f32d:"Respektiert OS-Einstellung.",f33:"Druckoptimierte Ansicht",f33d:"A3 Querformat für Bürowände.",f34:"Kompaktes Badge",f34d:"Widget 'Wer ist heute da'.",f35:"Besucherzähler",f35d:"Anonyme Erfassung nach Land.",f36:"Ohne Anmeldung",f36d:"Kein Konto nötig. Der Link ist der Schlüssel.",f37:"24-Monats-Bereinigung",f37d:"Teams nach Inaktivität gelöscht.",f38:"Geteilter Speicher",f38d:"Teamdaten über Speicher-API."
+},
+es:{hero:"Herramienta gratuita de planificación de vacaciones sin inicio de sesión. Hasta 25 personas. 55 países, 11 idiomas, 2026–2035.",howTitle:"Cómo funciona",s1:"Crea un equipo",s1d:"elige nombre y año. Link compartible al instante.",s2d:"ingresa nombre y país. Los festivos se cargan automáticamente.",s3:"Elige días de vacaciones",s3d:"selecciona un miembro y haz clic o arrastra en el calendario.",s4:"Comparte el enlace",s4d:"cualquiera con el enlace puede ver y editar.",s5:"Analiza y exporta",s5d:"cambia entre vistas y descarga informes.",calTitle:"Calendario y Planificación",viewTitle:"Vistas y Análisis",shareTitle:"Compartir y Colaboración",teamTitle:"Gestión de Equipo",expTitle:"Exportar e Integración",designTitle:"Diseño y Accesibilidad",dataTitle:"Datos y Privacidad",footer:"Hecho con cariño para equipos que valoran la simplicidad.",f1:"Calendario 12 meses",f1d:"Vista anual con miembros codificados por color.",f2:"Arrastrar para seleccionar",f2d:"Fines de semana excluidos automáticamente.",f3:"Multi-año (2026–2035)",f3d:"Festivos calculados algorítmicamente.",f4:"Vista trimestral",f4d:"Q1–Q4 para tres meses.",f5:"55 países + regiones",f5d:"Festivos regionales para España, Alemania, etc.",f6:"Detector de conflictos",f6d:"Alerta si vacaciones en día festivo.",f7:"Optimizador de vacaciones",f7d:"Sugiere días puente óptimos.",f8:"Heatmap",f8d:"Intensidad diaria de ausencias.",f9:"Timeline / Gantt",f9d:"Barras por miembro.",f10:"Panel de cobertura",f10d:"Gráfico semanal de disponibilidad.",f11:"Resumen festivos",f11d:"Festivos agregados del equipo.",f12:"Registro de actividad",f12d:"Feed cronológico de cambios.",f13:"Enlace instantáneo",f13d:"URL única por equipo.",f14:"Código QR",f14d:"Escanea para unirte.",f15:"Widget incrustable",f15d:"Código iframe para cualquier web.",f16:"Bloquear / Desbloquear",f16d:"Admin puede bloquear el tablero.",f17:"Deshacer / Rehacer",f17d:"Ctrl+Z con historial de 20 acciones.",f18:"Tracker PTO",f18d:"Asignación PTO con barra de progreso.",f19:"Contador días laborables",f19d:"Días restantes sin fines de semana ni festivos.",f20:"Flujo de aprobación",f20d:"Aprobadores revisan vacaciones.",f21:"Festivos regionales",f21d:"Selección de región para festivos locales.",f22:"Exportar ICS",f22d:"Archivos .ics para calendarios.",f23:"Informe PDF / HTML",f23d:"Informe anual con tabla y análisis.",f24:"Importar / Exportar CSV",f24d:"Carga masiva o exportación para RRHH.",f25:"Exportar Excel",f25d:"Archivo listo para nóminas.",f26:"TSV / Google Sheets",f26d:"Feed en vivo.",f27:"API JSON",f27d:"Datos para integraciones.",f28:"URL iCal",f28d:"URL webcal con actualización automática.",f29:"Mini widget",f29d:"Widget compacto de ausencias.",f30:"11 Idiomas",f30d:"Interfaz completamente traducida.",f31:"3 Temas Liquid Glass",f31d:"Light, Dark y Pink.",f32:"Detección modo oscuro",f32d:"Respeta la preferencia del sistema.",f33:"Vista para imprimir",f33d:"A3 paisaje para oficinas.",f34:"Badge compacto",f34d:"Widget de presencia diaria.",f35:"Contador de visitas",f35d:"Seguimiento anónimo por país.",f36:"Sin inicio de sesión",f36d:"Sin cuentas. El enlace es la clave.",f37:"Limpieza automática 24 meses",f37d:"Equipos eliminados tras inactividad.",f38:"Almacenamiento compartido",f38d:"Datos por API de almacenamiento."},
+pt:{hero:"Ferramenta gratuita de planeamento de férias sem login. Até 25 pessoas. 55 países, 11 línguas, 2026–2035.",howTitle:"Como funciona",s1:"Crie uma equipa",s1d:"escolha nome e ano. Link partilhável instantâneo.",s2d:"introduza nome e país. Feriados carregam automaticamente.",s3:"Escolha os dias",s3d:"selecione um membro e clique ou arraste no calendário.",s4:"Partilhe o link",s4d:"qualquer pessoa com o link pode ver e editar.",s5:"Analise e exporte",s5d:"alterne entre vistas e descarregue relatórios.",calTitle:"Calendário e Planeamento",viewTitle:"Vistas e Análise",shareTitle:"Partilha e Colaboração",teamTitle:"Gestão de Equipa",expTitle:"Exportação e Integração",designTitle:"Design e Acessibilidade",dataTitle:"Dados e Privacidade",footer:"Feito com carinho para equipas que valorizam a simplicidade.",f1:"Calendário 12 meses",f1d:"Vista anual com membros codificados por cor.",f2:"Arrastar para selecionar",f2d:"Fins de semana excluídos.",f3:"Multi-ano (2026–2035)",f3d:"Feriados calculados algoritmicamente.",f4:"Vista trimestral",f4d:"Q1–Q4.",f5:"55 países + regiões",f5d:"Feriados regionais.",f6:"Detetor de conflitos",f6d:"Alerta se férias em feriado.",f7:"Otimizador de férias",f7d:"Sugere dias ponte.",f8:"Heatmap",f8d:"Intensidade de ausências.",f9:"Timeline / Gantt",f9d:"Barras por membro.",f10:"Painel de cobertura",f10d:"Gráfico semanal.",f11:"Resumo feriados",f11d:"Feriados agregados.",f12:"Registo de atividade",f12d:"Feed cronológico.",f13:"Link instantâneo",f13d:"URL único por equipa.",f14:"Código QR",f14d:"Digitalize para aderir.",f15:"Widget incorporável",f15d:"Código iframe.",f16:"Bloquear / Desbloquear",f16d:"Admin pode bloquear.",f17:"Anular / Refazer",f17d:"Ctrl+Z.",f18:"Tracker PTO",f18d:"Alocação PTO.",f19:"Contador dias úteis",f19d:"Dias restantes.",f20:"Fluxo de aprovação",f20d:"Aprovadores reveem férias.",f21:"Feriados regionais",f21d:"Seleção de região.",f22:"Exportar ICS",f22d:"Ficheiros .ics.",f23:"Relatório PDF / HTML",f23d:"Relatório anual.",f24:"Importar / Exportar CSV",f24d:"Carga em massa.",f25:"Exportar Excel",f25d:"Ficheiro SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Feed live.",f27:"API JSON",f27d:"Dados estruturados.",f28:"URL iCal",f28d:"URL webcal.",f29:"Mini widget",f29d:"Widget compacto.",f30:"11 Línguas",f30d:"Interface traduzida.",f31:"3 Temas",f31d:"Light, Dark e Pink.",f32:"Deteção modo escuro",f32d:"Respeita preferência OS.",f33:"Vista impressão",f33d:"A3 paisagem.",f34:"Badge compacto",f34d:"Widget presença.",f35:"Contador visitas",f35d:"Rastreio anónimo.",f36:"Sem login",f36d:"Sem contas.",f37:"Limpeza 24 meses",f37d:"Eliminação automática.",f38:"Armazenamento partilhado",f38d:"Dados via API."},
+hu:{hero:"Ingyenes csapatszabadság-tervező bejelentkezés nélkül. Max 25 fő. 55 ország, 11 nyelv, 2026–2035.",howTitle:"Hogyan működik",s1:"Csapat létrehozása",s1d:"név és év kiválasztása. Azonnali megosztható link.",s2d:"név és ország megadása. Ünnepnapok automatikusan betöltődnek.",s3:"Szabadságnapok kiválasztása",s3d:"válassz tagot, kattints vagy húzz a naptáron.",s4:"Link megosztása",s4d:"bárki a linkkel megtekintheti és szerkesztheti.",s5:"Elemzés és exportálás",s5d:"nézetek váltása, jelentések letöltése.",calTitle:"Naptár és Tervezés",viewTitle:"Nézetek és Elemzés",shareTitle:"Megosztás és Együttműködés",teamTitle:"Csapatkezelés",expTitle:"Export és Integráció",designTitle:"Design és Elérhetőség",dataTitle:"Adatok és Adatvédelem",footer:"Gondossággal készítve az egyszerűséget értékelő csapatoknak.",f1:"12 hónapos naptár",f1d:"Éves áttekintés színkódolt tagokkal.",f2:"Húzás kijelöléshez",f2d:"Hétvégék automatikusan kihagyva.",f3:"Többéves támogatás",f3d:"Ünnepnapok algoritmikusan számítva.",f4:"Negyedéves nézet",f4d:"Q1–Q4.",f5:"55 ország + régiók",f5d:"Regionális ünnepnapok.",f6:"Ünnepnap-ütközés",f6d:"Figyelmeztetés ünnepnapon.",f7:"Szabadság-optimalizáló",f7d:"Optimális áthidaló napok.",f8:"Hőtérkép",f8d:"Napi hiányzási intenzitás.",f9:"Idővonal / Gantt",f9d:"Sávok tagonként.",f10:"Lefedettségi panel",f10d:"Heti elérhetőségi diagram.",f11:"Ünnepnap-összefoglaló",f11d:"Csapat ünnepnapjai.",f12:"Tevékenységnapló",f12d:"Módosítások idővonala.",f13:"Azonnali link",f13d:"Egyedi URL csapatonként.",f14:"QR-kód",f14d:"Szkennelj a csatlakozáshoz.",f15:"Beágyazható widget",f15d:"Iframe-kód.",f16:"Zárolás",f16d:"Admin zárolhatja.",f17:"Visszavonás / Újra",f17d:"Ctrl+Z.",f18:"PTO nyomkövető",f18d:"PTO-kiosztás.",f19:"Munkanapok számlálója",f19d:"Hátralévő munkanapok.",f20:"Jóváhagyási folyamat",f20d:"Jóváhagyók ellenőrzik.",f21:"Regionális ünnepnapok",f21d:"Régió kiválasztása.",f22:"ICS export",f22d:".ics fájlok.",f23:"PDF / HTML jelentés",f23d:"Éves jelentés.",f24:"CSV import / export",f24d:"Tömeges feltöltés.",f25:"Excel export",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Élő feed.",f27:"JSON API",f27d:"Strukturált adatok.",f28:"iCal URL",f28d:"Webcal URL.",f29:"Mini widget",f29d:"Kompakt widget.",f30:"11 Nyelv",f30d:"Teljesen fordított.",f31:"3 Téma",f31d:"Light, Dark, Pink.",f32:"Sötét mód",f32d:"OS-beállítás.",f33:"Nyomtatási nézet",f33d:"A3 fekvő.",f34:"Kompakt badge",f34d:"Jelenlét widget.",f35:"Látogatásszámláló",f35d:"Anonim nyomkövetés.",f36:"Bejelentkezés nélkül",f36d:"A link a kulcs.",f37:"24 hónapos törlés",f37d:"Inaktivitás után.",f38:"Megosztott tároló",f38d:"API-n keresztül."},
+sv:{hero:"Gratis semesterplanerare utan inloggning. Upp till 25 personer. 55 länder, 11 språk, 2026–2035.",howTitle:"Så fungerar det",s1:"Skapa ett team",s1d:"välj namn och år. Delbar länk direkt.",s2d:"ange namn och land. Helgdagar laddas automatiskt.",s3:"Välj semesterdagar",s3d:"välj medlem, klicka eller dra i kalendern.",s4:"Dela länken",s4d:"alla med länken kan se och redigera.",s5:"Analysera & exportera",s5d:"växla vyer, ladda ner rapporter.",calTitle:"Kalender & Planering",viewTitle:"Vyer & Analys",shareTitle:"Delning & Samarbete",teamTitle:"Teamhantering",expTitle:"Export & Integration",designTitle:"Design & Tillgänglighet",dataTitle:"Data & Integritet",footer:"Byggt med omsorg för team som värdesätter enkelhet.",f1:"12-månaderskalender",f1d:"Årsöversikt med färgkodade medlemmar.",f2:"Dra för att välja",f2d:"Helger exkluderas.",f3:"Flerårs-stöd",f3d:"Helgdagar beräknade.",f4:"Kvartalsvy",f4d:"Q1–Q4.",f5:"55 länder + regioner",f5d:"Regionala helgdagar.",f6:"Helgdagskonflikt",f6d:"Varning vid helgdag.",f7:"Semesteroptimering",f7d:"Föreslår brödagar.",f8:"Värmekarta",f8d:"Daglig frånvaro.",f9:"Tidslinje / Gantt",f9d:"Staplar per medlem.",f10:"Täckningspanel",f10d:"Veckovis tillgänglighet.",f11:"Helgdagssammanfattning",f11d:"Teamets helgdagar.",f12:"Aktivitetslogg",f12d:"Kronologisk feed.",f13:"Direktlänk",f13d:"Unik URL per team.",f14:"QR-kod",f14d:"Skanna för att gå med.",f15:"Inbäddningsbar widget",f15d:"Iframe-kod.",f16:"Låsa / Låsa upp",f16d:"Admin kan låsa.",f17:"Ångra / Gör om",f17d:"Ctrl+Z.",f18:"PTO-spårare",f18d:"PTO-tilldelning.",f19:"Arbetsdagar kvar",f19d:"Återstående dagar.",f20:"Godkännandeflöde",f20d:"Godkännare granskar.",f21:"Regionala helgdagar",f21d:"Val av region.",f22:"ICS-export",f22d:".ics-filer.",f23:"PDF / HTML-rapport",f23d:"Årsrapport.",f24:"CSV import / export",f24d:"Massuppladdning.",f25:"Excel-export",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Live-feed.",f27:"JSON API",f27d:"Strukturerad data.",f28:"iCal-URL",f28d:"Webcal-URL.",f29:"Miniwidget",f29d:"Kompakt widget.",f30:"11 Språk",f30d:"Helt översatt.",f31:"3 Teman",f31d:"Light, Dark, Pink.",f32:"Mörkt läge",f32d:"OS-inställning.",f33:"Utskriftsvy",f33d:"A3 liggande.",f34:"Kompakt badge",f34d:"Närvarowidget.",f35:"Besöksräknare",f35d:"Anonym spårning.",f36:"Utan inloggning",f36d:"Länken är nyckeln.",f37:"24-månaders rensning",f37d:"Raderas efter inaktivitet.",f38:"Delat lagring",f38d:"Via lagrings-API."},
+it:{hero:"Strumento gratuito per pianificare le ferie del team senza login. Fino a 25 persone. 55 paesi, 11 lingue, 2026–2035.",howTitle:"Come funziona",s1:"Crea un team",s1d:"scegli nome e anno. Link condivisibile istantaneo.",s2d:"inserisci nome e paese. Le festività si caricano automaticamente.",s3:"Scegli i giorni",s3d:"seleziona un membro, clicca o trascina sul calendario.",s4:"Condividi il link",s4d:"chiunque con il link può vedere e modificare.",s5:"Analizza ed esporta",s5d:"cambia vista, scarica report.",calTitle:"Calendario e Pianificazione",viewTitle:"Viste e Analisi",shareTitle:"Condivisione e Collaborazione",teamTitle:"Gestione Team",expTitle:"Esportazione e Integrazione",designTitle:"Design e Accessibilità",dataTitle:"Dati e Privacy",footer:"Costruito con cura per i team che apprezzano la semplicità.",f1:"Calendario 12 mesi",f1d:"Vista annuale con membri colorati.",f2:"Trascina per selezionare",f2d:"Weekend esclusi.",f3:"Multi-anno (2026–2035)",f3d:"Festività calcolate.",f4:"Vista trimestrale",f4d:"Q1–Q4.",f5:"55 paesi + regioni",f5d:"Festività regionali.",f6:"Rilevatore conflitti",f6d:"Avviso se ferie in giorno festivo.",f7:"Ottimizzatore ferie",f7d:"Suggerisce giorni ponte.",f8:"Heatmap",f8d:"Intensità assenze.",f9:"Timeline / Gantt",f9d:"Barre per membro.",f10:"Dashboard copertura",f10d:"Grafico settimanale.",f11:"Riepilogo festività",f11d:"Festività aggregate.",f12:"Log attività",f12d:"Feed cronologico.",f13:"Link istantaneo",f13d:"URL unico per team.",f14:"Codice QR",f14d:"Scansiona per unirti.",f15:"Widget incorporabile",f15d:"Codice iframe.",f16:"Blocca / Sblocca",f16d:"Admin può bloccare.",f17:"Annulla / Ripeti",f17d:"Ctrl+Z.",f18:"Tracker PTO",f18d:"Allocazione PTO.",f19:"Contatore giorni lavorativi",f19d:"Giorni rimanenti.",f20:"Flusso approvazione",f20d:"Approvatori verificano.",f21:"Festività regionali",f21d:"Selezione regione.",f22:"Esporta ICS",f22d:"File .ics.",f23:"Report PDF / HTML",f23d:"Report annuale.",f24:"Import / Export CSV",f24d:"Caricamento massivo.",f25:"Export Excel",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Feed live.",f27:"API JSON",f27d:"Dati strutturati.",f28:"URL iCal",f28d:"URL webcal.",f29:"Mini widget",f29d:"Widget compatto.",f30:"11 Lingue",f30d:"Interfaccia tradotta.",f31:"3 Temi",f31d:"Light, Dark, Pink.",f32:"Rilevamento dark mode",f32d:"Preferenza OS.",f33:"Vista stampa",f33d:"A3 orizzontale.",f34:"Badge compatto",f34d:"Widget presenza.",f35:"Contatore visite",f35d:"Tracciamento anonimo.",f36:"Senza login",f36d:"Il link è la chiave.",f37:"Pulizia 24 mesi",f37d:"Eliminazione dopo inattività.",f38:"Storage condiviso",f38d:"Dati via API."},
+bg:{hero:"Безплатен инструмент за планиране на отпуски без вход. До 25 души. 55 държави, 11 езика, 2026–2035.",howTitle:"Как работи",s1:"Създай екип",s1d:"избери име и година. Моментален споделяем линк.",s2d:"въведи име и държава. Празниците се зареждат автоматично.",s3:"Избери дни",s3d:"избери член, кликни или плъзни в календара.",s4:"Сподели линка",s4d:"всеки с линка може да вижда и редактира.",s5:"Анализирай и експортирай",s5d:"превключвай изгледи, изтегляй отчети.",calTitle:"Календар и Планиране",viewTitle:"Изгледи и Анализ",shareTitle:"Споделяне и Сътрудничество",teamTitle:"Управление на екипа",expTitle:"Експорт и Интеграция",designTitle:"Дизайн и Достъпност",dataTitle:"Данни и Поверителност",footer:"Създадено с грижа за екипи, които ценят простотата.",f1:"12-месечен календар",f1d:"Годишен преглед с цветово кодирани членове.",f2:"Плъзгане за избор",f2d:"Уикендите се пропускат.",f3:"Мултигодишна поддръжка",f3d:"Празниците изчислени алгоритмично.",f4:"Тримесечен изглед",f4d:"Q1–Q4.",f5:"55 държави + региони",f5d:"Регионални празници.",f6:"Детектор на конфликти",f6d:"Предупреждение при празник.",f7:"Оптимизатор на отпуски",f7d:"Предлага мостови дни.",f8:"Хийтмап",f8d:"Интензитет на отсъствия.",f9:"Таймлайн / Гант",f9d:"Ленти по член.",f10:"Панел на покритие",f10d:"Седмична наличност.",f11:"Обобщение празници",f11d:"Агрегирани празници.",f12:"Дневник на дейността",f12d:"Хронологичен фийд.",f13:"Моментален линк",f13d:"Уникален URL.",f14:"QR код",f14d:"Сканирай за присъединяване.",f15:"Вграждаем уиджет",f15d:"Iframe код.",f16:"Заключване",f16d:"Админът може да заключи.",f17:"Отмяна / Повторение",f17d:"Ctrl+Z.",f18:"PTO тракер",f18d:"PTO разпределение.",f19:"Работни дни",f19d:"Оставащи дни.",f20:"Одобрителен процес",f20d:"Одобряващите проверяват.",f21:"Регионални празници",f21d:"Избор на регион.",f22:"ICS експорт",f22d:".ics файлове.",f23:"PDF / HTML отчет",f23d:"Годишен отчет.",f24:"CSV импорт / експорт",f24d:"Масово качване.",f25:"Excel експорт",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Жив фийд.",f27:"JSON API",f27d:"Структурирани данни.",f28:"iCal URL",f28d:"Webcal URL.",f29:"Мини уиджет",f29d:"Компактен уиджет.",f30:"11 Езика",f30d:"Напълно преведен.",f31:"3 Теми",f31d:"Light, Dark, Pink.",f32:"Тъмен режим",f32d:"OS настройка.",f33:"Изглед за печат",f33d:"A3 пейзаж.",f34:"Компактен бадж",f34d:"Уиджет за присъствие.",f35:"Брояч на посещения",f35d:"Анонимно проследяване.",f36:"Без вход",f36d:"Линкът е ключът.",f37:"Изчистване 24 месеца",f37d:"Изтриване след неактивност.",f38:"Споделено хранилище",f38d:"Данни чрез API."},
+ar:{hero:"أداة مجانية لتخطيط إجازات الفريق بدون تسجيل دخول. حتى 25 شخصاً. 55 دولة، 11 لغة، 2026–2035.",howTitle:"كيف يعمل",s1:"أنشئ فريقاً",s1d:"اختر اسماً وسنة. رابط مشاركة فوري.",s2d:"أدخل الاسم والدولة. تُحمّل العطل الرسمية تلقائياً.",s3:"اختر أيام الإجازة",s3d:"حدد عضواً، ثم انقر أو اسحب في التقويم.",s4:"شارك الرابط",s4d:"أي شخص لديه الرابط يمكنه العرض والتعديل.",s5:"حلّل وصدّر",s5d:"بدّل بين العروض، حمّل التقارير.",calTitle:"التقويم والتخطيط",viewTitle:"العروض والتحليلات",shareTitle:"المشاركة والتعاون",teamTitle:"إدارة الفريق",expTitle:"التصدير والتكامل",designTitle:"التصميم وإمكانية الوصول",dataTitle:"البيانات والخصوصية",footer:"صُنع بعناية للفرق التي تقدّر البساطة.",f1:"تقويم 12 شهراً",f1d:"عرض سنوي بألوان مميزة.",f2:"اسحب للتحديد",f2d:"عطل نهاية الأسبوع مستثناة.",f3:"دعم متعدد السنوات",f3d:"العطل محسوبة خوارزمياً.",f4:"عرض ربع سنوي",f4d:"Q1–Q4.",f5:"55 دولة + مناطق",f5d:"عطل إقليمية.",f6:"كاشف التعارضات",f6d:"تنبيه عند إجازة في يوم عطلة.",f7:"محسّن الإجازات",f7d:"يقترح أيام الجسر.",f8:"خريطة حرارية",f8d:"كثافة الغياب.",f9:"الجدول الزمني",f9d:"أشرطة لكل عضو.",f10:"لوحة التغطية",f10d:"رسم بياني أسبوعي.",f11:"ملخص العطل",f11d:"عطل الفريق المجمعة.",f12:"سجل النشاط",f12d:"تسلسل زمني للتغييرات.",f13:"رابط فوري",f13d:"URL فريد لكل فريق.",f14:"رمز QR",f14d:"امسح للانضمام.",f15:"ويدجت قابل للتضمين",f15d:"كود iframe.",f16:"قفل / فتح",f16d:"المسؤول يمكنه القفل.",f17:"تراجع / إعادة",f17d:"Ctrl+Z.",f18:"متتبع PTO",f18d:"تخصيص PTO.",f19:"عداد أيام العمل",f19d:"الأيام المتبقية.",f20:"سير عمل الموافقة",f20d:"الموافقون يراجعون.",f21:"عطل إقليمية",f21d:"اختيار المنطقة.",f22:"تصدير ICS",f22d:"ملفات .ics.",f23:"تقرير PDF / HTML",f23d:"تقرير سنوي.",f24:"استيراد / تصدير CSV",f24d:"تحميل جماعي.",f25:"تصدير Excel",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"تغذية مباشرة.",f27:"واجهة JSON",f27d:"بيانات منظمة.",f28:"رابط iCal",f28d:"رابط webcal.",f29:"ويدجت مصغر",f29d:"ويدجت مدمج.",f30:"11 لغة",f30d:"واجهة مترجمة بالكامل.",f31:"3 سمات",f31d:"فاتح، داكن، وردي.",f32:"كشف الوضع الداكن",f32d:"يحترم إعداد النظام.",f33:"عرض للطباعة",f33d:"A3 أفقي.",f34:"شارة مدمجة",f34d:"ويدجت الحضور.",f35:"عداد الزيارات",f35d:"تتبع مجهول.",f36:"بدون تسجيل دخول",f36d:"الرابط هو المفتاح.",f37:"تنظيف 24 شهراً",f37d:"حذف بعد عدم النشاط.",f38:"تخزين مشترك",f38d:"بيانات عبر API."}
+};
 
 function TodayHolidays({th,t}) {
   const today = new Date();
