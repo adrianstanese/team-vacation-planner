@@ -2992,70 +2992,151 @@ function AnalyticsDashboard({team,yr,th,t}) {
 }
 
 function TripsView({team,onUpdate,th,t,yr,holSet}){
-  var[aId,setAId]=useState(null);
-  var[quarter,setQuarter]=useState(null);
-  var am=team.members.find(function(m){return m.id===aId;});
-  var ai=am?team.members.indexOf(am):-1;
-  var ac=ai>=0?MC[ai%MC.length]:null;
+  var trips=(team.trips||[]).sort(function(a,b){return(a.start||"").localeCompare(b.start||"");});
+  var[adding,setAdding]=useState(false);
+  var[editId,setEditId]=useState(null);
+  var[form,setForm]=useState({member:"",start:"",end:"",dest:"",project:""});
 
-  // Trip days stored per member in team.tripDays = {memberId: ["2026-07-05",...]}
-  var tripDays=team.tripDays||{};
+  var resetForm=function(){setForm({member:"",start:"",end:"",dest:"",project:""});setAdding(false);setEditId(null);};
 
-  var toggleDay=function(y2,m2,d2){
-    console.log("TOGGLE",y2,m2,d2,"aId=",aId);
-    if(!aId){console.log("NO AID");return;}
-    try{
-    var key=dk(y2,m2,d2);
-    var md=JSON.parse(JSON.stringify(team.tripDays||{}));
-    var arr=md[aId]||[];
-    var idx=arr.indexOf(key);
-    if(idx>=0)arr.splice(idx,1); else arr.push(key);
-    md[aId]=arr;
-    onUpdate({...team,tripDays:md});
-    }catch(e){console.error("toggleDay error",e);}
+  var saveTrip=function(){
+    if(!form.member||!form.start||!form.end)return;
+    var allTrips=[...(team.trips||[])];
+    var tripObj={id:editId||("t"+Date.now()),member:form.member,start:form.start,end:form.end,dest:form.dest,project:form.project};
+    if(editId){var idx=allTrips.findIndex(function(x){return x.id===editId;});if(idx>=0)allTrips[idx]=tripObj;}
+    else allTrips.push(tripObj);
+    onUpdate({...team,trips:allTrips});resetForm();
   };
 
-  // Calendar months
+  var deleteTrip=function(id){
+    var allTrips=(team.trips||[]).filter(function(x){return x.id!==id;});
+    onUpdate({...team,trips:allTrips});
+    if(editId===id)resetForm();
+  };
+
+  var startEdit=function(tr){
+    setForm({member:tr.member,start:tr.start,end:tr.end,dest:tr.dest||"",project:tr.project||""});
+    setEditId(tr.id);setAdding(true);
+  };
+
+  var countWorkDays=function(s,e){if(!s||!e)return 0;var d1=new Date(s+"T12:00:00"),d2=new Date(e+"T12:00:00"),cnt=0;for(var d=new Date(d1);d<=d2;d.setDate(d.getDate()+1)){var dow=d.getDay();if(dow!==0&&dow!==6)cnt++;}return cnt;};
+
+  // Build a set of all trip days per member for the calendar
+  var tripDayMap={};
+  trips.forEach(function(tr){
+    if(!tr.start||!tr.end)return;
+    var d1=new Date(tr.start+"T12:00:00"),d2=new Date(tr.end+"T12:00:00");
+    if(!tripDayMap[tr.member])tripDayMap[tr.member]=[];
+    for(var d=new Date(d1);d<=d2;d.setDate(d.getDate()+1)){
+      tripDayMap[tr.member].push(dk(d.getFullYear(),d.getMonth(),d.getDate()));
+    }
+  });
+
+  var totalDays=trips.reduce(function(sum,tr){return sum+countWorkDays(tr.start,tr.end);},0);
+
+  // Calendar
+  var[quarter,setQuarter]=useState(null);
   var allM=Array.from({length:12},function(_,i){return{year:yr,month:i};});
   var filtered=quarter===null?allM:allM.filter(function(x){return Math.floor(x.month/3)===quarter;});
-
-  // Stats
-  var totalTripDays=0;
-  team.members.forEach(function(m){totalTripDays+=((tripDays[m.id]||[]).filter(function(d){return d.startsWith(String(yr));}).length);});
+  var mob=typeof window!=="undefined"&&window.innerWidth<700;
 
   return <div className="tvp-fade">
     {/* Header */}
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
       <div>
         <h3 style={{margin:0,fontSize:17,fontWeight:700,color:"#D97706",fontFamily:F,display:"flex",alignItems:"center",gap:6}}>✈️ {t.trips||"Business Trips"} {yr}</h3>
-        <div style={{fontSize:11,color:th.t3,marginTop:2}}>{team.members.length} {t.totalMembers||"members"} · {totalTripDays} {t.tripDays||"trip days"}</div>
+        <div style={{fontSize:11,color:th.t3,marginTop:2}}>{trips.length} {trips.length!==1?(t.trips||"trips"):(t.trip||"trip")} · {totalDays} {t.dys||"days"}</div>
       </div>
-      {/* Quarter pills */}
+      {!adding&&<button onClick={function(){resetForm();setAdding(true);}} style={{padding:"8px 16px",borderRadius:10,border:"none",background:"#D97706",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:F,display:"flex",alignItems:"center",gap:4,boxShadow:"0 2px 8px rgba(217,119,6,.25)"}}><Ic n="plus" s={13} c="#fff"/> {t.addTrip||"Add Trip"}</button>}
+    </div>
+
+    {/* Add/Edit Form */}
+    {adding&&<div style={{padding:16,background:th.gbg,borderRadius:12,border:"1px solid #D97706",marginBottom:16}}>
+      <div style={{fontSize:13,fontWeight:700,color:"#D97706",marginBottom:12}}>{editId?(t.editTrip||"Edit Trip"):(t.addTrip||"New Trip")}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <div>
+          <label style={{fontSize:10,color:th.t3,fontWeight:600,display:"block",marginBottom:3}}>{t.mb||"Member"}</label>
+          <select value={form.member} onChange={function(e){setForm({...form,member:e.target.value});}} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}>
+            <option value="">— {t.sel||"Select"} —</option>
+            {team.members.map(function(m){return <option key={m.id} value={m.id}>{m.name}</option>;})}
+          </select>
+        </div>
+        <div>
+          <label style={{fontSize:10,color:th.t3,fontWeight:600,display:"block",marginBottom:3}}>{t.dest||"Destination"}</label>
+          <input value={form.dest} onChange={function(e){setForm({...form,dest:e.target.value});}} placeholder="City, Country" maxLength={50} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
+        </div>
+        <div>
+          <label style={{fontSize:10,color:th.t3,fontWeight:600,display:"block",marginBottom:3}}>{t.startDate||"Start date"}</label>
+          <input type="date" value={form.start} onChange={function(e){setForm({...form,start:e.target.value});}} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
+        </div>
+        <div>
+          <label style={{fontSize:10,color:th.t3,fontWeight:600,display:"block",marginBottom:3}}>{t.endDate||"End date"}</label>
+          <input type="date" value={form.end} onChange={function(e){setForm({...form,end:e.target.value});}} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
+        </div>
+      </div>
+      <div style={{marginTop:10}}>
+        <label style={{fontSize:10,color:th.t3,fontWeight:600,display:"block",marginBottom:3}}>{t.project||"Project / Purpose"}</label>
+        <input value={form.project} onChange={function(e){setForm({...form,project:e.target.value});}} placeholder="Optional" maxLength={80} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:14,justifyContent:"flex-end"}}>
+        <button onClick={resetForm} style={{padding:"7px 16px",borderRadius:8,border:"1px solid "+th.gbd,background:"transparent",color:th.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:F}}>{t.cancel||"Cancel"}</button>
+        <button onClick={saveTrip} disabled={!form.member||!form.start||!form.end} style={{padding:"7px 16px",borderRadius:8,border:"none",background:form.member&&form.start&&form.end?"#D97706":"#D1D5DB",color:"#fff",fontSize:12,fontWeight:700,cursor:form.member&&form.start&&form.end?"pointer":"default",fontFamily:F}}>{editId?(t.save||"Save"):(t.addTrip||"Add Trip")}</button>
+      </div>
+    </div>}
+
+    {/* Trip list */}
+    {trips.length>0&&<div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
+      {trips.map(function(tr){
+        var m=team.members.find(function(x){return x.id===tr.member;});
+        var mc=m?MC[team.members.indexOf(m)%MC.length]:{d:"#D97706",b:"#FAEEDA",t:"#854F0B"};
+        var days=countWorkDays(tr.start,tr.end);
+        var startD=tr.start?new Date(tr.start+"T12:00:00"):null;
+        var endD=tr.end?new Date(tr.end+"T12:00:00"):null;
+        var fmtD=function(d){if(!d)return"";return d.getDate()+" "+(t.M||["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"])[d.getMonth()];};
+        return <div key={tr.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:th.gbg,borderRadius:10,border:"1px solid "+th.gbd,transition:"all .15s"}} onMouseEnter={function(e){e.currentTarget.style.borderColor="#D97706";}} onMouseLeave={function(e){e.currentTarget.style.borderColor=th.gbd;}}>
+          <div style={{width:36,height:36,borderRadius:"50%",background:mc.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:14,fontWeight:700,flexShrink:0}}>{m?m.name[0].toUpperCase():"?"}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:600,color:th.tx}}>{m?m.name:"?"}</div>
+            <div style={{fontSize:11,color:th.t3,display:"flex",flexWrap:"wrap",gap:4,marginTop:2}}>
+              <span>{fmtD(startD)} – {fmtD(endD)}</span>
+              {tr.dest&&<span style={{color:"#D97706",fontWeight:600}}>· {tr.dest}</span>}
+              {tr.project&&<span>· {tr.project}</span>}
+            </div>
+          </div>
+          <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:8,background:"#FAEEDA",color:"#854F0B",flexShrink:0}}>{days}d</span>
+          <button onClick={function(){startEdit(tr);}} style={{background:"none",border:"none",cursor:"pointer",padding:3}}><Ic n="edit" s={13} c={th.t3}/></button>
+          <button onClick={function(){deleteTrip(tr.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:3}}><Ic n="trash" s={13} c={th.t3}/></button>
+        </div>;
+      })}
+    </div>}
+
+    {/* Empty state */}
+    {trips.length===0&&!adding&&<div style={{textAlign:"center",padding:"30px 20px",marginBottom:16}}>
+      <div style={{fontSize:36,marginBottom:10}}>✈️</div>
+      <div style={{fontSize:15,fontWeight:700,color:th.tx,marginBottom:4}}>{t.noTrips||"No business trips yet"}</div>
+      <div style={{fontSize:12,color:th.t3}}>{t.noTripsDesc||"Track your team's business travel — destinations, dates, and projects."}</div>
+    </div>}
+
+    {/* Quarter pills */}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <span style={{fontSize:14,fontWeight:700,color:th.tx}}>{t.cal||"Calendar"}</span>
       <div style={{display:"flex",gap:3}}>
-        <button onClick={function(){setQuarter(null);}} style={{padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:600,border:quarter===null?"1.5px solid #D97706":"1px solid "+th.gbd,background:quarter===null?"#FAEEDA":"transparent",color:quarter===null?"#D97706":th.t3,cursor:"pointer",fontFamily:F}}>{t.yr||"Year"}</button>
-        {[0,1,2,3].map(function(q){return <button key={q} onClick={function(){setQuarter(quarter===q?null:q);}} style={{padding:"4px 10px",borderRadius:6,fontSize:10,fontWeight:600,border:quarter===q?"1.5px solid #D97706":"1px solid "+th.gbd,background:quarter===q?"#FAEEDA":"transparent",color:quarter===q?"#D97706":th.t3,cursor:"pointer",fontFamily:F}}>Q{q+1}</button>;})}
+        {[{l:t.yr||"Year",v:null},{l:"Q1",v:0},{l:"Q2",v:1},{l:"Q3",v:2},{l:"Q4",v:3}].map(function(q){return <button key={q.l} onClick={function(){setQuarter(q.v);}} style={{padding:"3px 10px",borderRadius:6,fontSize:10,fontWeight:600,border:quarter===q.v?"1.5px solid #D97706":"1px solid "+th.gbd,background:quarter===q.v?"#FAEEDA":"transparent",color:quarter===q.v?"#D97706":th.t3,cursor:"pointer",fontFamily:F}}>{q.l}</button>;})}
       </div>
     </div>
 
-    {/* Member selector */}
-    <div style={{display:"flex",flexWrap:"wrap",gap:3,marginBottom:12,padding:"6px 8px",background:th.gbg,borderRadius:8,border:"1px solid "+th.gbd}}>
-      {team.members.map(function(m,i){var mc=MC[i%MC.length];var isA=m.id===aId;var dc=((tripDays[m.id]||[]).filter(function(d){return d.startsWith(String(yr));}).length);return <button key={m.id} onClick={function(){console.log("SELECT MEMBER",m.id,m.name);setAId(m.id===aId?null:m.id);}} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:6,border:isA?"1.5px solid #D97706":"1px solid transparent",background:isA?"#FAEEDA":"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:isA?"#D97706":th.t2,fontFamily:F,transition:"all .15s"}}><span style={{width:8,height:8,borderRadius:"50%",background:mc.d,flexShrink:0}}></span>{m.name}{dc>0&&<span style={{fontSize:9,color:"#D97706",fontFamily:FM,marginLeft:2}}>({dc})</span>}</button>;})}
-    </div>
-
-    {!aId&&<div style={{padding:"10px 14px",background:"#FAEEDA",borderRadius:8,marginBottom:12,fontSize:12,color:"#D97706",fontWeight:500}}>{t.selTrip||"Select a member to mark business trip days"}</div>}
-
-    {/* Calendar grid — amber themed */}
-    <div style={{display:"grid",gridTemplateColumns:quarter===null?"repeat(3,1fr)":"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
+    {/* Calendar grid showing trips as amber days */}
+    <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"repeat(3,1fr)",gap:mob?10:12}}>
       {filtered.map(function(mo){
-        var year=mo.year,month=mo.month;
-        var days2=dim(year,month);var first=fdm(year,month);
-        var cells=[];for(var i2=0;i2<first;i2++)cells.push(null);for(var d2=1;d2<=days2;d2++)cells.push(d2);
+        var year2=mo.year,month2=mo.month;
+        var daysInMonth=dim(year2,month2);var first=fdm(year2,month2);
+        var cells=[];for(var i2=0;i2<first;i2++)cells.push(null);for(var d2=1;d2<=daysInMonth;d2++)cells.push(d2);
         var dayLabels=[t.mo,t.tu,t.we2,t.th,t.fr,t.sa,t.su];
-        var seasonBg=month>=5&&month<=7?"rgba(245,158,11,.04)":month===11||month<=1?"rgba(99,102,241,.04)":month>=2&&month<=4?"rgba(16,185,129,.03)":"rgba(249,115,22,.025)";
+        var seasonBg=month2>=5&&month2<=7?"rgba(245,158,11,.04)":month2===11||month2<=1?"rgba(99,102,241,.04)":month2>=2&&month2<=4?"rgba(16,185,129,.03)":"rgba(249,115,22,.025)";
 
-        return <div key={month} style={{background:th.gbg,borderRadius:G.rSm,border:"1px solid "+th.gbd,overflow:"hidden",animation:"popIn .3s ease-out"}}>
+        return <div key={month2} style={{background:th.gbg,borderRadius:G.rSm,border:"1px solid "+th.gbd,overflow:"hidden"}}>
           <div style={{padding:"8px 12px",borderBottom:"1px solid "+th.bl,background:seasonBg,display:"flex",justifyContent:"space-between"}}>
-            <span style={{fontSize:13,fontWeight:650,color:th.tx,fontFamily:F}}>{t.M[month]}</span>
+            <span style={{fontSize:13,fontWeight:650,color:th.tx,fontFamily:F}}>{t.M[month2]}</span>
           </div>
           <div style={{padding:"6px"}}>
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",marginBottom:3}}>
@@ -3064,24 +3145,26 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
               {cells.map(function(day,ci){
                 if(day===null)return <div key={"e"+ci}/>;
-                var key=dk(year,month,day);
-                var we=isWe(year,month,day);
+                var key=dk(year2,month2,day);
+                var we=isWe(year2,month2,day);
                 var isHol=holSet&&holSet.has&&holSet.has(key);
-                // Gather trip info for this day across ALL members
-                var trippers=[];team.members.forEach(function(m2,mi){if((tripDays[m2.id]||[]).indexOf(key)>=0)trippers.push({name:m2.name,mc:MC[mi%MC.length]});});
-                // Is this day marked for active member?
-                var isTrip=aId&&(tripDays[aId]||[]).indexOf(key)>=0;
-                var past=new Date(year,month,day)<new Date(CY,CM,CD);
+                // Find all members traveling on this day
+                var travelers=[];
+                team.members.forEach(function(m2,mi){
+                  if(tripDayMap[m2.id]&&tripDayMap[m2.id].indexOf(key)>=0){
+                    travelers.push({name:m2.name,mc:MC[mi%MC.length]});
+                  }
+                });
+                var hasTrip=travelers.length>0;
+                var isTd=year2===CY&&month2===CM&&day===CD;
 
-                return <div key={ci}
-                  onClick={function(e){e.stopPropagation();console.log("TRIP CLICK",year,month,day,aId);toggleDay(year,month,day);}}
-                  style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:6,cursor:!aId?"default":"pointer",transition:"transform .12s",
-                    background:isTrip?"#D97706":trippers.length>0?trippers[0].mc.b:isHol?"#DBEAFE":we?"transparent":"transparent",
-                    color:isTrip?"#fff":trippers.length>0?trippers[0].mc.t:isHol?"#3B82F6":we?th.t3+"80":th.tx,
-                    opacity:1,
-                    border:isTrip?"1px solid #B45309":"1px solid transparent"}}>
-                  <span style={{fontSize:11,fontWeight:isTrip?700:500,lineHeight:1}}>{day}</span>
-                  {trippers.length>1&&<span style={{position:"absolute",top:-3,right:-3,width:12,height:12,borderRadius:"50%",background:"#D97706",color:"#fff",fontSize:7,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{trippers.length}</span>}
+                return <div key={ci} style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:6,
+                  background:hasTrip?travelers[0].mc.b:isHol?"#DBEAFE":we?"transparent":"transparent",
+                  border:hasTrip?"1.5px solid #D97706":"1px solid transparent",
+                  boxShadow:hasTrip?"0 0 6px rgba(217,119,6,.2)":"none"}}>
+                  <span style={{fontSize:11,fontWeight:isTd||hasTrip?700:500,color:hasTrip?"#92400E":isTd?th.ac:we?th.t3+"80":isHol?"#3B82F6":th.tx,lineHeight:1}}>{day}</span>
+                  {travelers.length>1&&<span style={{position:"absolute",top:-3,right:-3,width:12,height:12,borderRadius:"50%",background:"#D97706",color:"#fff",fontSize:7,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{travelers.length}</span>}
+                  {hasTrip&&travelers.length===1&&<span style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50%)",width:4,height:4,borderRadius:"50%",background:"#D97706"}}/>}
                 </div>;
               })}
             </div>
