@@ -3214,6 +3214,19 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const[newPinInput,setNewPinInput]=useState("");
   const[confirmPinInput,setConfirmPinInput]=useState("");
 
+  // ─── PIN access helper ────────────────────────────────────────────
+  // Returns true if a member is PIN-protected and the current session is NOT unlocked for them
+  // Approver, once unlocked, can manage all members
+  const isPinLocked = (memberId) => {
+    const target = team.members.find(x => x.id === memberId);
+    if (!target || !target.pinHash) return false; // No PIN → free
+    if (unlockedId === memberId) return false; // Already unlocked
+    const meUnlocked = team.members.find(x => x.id === unlockedId);
+    const meIsApprover = meUnlocked && (meUnlocked.isApprover || team.approver === meUnlocked.id);
+    if (meIsApprover) return false; // Approver bypass
+    return true;
+  };
+
   useEffect(()=>{
     if(!document.getElementById("tvp-css")){
       const s=document.createElement("style");s.id="tvp-css";s.textContent=CSS_ANIMS;document.head.appendChild(s);
@@ -3267,13 +3280,27 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
     setNPin("");setNIsApprover(false);
     if(mob)setSb(false);
   };
-  const del=id=>{if(locked)return;const m=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.filter(x=>x.id!==id),log:addLogEntry(team,`${(m&&m.name)||"Member"} was removed`)});if(aId===id)setAId(null);flash(t.mr);};
-  const ren=(id,n)=>{setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
-  const setCo=(id,cc)=>{const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
-  const setPto=(id,val)=>{updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
-  const setRegion=(id,val)=>{updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
+  const del=id=>{
+    if(locked)return;
+    const target=team.members.find(x=>x.id===id);
+    if(!target){return;}
+    // If the member has a PIN, require approver or self to delete
+    if(target.pinHash){
+      const meUnlocked=team.members.find(x=>x.id===unlockedId);
+      const meIsApprover=meUnlocked&&(meUnlocked.isApprover||team.approver===meUnlocked.id);
+      if(unlockedId!==id&&!meIsApprover){
+        flash("PIN required to delete this member");
+        return;
+      }
+    }
+    const m=target;updateWithHistory({...team,members:team.members.filter(x=>x.id!==id),log:addLogEntry(team,`${(m&&m.name)||"Member"} was removed`)});if(aId===id)setAId(null);flash(t.mr);};
+  const ren=(id,n)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
+  const setCo=(id,cc)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
+  const setPto=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
+  const setRegion=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
   const tog=(y,m,d)=>{
     if(!aId||locked)return;
+    if(isPinLocked(aId)){flash("Enter PIN to edit this member");return;}
     const key=dk(y,m,d);
     const member=team.members.find(function(x){return x.id===aId;});
     if(!member)return;
