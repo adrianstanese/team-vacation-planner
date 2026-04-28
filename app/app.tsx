@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 
+const hashPin=async(pin)=>{const enc=new TextEncoder().encode(pin);const buf=await crypto.subtle.digest("SHA-256",enc);return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");};
+const verifyPin=async(pin,hash)=>{const h=await hashPin(pin);return h===hash;};
+
 // ═══════════════════════════════════════════════════════════════════
 // TEAM VACATION PLANNER v5
 // Multi-year holidays · Drag-select · Conflicts · ICS · PDF · Admin
@@ -3192,6 +3195,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
 function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members||[]).filter(function(m){return(m.days||[]).indexOf(today)>=0;});if(!out.length)return <div style={{padding:"8px 14px",background:"rgba(16,185,129,.08)",borderRadius:10,border:"1px solid rgba(16,185,129,.15)",marginBottom:10,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,color:"#059669"}}><span>✅</span>{t.fullTeam||"Full team in today!"}</div>;return <div style={{padding:"8px 14px",background:out.length>=3?"rgba(239,68,68,.06)":"rgba(245,158,11,.06)",borderRadius:10,border:"1px solid "+(out.length>=3?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)"),marginBottom:10}}><div style={{fontSize:10,fontWeight:700,color:out.length>=3?"#DC2626":"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{t.outToday||"Out today"} ({out.length})</div><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{out.map(function(m){var mc=MC[team.members.indexOf(m)%MC.length];return <span key={m.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:8,background:mc.b,fontSize:11,fontWeight:600,color:mc.t}}><span style={{width:6,height:6,borderRadius:"50%",background:mc.d}}></span>{m.name}</span>;})}</div></div>;}
 function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
+  const[nPin,setNPin]=useState("");const[nIsApprover,setNIsApprover]=useState(false);const[pinPrompt,setPinPrompt]=useState(null);const[pinInput,setPinInput]=useState("");const[pinErr,setPinErr]=useState(false);const[unlockedId,setUnlockedId]=useState(null);
 
   useEffect(()=>{
     if(!document.getElementById("tvp-css")){
@@ -3227,8 +3231,8 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const holSet=new Set();team.members.forEach(m=>{if(m.country)computeHolidays(m.country,yr).forEach(h=>holSet.add(h));});
 
   const startAdd=()=>{if(locked){flash(t.locked);return;}if(team.members.length>=25){flash(t.mx);return;}setAdding(true);setNn("");setNc(null);setNr(null);};
-  const confirmAdd=()=>{const n=nn.trim();if(!n||!nc)return;const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:!team.approver};const co=EU_C.find(c=>c.c===nc);updateWithHistory({...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)});setAId(nm.id);setAdding(false);setNn("");setNc(null);setNr(null);if(mob)setSb(false);};
-  const del=id=>{if(locked)return;const m=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.filter(x=>x.id!==id),log:addLogEntry(team,`${(m&&m.name)||"Member"} was removed`)});if(aId===id)setAId(null);flash(t.mr);};
+  const confirmAdd=async()=>{const n=nn.trim();if(!n||!nc)return;if(!nPin||nPin.length!==6||!/^\d{6}$/.test(nPin)){flash("PIN must be exactly 6 digits");return;}const ph=await hashPin(nPin);const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:!team.approver,pinHash:ph,isApprover:nIsApprover};const co=EU_C.find(c=>c.c===nc);const updTeam={...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)};if(nIsApprover){updTeam.approver=nm.id;}updateWithHistory(updTeam);setAId(nm.id);setUnlockedId(nm.id);setAdding(false);setNn("");setNc(null);setNr(null);setNPin("");setNIsApprover(false);if(mob)setSb(false);};
+  const del=id=>{if(locked)return;const me=team.members.find(x=>x.id===unlockedId);const isAppr=me&&(me.isApprover||team.approver===me.id);if(!isAppr&&unlockedId!==id){flash("Only the approver can delete other members");return;}const m=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.filter(x=>x.id!==id),log:addLogEntry(team,`${(m&&m.name)||"Member"} was removed`)});if(aId===id)setAId(null);flash(t.mr);};
   const ren=(id,n)=>{setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
   const setCo=(id,cc)=>{const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
   const setPto=(id,val)=>{updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
@@ -3331,6 +3335,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
         {/* Add Member button — TOP of sidebar */}
         <div style={{padding:"4px 8px 6px",display:"flex",flexDirection:"column",gap:4}}>
           {!locked&&!adding&&<Btn th={th} sz="sm" icon="plus" onClick={startAdd} disabled={team.members.length>=25} style={{width:"100%",justifyContent:"center"}}>{t.am}</Btn>}
+          {am&&!am.pinHash&&<button onClick={function(){setSetPinFor(am.id);setNewPinInput("");setConfirmPinInput("");}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"1.5px solid #F59E0B",background:"rgba(254,243,199,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#92400E"}}><Ic n="lock" s={12} c="#92400E"/> Set PIN to protect</button>}
           <button onClick={function(){setHolBr(true);if(mob)setSb(false);}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #EF4444)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(245,158,11,0.3)"}}><Ic n="flag" s={12} c="#fff"/> {t.ch}</button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"2px 8px 8px",display:"flex",flexDirection:"column",gap:1}}>
@@ -3344,6 +3349,11 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
               <option value="">National only (no region)</option>
               {REGIONS[nc].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
             </select>}
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            <input type="password" inputMode="numeric" maxLength={6} value={nPin} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setNPin(v);}} placeholder="6-digit PIN (required)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${nPin.length===6?"#10B981":th.bd}`,fontSize:13,fontFamily:F,color:th.tx,background:th.bg,outline:"none",letterSpacing:4,textAlign:"center"}}/>
+            <label style={{display:"flex",alignItems:"center",gap:6,padding:"2px 0",cursor:"pointer",fontSize:11,fontWeight:600,color:th.t2}}>
+              <input type="checkbox" checked={nIsApprover} onChange={e=>setNIsApprover(e.target.checked)} style={{width:14,height:14,accentColor:th.ac}}/> Approver (can manage all members)
+            </label>
             <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>setAdding(false)}>{t.can}</Btn></div>
           </div>}
           {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
@@ -3374,7 +3384,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
         {team.members.length>0&&view==="cal"&&<div style={{marginBottom:10,padding:"8px 12px",background:th.gbg,borderRadius:G.rXs,border:`1px solid ${th.gbd}`,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
           <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
             {team.members.map((m,i)=>{const c=MC[i%MC.length];const co=m.country?EU_C.find(x=>x.c===m.country):null;
-              return <div key={m.id} onClick={()=>setAId(m.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",background:aId===m.id?c.b:th.sh,borderRadius:14,fontSize:10,fontWeight:500,color:c.t,cursor:"pointer",border:aId===m.id?`1.5px solid ${c.d}40`:"1.5px solid transparent"}}><div style={{width:6,height:6,borderRadius:"50%",background:c.d}}/>{co?co.f+" ":""}{m.name} ({(m.days||[]).length})</div>;})}
+              return <div key={m.id} onClick={()=>{const me=team.members.find(x=>x.id===unlockedId);const isAppr=me&&(me.isApprover||team.approver===me.id);if(m.pinHash&&unlockedId!==m.id&&!isAppr){setPinPrompt(m.id);setPinInput("");setPinErr(false);}else{setAId(m.id);}}} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",background:aId===m.id?c.b:th.sh,borderRadius:14,fontSize:10,fontWeight:500,color:c.t,cursor:"pointer",border:aId===m.id?`1.5px solid ${c.d}40`:"1.5px solid transparent"}}><div style={{width:6,height:6,borderRadius:"50%",background:c.d}}/>{co?co.f+" ":""}{m.name} ({(m.days||[]).length})</div>;})}
             <div style={{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:14,fontSize:10,color:th.ht,background:th.hc}}><div style={{width:6,height:6,borderRadius:3,background:th.ht}}/> {t.holiday}</div>
           </div>
         </div>}
@@ -3446,7 +3456,21 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
             if(!countries.size) return <div style={{color:th.t3,fontSize:13,textAlign:"center",padding:30}}>No countries assigned.</div>;
             const allH={};[...countries].forEach(cc=>computeHolidays(cc,yr).forEach(h=>{if(!allH[h])allH[h]=[];allH[h].push(cc);}));
             const dates=Object.keys(allH).sort();
-            return <div style={{display:"flex",flexDirection:"column",gap:6}}>{dates.map(d=>{const p=pk(d);const dow=new Date(p.y,p.m,p.d).toLocaleDateString("en",{weekday:"short"});const affected=team.members.filter(m=>(allH[d]||[]).includes(m.country));
+            
+  const pinModal = pinPrompt ? <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={()=>setPinPrompt(null)}>
+    <div onClick={e=>e.stopPropagation()} style={{background:th.bg,borderRadius:16,padding:24,width:280,boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+      <div style={{fontSize:15,fontWeight:700,color:th.tx,marginBottom:4}}>Enter PIN</div>
+      <div style={{fontSize:11,color:th.t3,marginBottom:16}}>{(team.members.find(x=>x.id===pinPrompt)||{}).name}</div>
+      <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pinInput} onChange={e=>{const v=e.target.value.replace(/\D/g,"");setPinInput(v);setPinErr(false);}} onKeyDown={async e=>{if(e.key==="Enter"&&pinInput.length===6){const m=team.members.find(x=>x.id===pinPrompt);if(m&&m.pinHash){const ok=await verifyPin(pinInput,m.pinHash);if(ok){setUnlockedId(pinPrompt);setAId(pinPrompt);setPinPrompt(null);setPinInput("");}else{setPinErr(true);}}else{setAId(pinPrompt);setPinPrompt(null);setPinInput("");}}if(e.key==="Escape")setPinPrompt(null);}} style={{width:"100%",padding:"12px",borderRadius:10,border:`2px solid ${pinErr?"#EF4444":th.ac}`,fontSize:18,fontFamily:FM,color:th.tx,background:th.sf,outline:"none",letterSpacing:8,textAlign:"center"}} placeholder="______"/>
+      {pinErr&&<div style={{color:"#EF4444",fontSize:11,fontWeight:600,marginTop:6,textAlign:"center"}}>Wrong PIN</div>}
+      <div style={{display:"flex",gap:8,marginTop:16}}>
+        <button onClick={async()=>{if(pinInput.length!==6)return;const m=team.members.find(x=>x.id===pinPrompt);if(m&&m.pinHash){const ok=await verifyPin(pinInput,m.pinHash);if(ok){setUnlockedId(pinPrompt);setAId(pinPrompt);setPinPrompt(null);setPinInput("");}else{setPinErr(true);}}else{setAId(pinPrompt);setPinPrompt(null);setPinInput("");}}} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:th.ac,color:"#fff",fontSize:13,fontWeight:700,fontFamily:F,cursor:"pointer"}}>Unlock</button>
+        <button onClick={()=>setPinPrompt(null)} style={{padding:"10px 16px",borderRadius:10,border:`1px solid ${th.bd}`,background:"transparent",color:th.t2,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer"}}>Cancel</button>
+      </div>
+    </div>
+  </div> : null;
+
+  return <div style={{display:"flex",flexDirection:"column",gap:6}}>{dates.map(d=>{const p=pk(d);const dow=new Date(p.y,p.m,p.d).toLocaleDateString("en",{weekday:"short"});const affected=team.members.filter(m=>(allH[d]||[]).includes(m.country));
               return <div key={d} style={{background:th.sf,borderRadius:6,border:`1px solid ${th.bd}`,padding:"8px 12px",display:"flex",alignItems:"center",gap:10}}>
                 <div style={{minWidth:36,textAlign:"center"}}><div style={{fontSize:15,fontWeight:700,color:th.ht,fontFamily:F}}>{p.d}</div><div style={{fontSize:9,color:th.t3,fontWeight:600}}>{t.M[p.m].slice(0,3)}</div></div>
                 <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:th.tx}}>{holName(d)}</div><div style={{fontSize:10,color:th.t3}}>{dow} — {affected.map(m=>m.name).join(", ")}</div></div>
@@ -3676,7 +3700,7 @@ export default function App(){
         </div></ErrorBoundary>;
       }
     }
-    return <ErrorBoundary><WS team={team} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
+    return <ErrorBoundary><WS team={team} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/>{pinModal}<CookieNotice th={th} t={t}/></ErrorBoundary>;
   }
   const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);db.del("team:"+id,true);};
   return <ErrorBoundary><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
