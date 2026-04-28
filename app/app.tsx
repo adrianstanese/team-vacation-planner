@@ -3309,6 +3309,43 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
 
   const[vk,setVk]=useState(0);const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:t.activityLog||"Log"},{k:"analytics",i:"bar",l:t.analytics||"Analytics"},{k:"trips",i:"globe",l:t.trips||"Trips"}];
 
+  // ─── PIN unlock modal ────────────────────────────────────────────
+  const tryUnlock = async () => {
+    if (pinInput.length !== 6) return;
+    const m = team.members.find(x => x.id === pinPrompt);
+    if (!m) { setPinPrompt(null); return; }
+    if (!m.pinHash) {
+      setUnlockedId(m.id);
+      setAId(m.id);
+      setPinPrompt(null);
+      setPinInput("");
+      return;
+    }
+    const ok = await verifyPin(pinInput, m.pinHash);
+    if (ok) {
+      setUnlockedId(m.id);
+      setAId(m.id);
+      setPinPrompt(null);
+      setPinInput("");
+    } else {
+      setPinErr(true);
+    }
+  };
+  const pinModalEl = pinPrompt ? (
+    <div onClick={()=>setPinPrompt(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:th.bg,borderRadius:16,padding:24,width:300,maxWidth:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+        <div style={{fontSize:15,fontWeight:700,color:th.tx,marginBottom:4,fontFamily:F}}>Enter PIN</div>
+        <div style={{fontSize:11,color:th.t3,marginBottom:16,fontFamily:F}}>{(team.members.find(x=>x.id===pinPrompt)||{}).name}</div>
+        <input autoFocus type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pinInput} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setPinInput(v);setPinErr(false);}} onKeyDown={e=>{if(e.key==="Enter")tryUnlock();if(e.key==="Escape")setPinPrompt(null);}} style={{width:"100%",padding:"12px",borderRadius:10,border:"2px solid "+(pinErr?"#EF4444":th.ac),fontSize:18,fontFamily:FM,color:th.tx,background:th.sf,outline:"none",letterSpacing:8,textAlign:"center"}} placeholder="______"/>
+        {pinErr&&<div style={{color:"#EF4444",fontSize:11,fontWeight:600,marginTop:6,textAlign:"center",fontFamily:F}}>Wrong PIN</div>}
+        <div style={{display:"flex",gap:8,marginTop:16}}>
+          <button onClick={tryUnlock} disabled={pinInput.length!==6} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:pinInput.length===6?th.ac:th.t3,color:"#fff",fontSize:13,fontWeight:700,fontFamily:F,cursor:pinInput.length===6?"pointer":"not-allowed",opacity:pinInput.length===6?1:0.5}}>Unlock</button>
+          <button onClick={()=>{setPinPrompt(null);setPinInput("");setPinErr(false);}} style={{padding:"10px 16px",borderRadius:10,border:"1px solid "+th.bd,background:"transparent",color:th.t2,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer"}}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return <div style={{minHeight:"100vh",background:th.bg,fontFamily:F,display:"flex",flexDirection:"column"}}>
     <header style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"0 12px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -3387,7 +3424,14 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
             {!team.approver&&!team.members.some(x=>x.isApprover)&&<label style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",cursor:"pointer",fontSize:11,fontWeight:600,color:th.t2}}><input type="checkbox" checked={nIsApprover} onChange={e=>setNIsApprover(e.target.checked)} style={{width:14,height:14,accentColor:th.ac,cursor:"pointer"}}/>Approver (can manage all members)</label>}
             <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc||nPin.length!==6} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>{setAdding(false);setNn("");setNc(null);setNr(null);setNPin("");setNIsApprover(false);}}>{t.can}</Btn></div>
           </div>}
-          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
+          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{
+              if(m.id===aId){setAId(null);return;}
+              const meUnlocked=team.members.find(x=>x.id===unlockedId);
+              const meIsAppr=meUnlocked&&(meUnlocked.isApprover||team.approver===meUnlocked.id);
+              if(m.pinHash&&unlockedId!==m.id&&!meIsAppr){setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
+              setAId(m.id);
+              if(mob)setSb(false);
+            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}
@@ -3717,7 +3761,7 @@ export default function App(){
         </div></ErrorBoundary>;
       }
     }
-    return <ErrorBoundary><WS team={team} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
+    return <ErrorBoundary><WS team={team} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/>{pinModalEl}<CookieNotice th={th} t={t}/></ErrorBoundary>;
   }
   const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);db.del("team:"+id,true);};
   return <ErrorBoundary><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
