@@ -1,5 +1,16 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 
+// ─── PIN hashing (SHA-256) ──────────────────────────────────────────
+const hashPin = async (pin) => {
+  const enc = new TextEncoder().encode(String(pin));
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+};
+const verifyPin = async (pin, hash) => {
+  const h = await hashPin(pin);
+  return h === hash;
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // TEAM VACATION PLANNER v5
 // Multi-year holidays · Drag-select · Conflicts · ICS · PDF · Admin
@@ -3192,6 +3203,16 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
 function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members||[]).filter(function(m){return(m.days||[]).indexOf(today)>=0;});if(!out.length)return <div style={{padding:"8px 14px",background:"rgba(16,185,129,.08)",borderRadius:10,border:"1px solid rgba(16,185,129,.15)",marginBottom:10,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,color:"#059669"}}><span>✅</span>{t.fullTeam||"Full team in today!"}</div>;return <div style={{padding:"8px 14px",background:out.length>=3?"rgba(239,68,68,.06)":"rgba(245,158,11,.06)",borderRadius:10,border:"1px solid "+(out.length>=3?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)"),marginBottom:10}}><div style={{fontSize:10,fontWeight:700,color:out.length>=3?"#DC2626":"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{t.outToday||"Out today"} ({out.length})</div><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{out.map(function(m){var mc=MC[team.members.indexOf(m)%MC.length];return <span key={m.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:8,background:mc.b,fontSize:11,fontWeight:600,color:mc.t}}><span style={{width:6,height:6,borderRadius:"50%",background:mc.d}}></span>{m.name}</span>;})}</div></div>;}
 function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
+  // ─── PIN feature state (Step 1: declarations only, no UI yet) ─────
+  const[nPin,setNPin]=useState("");
+  const[nIsApprover,setNIsApprover]=useState(false);
+  const[pinPrompt,setPinPrompt]=useState(null);
+  const[pinInput,setPinInput]=useState("");
+  const[pinErr,setPinErr]=useState(false);
+  const[unlockedId,setUnlockedId]=useState(null);
+  const[setPinFor,setSetPinFor]=useState(null);
+  const[newPinInput,setNewPinInput]=useState("");
+  const[confirmPinInput,setConfirmPinInput]=useState("");
 
   useEffect(()=>{
     if(!document.getElementById("tvp-css")){
