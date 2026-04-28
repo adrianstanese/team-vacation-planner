@@ -3248,7 +3248,25 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const holSet=new Set();team.members.forEach(m=>{if(m.country)computeHolidays(m.country,yr).forEach(h=>holSet.add(h));});
 
   const startAdd=()=>{if(locked){flash(t.locked);return;}if(team.members.length>=25){flash(t.mx);return;}setAdding(true);setNn("");setNc(null);setNr(null);};
-  const confirmAdd=()=>{const n=nn.trim();if(!n||!nc)return;const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:!team.approver};const co=EU_C.find(c=>c.c===nc);updateWithHistory({...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)});setAId(nm.id);setAdding(false);setNn("");setNc(null);setNr(null);if(mob)setSb(false);};
+  const confirmAdd=async()=>{
+    const n=nn.trim();
+    if(!n||!nc)return;
+    if(nPin.length!==6||!/^\d{6}$/.test(nPin)){flash("PIN must be exactly 6 digits");return;}
+    const ph=await hashPin(nPin);
+    const teamHasApprover=!!team.approver||team.members.some(x=>x.isApprover);
+    const becomeApprover=nIsApprover&&!teamHasApprover;
+    const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:!team.approver,pinHash:ph,isApprover:becomeApprover};
+    const co=EU_C.find(c=>c.c===nc);
+    const updTeam={...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)};
+    if(becomeApprover&&!team.approver)updTeam.approver=nm.id;
+    updateWithHistory(updTeam);
+    setAId(nm.id);
+    setUnlockedId(nm.id);
+    setAdding(false);
+    setNn("");setNc(null);setNr(null);
+    setNPin("");setNIsApprover(false);
+    if(mob)setSb(false);
+  };
   const del=id=>{if(locked)return;const m=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.filter(x=>x.id!==id),log:addLogEntry(team,`${(m&&m.name)||"Member"} was removed`)});if(aId===id)setAId(null);flash(t.mr);};
   const ren=(id,n)=>{setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
   const setCo=(id,cc)=>{const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
@@ -3365,7 +3383,9 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
               <option value="">National only (no region)</option>
               {REGIONS[nc].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
             </select>}
-            <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>setAdding(false)}>{t.can}</Btn></div>
+            <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={nPin} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setNPin(v);}} placeholder="6-digit PIN (required)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${nPin.length===6?"#10B981":th.bd}`,fontSize:13,fontFamily:F,color:th.tx,background:th.bg,outline:"none",letterSpacing:6,textAlign:"center"}}/>
+            {!team.approver&&!team.members.some(x=>x.isApprover)&&<label style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",cursor:"pointer",fontSize:11,fontWeight:600,color:th.t2}}><input type="checkbox" checked={nIsApprover} onChange={e=>setNIsApprover(e.target.checked)} style={{width:14,height:14,accentColor:th.ac,cursor:"pointer"}}/>Approver (can manage all members)</label>}
+            <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc||nPin.length!==6} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>{setAdding(false);setNn("");setNc(null);setNr(null);setNPin("");setNIsApprover(false);}}>{t.can}</Btn></div>
           </div>}
           {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{setAId(m.id===aId?null:m.id);if(mob)setSb(false);}} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
