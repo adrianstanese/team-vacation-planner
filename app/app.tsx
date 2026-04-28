@@ -3373,6 +3373,39 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
     </div>
   ) : null;
 
+  // ─── Set-PIN modal (for legacy members opting in) ────────────────
+  const savePin = async () => {
+    if (newPinInput.length !== 6) return;
+    if (newPinInput !== confirmPinInput) return;
+    const ph = await hashPin(newPinInput);
+    const upd = {
+      ...team,
+      members: team.members.map(x => x.id === setPinFor ? { ...x, pinHash: ph } : x),
+      log: addLogEntry(team, `PIN set for ${(team.members.find(x=>x.id===setPinFor)||{}).name||"member"}`)
+    };
+    updateWithHistory(upd);
+    setUnlockedId(setPinFor);
+    setSetPinFor(null);
+    setNewPinInput("");
+    setConfirmPinInput("");
+    flash("PIN set");
+  };
+  const setPinModalEl = setPinFor ? (
+    <div onClick={()=>{setSetPinFor(null);setNewPinInput("");setConfirmPinInput("");}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:th.bg,borderRadius:16,padding:24,width:320,maxWidth:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+        <div style={{fontSize:15,fontWeight:700,color:th.tx,marginBottom:4,fontFamily:F}}>Set a PIN</div>
+        <div style={{fontSize:11,color:th.t3,marginBottom:16,fontFamily:F,lineHeight:1.4}}>Protect <b>{(team.members.find(x=>x.id===setPinFor)||{}).name}</b> with a 6-digit PIN. This cannot be reset later.</div>
+        <input autoFocus type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={newPinInput} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setNewPinInput(v);}} placeholder="6-digit PIN" style={{width:"100%",padding:"12px",borderRadius:10,border:"2px solid "+(newPinInput.length===6?"#10B981":th.bd),fontSize:18,fontFamily:FM,color:th.tx,background:th.sf,outline:"none",letterSpacing:8,textAlign:"center",marginBottom:8}}/>
+        <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={confirmPinInput} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setConfirmPinInput(v);}} onKeyDown={e=>{if(e.key==="Enter")savePin();if(e.key==="Escape"){setSetPinFor(null);setNewPinInput("");setConfirmPinInput("");}}} placeholder="Confirm PIN" style={{width:"100%",padding:"12px",borderRadius:10,border:"2px solid "+(confirmPinInput.length===6&&confirmPinInput===newPinInput?"#10B981":th.bd),fontSize:18,fontFamily:FM,color:th.tx,background:th.sf,outline:"none",letterSpacing:8,textAlign:"center"}}/>
+        {confirmPinInput.length===6&&confirmPinInput!==newPinInput&&<div style={{color:"#EF4444",fontSize:11,fontWeight:600,marginTop:6,textAlign:"center",fontFamily:F}}>PINs do not match</div>}
+        <div style={{display:"flex",gap:8,marginTop:16}}>
+          <button onClick={savePin} disabled={newPinInput.length!==6||newPinInput!==confirmPinInput} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:newPinInput.length===6&&newPinInput===confirmPinInput?th.ac:th.t3,color:"#fff",fontSize:13,fontWeight:700,fontFamily:F,cursor:newPinInput.length===6&&newPinInput===confirmPinInput?"pointer":"not-allowed",opacity:newPinInput.length===6&&newPinInput===confirmPinInput?1:0.5}}>Save PIN</button>
+          <button onClick={()=>{setSetPinFor(null);setNewPinInput("");setConfirmPinInput("");}} style={{padding:"10px 16px",borderRadius:10,border:"1px solid "+th.bd,background:"transparent",color:th.t2,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer"}}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return <div style={{minHeight:"100vh",background:th.bg,fontFamily:F,display:"flex",flexDirection:"column"}}>
     <header style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"0 12px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -3434,6 +3467,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
         {/* Add Member button — TOP of sidebar */}
         <div style={{padding:"4px 8px 6px",display:"flex",flexDirection:"column",gap:4}}>
           {!locked&&!adding&&<Btn th={th} sz="sm" icon="plus" onClick={startAdd} disabled={team.members.length>=25} style={{width:"100%",justifyContent:"center"}}>{t.am}</Btn>}
+          {(()=>{const am=team.members.find(x=>x.id===aId);if(!am||am.pinHash)return null;return <button onClick={()=>{setSetPinFor(am.id);setNewPinInput("");setConfirmPinInput("");}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"1.5px solid #F59E0B",background:"rgba(254,243,199,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#92400E",marginTop:4}}><Ic n="lock" s={12} c="#92400E"/> Set PIN to protect</button>;})()}
           <button onClick={function(){setHolBr(true);if(mob)setSb(false);}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #EF4444)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(245,158,11,0.3)"}}><Ic n="flag" s={12} c="#fff"/> {t.ch}</button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"2px 8px 8px",display:"flex",flexDirection:"column",gap:1}}>
@@ -3648,6 +3682,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
 
     <Toast message={toast} visible={!!toast}/>
     {pinModalEl}
+    {setPinModalEl}
   </div>;
 }
 
