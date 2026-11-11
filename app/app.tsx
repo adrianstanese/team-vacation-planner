@@ -3257,6 +3257,11 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
 function YearNav({yr,onYear,th,small=false}){
   if(!onYear)return <span style={{fontSize:small?10:18,fontWeight:700,color:small?th.t3:th.tx}}>{yr}</span>;
   const bs=(on)=>({padding:small?"1px 6px":"5px 12px",borderRadius:small?6:8,fontSize:small?10:12,fontWeight:700,fontFamily:F,cursor:"pointer",border:on?`1.5px solid ${th.ac}`:`1px solid ${th.gbd}`,background:on?th.al:th.gbg,color:on?th.ac:th.t3,whiteSpace:"nowrap",lineHeight:1.4});
+  if(!small)return <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"center",gap:10,width:"100%"}}>
+    <div style={{justifySelf:"end"}}>{yr>YEAR_MIN&&<button onClick={()=>onYear(yr-1)} title={String(yr-1)} aria-label={"Go to "+(yr-1)} style={bs(false)}>{"‹ "+(yr-1)}</button>}</div>
+    <span style={{fontSize:22,fontWeight:750,color:th.tx,letterSpacing:-.5,textAlign:"center",minWidth:64}}>{yr}</span>
+    <div style={{justifySelf:"start"}}>{yr<YEAR_MAX&&<button onClick={()=>onYear(yr+1)} title={String(yr+1)} aria-label={"Go to "+(yr+1)} style={bs(true)}>{(yr+1)+" ›"}</button>}</div>
+  </div>;
   return <span style={{display:"inline-flex",alignItems:"center",gap:small?4:8}}>
     {yr>YEAR_MIN&&<button onClick={()=>onYear(yr-1)} title={String(yr-1)} aria-label={"Go to "+(yr-1)} style={bs(false)}>{small?"‹":"‹ "+(yr-1)}</button>}
     <span style={{fontSize:small?10:18,fontWeight:700,color:small?th.t2:th.tx,letterSpacing:small?0:-.5}}>{yr}</span>
@@ -3635,9 +3640,9 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
         {view==="cal"&&team.members.length===0&&<div style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:40,marginBottom:12}}>🌴</div><h2 style={{margin:"0 0 6px",fontSize:20,fontWeight:700,color:th.tx}}>{t.et}</h2><p style={{margin:"0 0 20px",fontSize:14,color:th.t2,lineHeight:1.5}}>{t.es2}</p><Btn th={th} icon="plus" onClick={()=>{setSb(true);setTimeout(startAdd,150);}}>{t.af}</Btn></div>}
 
         {view==="cal"&&<Fragment>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,marginBottom:14}}>
             <YearNav yr={yr} onYear={onYear} th={th}/>
-            <div style={{display:"flex",gap:2}}>
+            <div style={{display:"flex",gap:2,justifyContent:"center"}}>
               {[{l:"Year",v:null},{l:"Q1",v:0},{l:"Q2",v:1},{l:"Q3",v:2},{l:"Q4",v:3}].map(q=>
                 <button key={q.l} onClick={()=>setQuarter(q.v)} style={{padding:"3px 10px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:quarter===q.v?`1.5px solid ${th.ac}`:`1px solid ${th.gbd}`,background:quarter===q.v?th.al:th.gbg,color:quarter===q.v?th.ac:th.t3,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>{q.l}</button>)}
             </div>
