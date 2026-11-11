@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import CoffeeButton from "@/components/CoffeeButton";
 
 // Privacy notice (GDPR Art. 13). Text drafted with Counsel (2026-11-11); not legal advice.
 // OPERATOR_NAME / OPERATOR_ADDRESS: to be filled in by the site owner before this counts as a complete notice.
@@ -19,7 +20,10 @@ const h2: React.CSSProperties = { fontSize: 17, margin: "28px 0 6px", color: "#4
 export default function Privacy() {
   return <main style={{ minHeight: "100vh", background: "linear-gradient(145deg,#FEF7FF,#F0F4FF 50%,#F0FFF4)" }}>
     <div style={wrap}>
-      <Link href="/" prefetch={false} style={{ color: "#6D28D9", fontWeight: 600, textDecoration: "none" }}>← Team Vacation Planner</Link>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <Link href="/" prefetch={false} style={{ color: "#6D28D9", fontWeight: 600, textDecoration: "none" }}>← Team Vacation Planner</Link>
+        <CoffeeButton />
+      </div>
       <h1 style={{ fontSize: 30, margin: "18px 0 6px", color: "#3B0F80", fontFamily: "var(--font-display), system-ui, sans-serif" }}>Privacy</h1>
       <p style={{ color: "#5B4B8A", margin: 0 }}>Last updated: {UPDATED}</p>
 

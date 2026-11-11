@@ -87,3 +87,13 @@ body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 .tvp-coffee:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(255, 196, 0, .45); }
 @media (prefers-reduced-motion: reduce) { .tvp-coffee, .tvp-coffee:hover { transition: none; transform: none; } }
 @media print { .tvp-coffee { display: none; } }
+
+/* Buy me a coffee: top-right pill on every screen */
+.tvp-cof-top { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; height: 34px; padding: 0 14px 0 12px; margin-inline-start: 6px; border-radius: 999px; background: linear-gradient(135deg, #FFE24D, #FFC700); color: #2B1A00; font: 750 13px/1 inherit; font-family: inherit; text-decoration: none; white-space: nowrap; border: 1px solid rgba(160, 110, 0, .35); box-shadow: 0 2px 12px rgba(255, 190, 0, .45); transition: transform .15s ease, box-shadow .15s ease; }
+.tvp-cof-top:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255, 190, 0, .6); }
+.tvp-cof-top::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .7) 50%, transparent 70%); transform: translateX(-120%); animation: tvp-cof-shine 6s ease-in-out 1.5s infinite; pointer-events: none; }
+@keyframes tvp-cof-shine { 0%, 80% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+.tvp-cof-icon { width: 34px; padding: 0; justify-content: center; }
+@media (max-width: 560px) { .fp .tvp-cof-top { width: 34px; padding: 0; justify-content: center; } .fp .tvp-cof-l { display: none; } }
+@media (prefers-reduced-motion: reduce) { .tvp-cof-top, .tvp-cof-top:hover { transition: none; transform: none; } .tvp-cof-top::after { animation: none; display: none; } }
+@media print { .tvp-cof-top { display: none; } }

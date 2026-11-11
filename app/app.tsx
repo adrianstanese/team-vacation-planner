@@ -3,6 +3,7 @@ import qrcode from "qrcode-generator";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import BottomDuo from "@/components/WorkoseniePromo";
+import CoffeeButton from "@/components/CoffeeButton";
 import "./frontpage.css";
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { buildSheets } from "@/lib/xlsxSheets";
@@ -3172,6 +3173,7 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
         <ul>{Object.keys(LANG_NAMES).filter(k=>TX[k]).map(k=><li key={k}><button aria-current={k===lang?"true":undefined} onClick={()=>pickLang(k)}><b>{k.toUpperCase()}</b>{LANG_NAMES[k]}</button></li>)}</ul>
       </details>
       <button className="ghost" onClick={cycleTheme} aria-label={L.theme}><FpIcon n={theme==="dark"?"moon":theme==="pink"?"heart":"sun"}/></button>
+      <CoffeeButton lang={lang}/>
     </div></header>
 
     <main>
@@ -3985,6 +3987,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         <button onClick={()=>setSettings(!settings)} aria-label="Settings" aria-expanded={settings} title="Settings" style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
         {!mob&&<div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 8px",background:"rgba(139,92,246,.1)",borderRadius:10}}><span style={{width:6,height:6,borderRadius:"50%",background:"#22C55E",animation:"pulse 2s 3"}}></span><span style={{fontSize:9,fontWeight:600,color:"#6D28D9",fontFamily:FM}}>{t.live||"Live"}</span></div>}
         <Btn th={th} v="secondary" sz="sm" icon="share" onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
+        <CoffeeButton lang={lang} iconOnly={mob}/>
 
       </div>
     </header>
