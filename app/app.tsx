@@ -603,15 +603,25 @@ const clampYear=y=>Math.min(YEAR_MAX,Math.max(YEAR_MIN,y));
 const baseYearOf=team=>(team&&team.year)||CY;
 // Year a team opens on: the current year once the team's own year has passed, else its own year.
 const defaultViewYear=team=>{const b=baseYearOf(team);return clampYear(CY>b?CY:b);};
+// Used days: a half day counts 0.5 (half = subset of days)
+const usedOf=m=>{const h=new Set((m&&m.half)||[]);let n=0;((m&&m.days)||[]).forEach(x=>{n+=h.has(x)?0.5:1;});return n;};
+const fmtDays=n=>Number.isInteger(n)?String(n):String(Math.round(n*10)/10);
+// Allowance for a year: the base year uses m.pto (as always); other years m.ptoY[y], falling back to m.pto
+const allowanceOf=(m,y,base)=>y===base?m.pto:(m.ptoY&&m.ptoY[y]!=null?m.ptoY[y]:m.pto);
 const tripInYear=(tr,yr)=>!tr||!tr.start||!tr.end||(String(tr.start).slice(0,4)<=String(yr)&&String(tr.end).slice(0,4)>=String(yr));
 function teamForYear(raw,yr){
   if(!raw)return raw;
   const p=yr+"-",base=baseYearOf(raw);
   const v={...raw,year:yr,_vy:yr};
+  const cmax=Math.max(0,Math.min(60,Number(raw.carryMax)||0));
   v.members=(raw.members||[]).map(m=>{
     const nm={...m};
     if(Array.isArray(m.days))nm.days=m.days.filter(d=>typeof d!=="string"||d.indexOf(p)===0);
-    if(yr!==base)nm.approved=!!(m.apY&&m.apY[yr]);
+    if(Array.isArray(m.half))nm.half=m.half.filter(d=>typeof d!=="string"||d.indexOf(p)===0);
+    if(yr!==base){nm.approved=!!(m.apY&&m.apY[yr]);const a=allowanceOf(m,yr,base);if(a!=null)nm.pto=a;else delete nm.pto;}
+    nm._pto0=nm.pto;
+    // Carry-over: unused days of the previous year, up to the team's limit
+    if(cmax>0&&yr-1>=base){const pa=allowanceOf(m,yr-1,base);if(pa){const pp=(yr-1)+"-";const used=usedOf({days:(m.days||[]).filter(d=>typeof d==="string"&&d.indexOf(pp)===0),half:m.half});const left=Math.max(0,pa-used);if(left>0)nm.carry=Math.min(cmax,left);}}
     return nm;
   });
   if(Array.isArray(raw.trips))v.trips=raw.trips.filter(tr=>tripInYear(tr,yr));
@@ -628,8 +638,18 @@ function mergeYearView(view,raw){
   const rawM={};(raw.members||[]).forEach(m=>{rawM[m.id]=m;});
   out.members=(view.members||[]).map(m=>{
     const r=rawM[m.id];const nm={...m};
+    const p0=nm._pto0;delete nm._pto0;delete nm.carry;
     const keep=r&&Array.isArray(r.days)?r.days.filter(d=>typeof d==="string"&&d.indexOf(p)!==0):[];
     if(keep.length){const seen={};nm.days=keep.concat(m.days||[]).filter(d=>seen[d]?false:(seen[d]=true));}
+    const keepH=r&&Array.isArray(r.half)?r.half.filter(d=>typeof d==="string"&&d.indexOf(p)!==0):[];
+    if(keepH.length||Array.isArray(m.half)){const seen={};const hh=keepH.concat(m.half||[]).filter(d=>seen[d]?false:(seen[d]=true));if(hh.length||(r&&Array.isArray(r.half)))nm.half=hh;else delete nm.half;}
+    if(yr!==base&&r){
+      // An allowance edited while viewing this year belongs to this year only
+      const ptoY={...(r.ptoY||{})};
+      if(nm.pto!==p0){if(nm.pto==null)delete ptoY[yr];else ptoY[yr]=nm.pto;}
+      if(Object.keys(ptoY).length)nm.ptoY=ptoY;else delete nm.ptoY;
+      if("pto" in r)nm.pto=r.pto;else delete nm.pto;
+    }
     if(yr!==base){
       const apY={...((r&&r.apY)||{})};if(m.approved===true)apY[yr]=true;else delete apY[yr];
       if(Object.keys(apY).length)nm.apY=apY;else delete nm.apY;
@@ -2208,8 +2228,8 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           var vacBg = "transparent", vacColor = th.tx, vacWeight = 400, vacBorder = "2px solid transparent", vacShadow = "none", showCount = 0;
           var others = mh.filter(function(x){return !am || x.id!==am.id;});
           if(isA && ac) {
-            // Selected member's day — solid fill
-            vacBg = ac.d; vacColor = "#fff"; vacWeight = 800; vacBorder = "2px solid " + ac.d; vacShadow = "0 2px 8px " + ac.d + "40";
+            // Selected member's day — solid fill (half day: half filled)
+            vacBg = (am.half||[]).includes(key) ? "linear-gradient(135deg," + ac.d + " 50%," + ac.d + "45 50%)" : ac.d; vacColor = "#fff"; vacWeight = 800; vacBorder = "2px solid " + ac.d; vacShadow = "0 2px 8px " + ac.d + "40";
             // If others also have this day, add a dot indicator
             if(others.length>0) { showCount = others.length + 1; }
           } else if(am && !isA && others.length > 0) {
@@ -2227,7 +2247,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           } else if(!am && mh.length === 1) {
             // No member selected, 1 person — solid color
             var mc1 = MC[members.indexOf(mh[0])%MC.length];
-            vacBg = mc1.d; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 6px " + mc1.d + "35";
+            vacBg = (mh[0].half||[]).includes(key) ? "linear-gradient(135deg," + mc1.d + " 50%," + mc1.d + "45 50%)" : mc1.d; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 6px " + mc1.d + "35";
           } else if(!am && mh.length === 2) {
             var mcA = MC[members.indexOf(mh[0])%MC.length];
             var mcB = MC[members.indexOf(mh[1])%MC.length];
@@ -2456,7 +2476,7 @@ function ConflictAlerts({team,threshold,th,t}) {
 // ─── Member Row ──────────────────────────────────────────────────
 function SmoothNum({val,style:s}){var[d,setD]=useState(val);var p=useRef(val);useEffect(function(){if(val===p.current)return;var f=p.current;p.current=val;var t0=performance.now();var go=function(now){var r=Math.min((now-t0)/300,1);setD(Math.round(f+(val-f)*r));if(r<1)requestAnimationFrame(go);};requestAnimationFrame(go);},[val]);return <span style={s}>{d}</span>;}
 function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging}){
-  const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const[h,setH]=useState(false);const dc=(m.days||[]).length||0;
+  const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const[h,setH]=useState(false);const dc=usedOf(m);const allow=m.pto?m.pto+(m.carry||0):0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
 
@@ -2473,8 +2493,8 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:4}}>{m.name}{isApprover&&<span title={t.approverLabel||"Approver"} style={{fontSize:11}}>👑</span>}</div>
-      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${dc} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}</span>:""}{approvalMode&&!isApprover?(m.approved?<span style={{color:"#10B981",fontWeight:700,fontSize:9}}>{" ✓"}</span>:<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" ⏳"}</span>):""}</div>
-      {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>m.pto?"#EF4444":dc>m.pto*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/m.pto*100))+"%",transition:"width .3s"}}/></div>}
+      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${fmtDays(dc)} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}{m.carry?<span title="Carried over from last year" style={{color:"#047857"}}>{" +"+m.carry}</span>:null}</span>:""}{approvalMode&&!isApprover?(m.approved?<span style={{color:"#10B981",fontWeight:700,fontSize:9}}>{" ✓"}</span>:<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" ⏳"}</span>):""}</div>
+      {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>allow?"#EF4444":dc>allow*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/allow*100))+"%",transition:"width .3s"}}/></div>}
     {(function(){var yr2=typeof yr!=="undefined"?yr:CY;var mos=Array.from({length:12},function(_,mo){return(m.days||[]).filter(function(d){return d.startsWith(yr2+"-"+String(mo+1).padStart(2,"0"));}).length;});var mx=Math.max.apply(null,mos)||1;if(!(m.days||[]).length)return null;return <svg width="60" height="14" viewBox="0 0 60 14" style={{marginTop:3,opacity:.6}}>{mos.map(function(v,i){var h=Math.max(1,v/mx*12);return <rect key={i} x={i*5} y={14-h} width="4" height={h} rx="1" fill={c.d} opacity={v>0?.8:.15}/>;})}</svg>;})()}{(function(){var ds=(m.days||[]).filter(function(d){return d>dk(CY,CM,CD);}).sort();if(!ds.length)return null;var nd=ds[0].split("-");var diff=Math.ceil((new Date(+nd[0],+nd[1]-1,+nd[2])-new Date(CY,CM,CD))/864e5);if(diff<=0||diff>365)return null;return <div style={{fontSize:9,color:"#8B5CF6",fontWeight:600,marginTop:2,display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:11}}>🏖️</span>{diff===1?(t.tomorrow||"Tomorrow!"):diff+" "+(t.daysUntil||"days until vacation")}</div>;})()}
     </div>
     {(h||isActive)&&!locked&&<div style={{display:"flex",gap:1,flexShrink:0}}>
@@ -2490,7 +2510,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
         <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>{t.pto||"PTO"}</span>
         <input type="number" min="0" max="60" placeholder="—" value={m.pto||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onPtoChange(parseInt(e.target.value)||null);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:FM,textAlign:"center"}}/>
         <span style={{color:th.t3,fontSize:10}}>{t.dys}</span>
-        {m.pto&&<span style={{marginLeft:"auto",fontSize:10,color:dc>m.pto?"#EF4444":th.ac,fontWeight:700}}>{dc}/{m.pto}</span>}
+        {m.pto&&<span style={{marginLeft:"auto",fontSize:10,color:dc>allow?"#EF4444":th.ac,fontWeight:700}}>{fmtDays(dc)}/{allow}</span>}
       </div>
       {m.country&&REGIONS[m.country]&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
         <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>{t.region||"Region"}</span>
@@ -3185,7 +3205,7 @@ function TeamWorldMap({team,th,t}) {
   </div>;
 }
 
-function PTODonut({team,th,t}){var data=[];var tU=0;var tP=0;team.members.forEach(function(m,i){var u=(m.days||[]).length;var p=m.pto||0;if(p>0){data.push({n:m.name,u:u,p:p,c:MC[i%MC.length].d});tU+=u;tP+=p;}});if(!data.length)return null;var pct=Math.round(tU/tP*100);var R=55,cx=70,cy=70,C=2*Math.PI*R,off=0;return <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",marginBottom:16,padding:16,background:th.gbg,borderRadius:12,border:"1px solid "+th.gbd}}><svg width="140" height="140" viewBox="0 0 140 140"><circle cx={cx} cy={cy} r={R} fill="none" stroke={th.sh} strokeWidth="14"/>{data.map(function(d,i){var seg=d.u/tP*C;var o=off;off+=seg;return <circle key={i} cx={cx} cy={cy} r={R} fill="none" stroke={d.c} strokeWidth="14" strokeDasharray={seg+" "+(C-seg)} strokeDashoffset={-o} strokeLinecap="round" style={{transform:"rotate(-90deg)",transformOrigin:"70px 70px"}}/>;})} <text x={cx} y={cy-5} textAnchor="middle" fill={th.tx} fontSize="20" fontWeight="800" fontFamily={FM}>{pct}%</text><text x={cx} y={cy+10} textAnchor="middle" fill={th.t3} fontSize="8" fontWeight="600">{t.pto||"PTO"}</text></svg><div style={{display:"flex",flexDirection:"column",gap:3}}>{data.map(function(d){return <div key={d.n} style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}><span style={{width:8,height:8,borderRadius:2,background:d.c,flexShrink:0}}></span><span style={{color:th.tx,fontWeight:600,minWidth:60}}>{d.n}</span><span style={{color:th.t3,fontFamily:FM}}>{d.u}/{d.p}</span></div>;})}</div></div>;}
+function PTODonut({team,th,t}){var data=[];var tU=0;var tP=0;team.members.forEach(function(m,i){var u=usedOf(m);var p=(m.pto||0)+(m.carry||0);if(p>0){data.push({n:m.name,u:u,p:p,c:MC[i%MC.length].d});tU+=u;tP+=p;}});if(!data.length)return null;var pct=Math.round(tU/tP*100);var R=55,cx=70,cy=70,C=2*Math.PI*R,off=0;return <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap",marginBottom:16,padding:16,background:th.gbg,borderRadius:12,border:"1px solid "+th.gbd}}><svg width="140" height="140" viewBox="0 0 140 140"><circle cx={cx} cy={cy} r={R} fill="none" stroke={th.sh} strokeWidth="14"/>{data.map(function(d,i){var seg=d.u/tP*C;var o=off;off+=seg;return <circle key={i} cx={cx} cy={cy} r={R} fill="none" stroke={d.c} strokeWidth="14" strokeDasharray={seg+" "+(C-seg)} strokeDashoffset={-o} strokeLinecap="round" style={{transform:"rotate(-90deg)",transformOrigin:"70px 70px"}}/>;})} <text x={cx} y={cy-5} textAnchor="middle" fill={th.tx} fontSize="20" fontWeight="800" fontFamily={FM}>{pct}%</text><text x={cx} y={cy+10} textAnchor="middle" fill={th.t3} fontSize="8" fontWeight="600">{t.pto||"PTO"}</text></svg><div style={{display:"flex",flexDirection:"column",gap:3}}>{data.map(function(d){return <div key={d.n} style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}><span style={{width:8,height:8,borderRadius:2,background:d.c,flexShrink:0}}></span><span style={{color:th.tx,fontWeight:600,minWidth:60}}>{d.n}</span><span style={{color:th.t3,fontFamily:FM}}>{d.u}/{d.p}</span></div>;})}</div></div>;}
 function AnalyticsDashboard({team,yr,th,t}) {
   var members = team.members || [];
   if (members.length === 0) return <div className="tvp-fade" style={{textAlign:"center",padding:40,color:th.t3}}>{t.addMembers||"Add members to see analytics"}</div>;
@@ -3195,7 +3215,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
     var days = (m.days || []).filter(function(d){ return d.startsWith(String(yr)); });
     var hols = getAllHolidays(m, yr);
     var wd = workingDaysRemaining(m, yr);
-    return {name:m.name, days:days.length, hols:hols.length, wd:wd, pto:m.pto||0, color:MC[i%MC.length].d};
+    return {name:m.name, days:usedOf({days:days,half:m.half}), hols:hols.length, wd:wd, pto:(m.pto||0)+(m.carry||0), color:MC[i%MC.length].d};
   });
 
   // Monthly distribution
@@ -3582,7 +3602,7 @@ function NextYearPrompt({team,yr,onYear,th,lang}){
 
 function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members||[]).filter(function(m){return(m.days||[]).indexOf(today)>=0;});if(!out.length)return <div style={{padding:"8px 14px",background:"rgba(16,185,129,.08)",borderRadius:10,border:"1px solid rgba(16,185,129,.15)",marginBottom:10,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,color:"#059669"}}><span>✅</span>{t.fullTeam||"Full team in today!"}</div>;return <div style={{padding:"8px 14px",background:out.length>=3?"rgba(239,68,68,.06)":"rgba(245,158,11,.06)",borderRadius:10,border:"1px solid "+(out.length>=3?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)"),marginBottom:10}}><div style={{fontSize:10,fontWeight:700,color:out.length>=3?"#DC2626":"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{t.outToday||"Out today"} ({out.length})</div><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{out.map(function(m){var mc=MC[team.members.indexOf(m)%MC.length];return <span key={m.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:8,background:mc.b,fontSize:11,fontWeight:600,color:mc.t}}><span style={{width:6,height:6,borderRadius:"50%",background:mc.d}}></span>{m.name}</span>;})}</div></div>;}
 function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=null,th,t,lang,setLang,theme,setTheme}){
-  const[delOpen,setDelOpen]=useState(false);const[delText,setDelText]=useState("");const NY=NY_TX[lang]||NY_TX.en;
+  const[halfMode,setHalfMode]=useState(false);const[delOpen,setDelOpen]=useState(false);const[delText,setDelText]=useState("");const NY=NY_TX[lang]||NY_TX.en;
   const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
   // ─── PIN feature state (Step 1: declarations only, no UI yet) ─────
   const[nPin,setNPin]=useState("");
@@ -3692,12 +3712,20 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
     const key=dk(y,m,d);
     const member=team.members.find(function(x){return x.id===aId;});
     if(!member)return;
-    const ds=member.days||[];
-    const has=ds.indexOf(key)>=0;
+    const ds=member.days||[];const hs=member.half||[];
+    const has=ds.indexOf(key)>=0;const isHalf=hs.indexOf(key)>=0;
+    let nd=ds,nh=hs,what;
+    if(halfMode){
+      // Half-day mode: empty → half day, full → half day, half → removed
+      if(has&&isHalf){nd=ds.filter(x=>x!==key);nh=hs.filter(x=>x!==key);what=" removed half day ";}
+      else{nd=has?ds:[].concat(ds,[key]);nh=[].concat(hs,[key]);what=" added half day ";}
+    }else{
+      nd=has?ds.filter(x=>x!==key):[].concat(ds,[key]);nh=has?hs.filter(x=>x!==key):hs;what=has?" removed ":" added ";
+    }
     updateWithHistory({...team,members:team.members.map(function(mm){
       if(mm.id!==aId)return mm;
-      return{...mm,days:has?ds.filter(function(x){return x!==key;}):[].concat(ds,[key])};
-    }),log:addLogEntry(team,(member.name||"Member")+(has?" removed ":" added ")+key)});
+      const nm={...mm,days:nd};if(nh.length||mm.half)nm.half=nh;return nm;
+    }),log:addLogEntry(team,(member.name||"Member")+what+key)});
   };
   const setApprover=function(memberId){
     updateWithHistory({...team,approver:memberId||null});
@@ -3835,6 +3863,8 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportXLSX(team,t)}>Excel</Btn>
       {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>{t.approvedPdf}</Btn>}
       <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>Import</Btn>
+      <label title="Unused days from last year carried into this year (0 = off)" style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2,fontWeight:600}}>Carry over up to
+        <input type="number" min="0" max="60" value={team.carryMax||0} onChange={e=>{const v=Math.max(0,Math.min(60,parseInt(e.target.value)||0));const nt={...team};if(v)nt.carryMax=v;else delete nt.carryMax;updateWithHistory(nt);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11}}/> days</label>
       {onDeleteForever&&<Btn th={th} v="ghost" sz="sm" onClick={()=>{setDelText("");setDelOpen(true);}} style={{color:"#DC2626",borderColor:"#FECACA"}}>{NY.delBtn}</Btn>}
       <div style={{width:1,height:20,background:th.bd}}/>
       <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}>
@@ -3911,7 +3941,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         {team.members.length>0&&view==="cal"&&<div style={{marginBottom:10,padding:"8px 12px",background:th.gbg,borderRadius:G.rXs,border:`1px solid ${th.gbd}`,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
           <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
             {team.members.map((m,i)=>{const c=MC[i%MC.length];const co=m.country?EU_C.find(x=>x.c===m.country):null;
-              return <div key={m.id} onClick={()=>setAId(m.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",background:aId===m.id?c.b:th.sh,borderRadius:14,fontSize:10,fontWeight:500,color:c.t,cursor:"pointer",border:aId===m.id?`1.5px solid ${c.d}40`:"1.5px solid transparent"}}><div style={{width:6,height:6,borderRadius:"50%",background:c.d}}/>{co?co.f+" ":""}{m.name} ({(m.days||[]).length})</div>;})}
+              return <div key={m.id} onClick={()=>setAId(m.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",background:aId===m.id?c.b:th.sh,borderRadius:14,fontSize:10,fontWeight:500,color:c.t,cursor:"pointer",border:aId===m.id?`1.5px solid ${c.d}40`:"1.5px solid transparent"}}><div style={{width:6,height:6,borderRadius:"50%",background:c.d}}/>{co?co.f+" ":""}{m.name} ({fmtDays(usedOf(m))})</div>;})}
             <div style={{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:14,fontSize:10,color:th.ht,background:th.hc}}><div style={{width:6,height:6,borderRadius:3,background:th.ht}}/> {t.holiday}</div>
           </div>
         </div>}
@@ -3922,7 +3952,8 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
             <span style={{fontSize:12,fontWeight:600,color:ac.t}}>{t.ed}: {am.name}</span>
             <span style={{fontSize:11,color:ac.t,opacity:.7}}>{t.tap}</span>
           </div>
-          <button onClick={()=>{setAId(null);flash(am.name+": "+(am.days||[]).length+" "+(((am.days||[]).length===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>Done · {(am.days||[]).length} {((am.days||[]).length===1)?t.dy:t.dys}</button>
+          <button onClick={()=>setHalfMode(h=>!h)} aria-pressed={halfMode} title="Half-day mode: tap a day to make it a half day" style={{padding:"6px 12px",borderRadius:20,border:"1.5px solid "+ac.d,background:halfMode?ac.d:"transparent",color:halfMode?"#fff":ac.t,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>½ {halfMode?"on":"day"}</button>
+          <button onClick={()=>{setAId(null);setHalfMode(false);flash(am.name+": "+fmtDays(usedOf(am))+" "+((usedOf(am)===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>Done · {fmtDays(usedOf(am))} {(usedOf(am)===1)?t.dy:t.dys}</button>
         </div>}
 
         {/* Holiday Clash Warning */}

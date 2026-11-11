@@ -1,7 +1,7 @@
 // Builds the three sheets (Dashboard, Calendar, Timeline) of the Excel export as plain data for write-excel-file.
 // Pure: no DOM, no I/O, so it runs in the browser and in tests.
 
-type Member = { id: string; name?: string; country?: string; days?: unknown[] };
+type Member = { id: string; name?: string; country?: string; days?: unknown[]; half?: unknown[] };
 type Cell = { value?: string | number; type?: typeof String | typeof Number; fontWeight?: "bold"; fontSize?: number; textColor?: string; backgroundColor?: string; align?: "left" | "center" | "right"; columnSpan?: number; height?: number; wrap?: boolean } | null;
 export type Sheet = { sheet: string; data: Cell[][]; columns: { width: number }[] };
 
@@ -51,12 +51,16 @@ export function periods(days: string[]): string[] {
 
 export function buildSheets(x: XlsxInput): Sheet[] {
   const yr = x.year, p = `${yr}-`;
-  const ms = x.members.map(m => ({ ...m, days: (m.days || []).filter((d): d is string => typeof d === "string" && d.startsWith(p)) }));
+  const ms = x.members.map(m => {
+    const days = (m.days || []).filter((d): d is string => typeof d === "string" && d.startsWith(p));
+    const half = new Set((m.half || []).filter((d): d is string => typeof d === "string" && d.startsWith(p)));
+    return { ...m, days, used: days.reduce((n, d) => n + (half.has(d) ? 0.5 : 1), 0) };
+  });
   const color = (i: number) => x.colors.length ? x.colors[i % x.colors.length] : "#3B82F6";
   const who: Record<string, number[]> = {};
   ms.forEach((m, i) => m.days.forEach(d => { (who[d] ||= []).push(i); }));
   const overlaps = Object.keys(who).filter(d => who[d].length >= 2).sort();
-  const total = ms.reduce((s, m) => s + m.days.length, 0);
+  const total = ms.reduce((s, m) => s + m.used, 0);
   const cover = Math.round((1 - total / ((ms.length * 260) || 1)) * 100);
 
   // Dashboard
@@ -69,7 +73,7 @@ export function buildSheets(x: XlsxInput): Sheet[] {
     [],
     [str("Member summary", { ...S.sect, columnSpan: 4 }), null, null, null],
     [str("Member", S.hdr), str("Country", S.hdr), str("Days", S.hdr), str("Periods", S.hdr)],
-    ...ms.map(m => [str(m.name || "", { fontWeight: "bold" }), str(x.countryName(m.country)), num(m.days.length), str(periods(m.days).join(", "))]),
+    ...ms.map(m => [str(m.name || "", { fontWeight: "bold" }), str(x.countryName(m.country)), num(m.used), str(periods(m.days).join(", "))]),
   ];
   if (overlaps.length) {
     dash.push([], [str(`Overlap days (${overlaps.length})`, { ...S.sect, columnSpan: 2 }), null], [str("Date", S.hdr), str("Members out", S.hdr)]);
