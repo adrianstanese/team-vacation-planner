@@ -577,6 +577,59 @@ const pk=k=>{const[y,m,d]=k.split("-").map(Number);return{y,m:m-1,d};};
 const isWe=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
 const N=new Date(),CY=N.getFullYear(),CM=N.getMonth(),CD=N.getDate();
 
+// ─── Year switching ──────────────────────────────────────────────
+// A team is stored once, with every year's days in the same record (days are full dates).
+// The workspace always works on a one-year "view" of it; mergeYearView folds an edited
+// view back into the stored record without touching the other years.
+const YEAR_MIN=2026,YEAR_MAX=2035;
+const clampYear=y=>Math.min(YEAR_MAX,Math.max(YEAR_MIN,y));
+const baseYearOf=team=>(team&&team.year)||CY;
+// Year a team opens on: the current year once the team's own year has passed, else its own year.
+const defaultViewYear=team=>{const b=baseYearOf(team);return clampYear(CY>b?CY:b);};
+const tripInYear=(tr,yr)=>!tr||!tr.start||!tr.end||(String(tr.start).slice(0,4)<=String(yr)&&String(tr.end).slice(0,4)>=String(yr));
+function teamForYear(raw,yr){
+  if(!raw)return raw;
+  const p=yr+"-",base=baseYearOf(raw);
+  const v={...raw,year:yr,_vy:yr};
+  v.members=(raw.members||[]).map(m=>{
+    const nm={...m};
+    if(Array.isArray(m.days))nm.days=m.days.filter(d=>typeof d!=="string"||d.indexOf(p)===0);
+    if(yr!==base)nm.approved=!!(m.apY&&m.apY[yr]);
+    return nm;
+  });
+  if(Array.isArray(raw.trips))v.trips=raw.trips.filter(tr=>tripInYear(tr,yr));
+  if(yr!==base)v.locked=!!(raw.lockY&&raw.lockY[yr]);
+  return v;
+}
+function mergeYearView(view,raw){
+  if(!view||view._vy==null)return view;
+  const yr=view._vy,p=yr+"-";
+  const out={...view};delete out._vy;
+  if(!raw||raw.id!==view.id)return out;
+  const base=baseYearOf(raw);
+  if("year" in raw)out.year=raw.year;else delete out.year;
+  const rawM={};(raw.members||[]).forEach(m=>{rawM[m.id]=m;});
+  out.members=(view.members||[]).map(m=>{
+    const r=rawM[m.id];const nm={...m};
+    const keep=r&&Array.isArray(r.days)?r.days.filter(d=>typeof d==="string"&&d.indexOf(p)!==0):[];
+    if(keep.length){const seen={};nm.days=keep.concat(m.days||[]).filter(d=>seen[d]?false:(seen[d]=true));}
+    if(yr!==base){
+      const apY={...((r&&r.apY)||{})};if(m.approved===true)apY[yr]=true;else delete apY[yr];
+      if(Object.keys(apY).length)nm.apY=apY;else delete nm.apY;
+      if(r&&"approved" in r)nm.approved=r.approved;else delete nm.approved;
+    }
+    return nm;
+  });
+  const otherTrips=Array.isArray(raw.trips)?raw.trips.filter(tr=>!tripInYear(tr,yr)):[];
+  if(otherTrips.length)out.trips=otherTrips.concat(view.trips||[]);
+  if(yr!==base){
+    const lockY={...(raw.lockY||{})};if(view.locked)lockY[yr]=true;else delete lockY[yr];
+    if(Object.keys(lockY).length)out.lockY=lockY;else delete out.lockY;
+    if("locked" in raw)out.locked=raw.locked;else delete out.locked;
+  }
+  return out;
+}
+
 // ─── Storage (hybrid: API for teams, localStorage for prefs, window.storage for artifact sandbox) ───
 const API_BASE = "/api/team";
 const db={
@@ -3201,8 +3254,17 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
   </div>;
 }
 
+function YearNav({yr,onYear,th,small=false}){
+  if(!onYear)return <span style={{fontSize:small?10:18,fontWeight:700,color:small?th.t3:th.tx}}>{yr}</span>;
+  const bs=(on)=>({padding:small?"1px 6px":"5px 12px",borderRadius:small?6:8,fontSize:small?10:12,fontWeight:700,fontFamily:F,cursor:"pointer",border:on?`1.5px solid ${th.ac}`:`1px solid ${th.gbd}`,background:on?th.al:th.gbg,color:on?th.ac:th.t3,whiteSpace:"nowrap",lineHeight:1.4});
+  return <span style={{display:"inline-flex",alignItems:"center",gap:small?4:8}}>
+    {yr>YEAR_MIN&&<button onClick={()=>onYear(yr-1)} title={String(yr-1)} aria-label={"Go to "+(yr-1)} style={bs(false)}>{small?"‹":"‹ "+(yr-1)}</button>}
+    <span style={{fontSize:small?10:18,fontWeight:700,color:small?th.t2:th.tx,letterSpacing:small?0:-.5}}>{yr}</span>
+    {yr<YEAR_MAX&&<button onClick={()=>onYear(yr+1)} title={String(yr+1)} aria-label={"Go to "+(yr+1)} style={bs(true)}>{small?"›":(yr+1)+" ›"}</button>}
+  </span>;
+}
 function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members||[]).filter(function(m){return(m.days||[]).indexOf(today)>=0;});if(!out.length)return <div style={{padding:"8px 14px",background:"rgba(16,185,129,.08)",borderRadius:10,border:"1px solid rgba(16,185,129,.15)",marginBottom:10,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,color:"#059669"}}><span>✅</span>{t.fullTeam||"Full team in today!"}</div>;return <div style={{padding:"8px 14px",background:out.length>=3?"rgba(239,68,68,.06)":"rgba(245,158,11,.06)",borderRadius:10,border:"1px solid "+(out.length>=3?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)"),marginBottom:10}}><div style={{fontSize:10,fontWeight:700,color:out.length>=3?"#DC2626":"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{t.outToday||"Out today"} ({out.length})</div><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{out.map(function(m){var mc=MC[team.members.indexOf(m)%MC.length];return <span key={m.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:8,background:mc.b,fontSize:11,fontWeight:600,color:mc.t}}><span style={{width:6,height:6,borderRadius:"50%",background:mc.d}}></span>{m.name}</span>;})}</div></div>;}
-function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
+function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
   // ─── PIN feature state (Step 1: declarations only, no UI yet) ─────
   const[nPin,setNPin]=useState("");
@@ -3248,6 +3310,8 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const undo=()=>{if(!historyRef.current.length)return;const prev=historyRef.current.pop();redoRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(prev));flash("Undo");};
   const redo=()=>{if(!redoRef.current.length)return;const next=redoRef.current.pop();historyRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(next));flash("Redo");};
   const updateWithHistory=(newTeam)=>{pushHistory(team);onUpdate(newTeam);};
+  // Undo steps belong to the year they were made in: start clean when the year changes
+  useEffect(()=>{historyRef.current=[];redoRef.current=[];},[team.year]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(()=>{const h=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==="z"){e.preventDefault();if(e.shiftKey)redo();else undo();}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[team]);
@@ -3417,7 +3481,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
             <h1 style={{margin:0,fontSize:15,fontWeight:700,color:th.tx,letterSpacing:-.3}}>{team.name}</h1>
             {locked&&<Ic n="lock" s={13} c={th.wm}/>}
           </div>
-          <div style={{fontSize:10,color:th.t3}}>{yr} · {team.members.length} {team.members.length!==1?t.mbs:t.mb}</div>
+          <div style={{fontSize:10,color:th.t3,display:"flex",alignItems:"center",gap:4}}><YearNav yr={yr} onYear={onYear} th={th} small/><span>· {team.members.length} {team.members.length!==1?t.mbs:t.mb}</span></div>
         </div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:3}}>
@@ -3549,7 +3613,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
           </div>;
         })()}
 
-        <WhosOutBanner team={team} th={th} t={t}/>
+        <WhosOutBanner team={rawTeam||team} th={th} t={t}/>
         {view==="cal"&&!am&&team.members.length>0&&!locked&&<div style={{background:th.al,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:th.ac,fontWeight:500}}>{t.sel}</div>}
         {view==="cal"&&locked&&<div style={{background:th.wl,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#92400E",fontWeight:500,display:"flex",alignItems:"center",gap:6}}><Ic n="lock" s={14} c="#92400E"/>{t.locked}</div>}
 
@@ -3572,7 +3636,7 @@ function WS({team,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
 
         {view==="cal"&&<Fragment>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-            <span style={{fontSize:18,fontWeight:700,color:th.tx,letterSpacing:-.5}}>{yr}</span>
+            <YearNav yr={yr} onYear={onYear} th={th}/>
             <div style={{display:"flex",gap:2}}>
               {[{l:"Year",v:null},{l:"Q1",v:0},{l:"Q2",v:1},{l:"Q3",v:2},{l:"Q4",v:3}].map(q=>
                 <button key={q.l} onClick={()=>setQuarter(q.v)} style={{padding:"3px 10px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:quarter===q.v?`1.5px solid ${th.ac}`:`1px solid ${th.gbd}`,background:quarter===q.v?th.al:th.gbg,color:quarter===q.v?th.ac:th.t3,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>{q.l}</button>)}
@@ -3726,7 +3790,9 @@ function CookieNotice({th, t}) {
 // ─── App ─────────────────────────────────────────────────────────
 export default function App(){
 
-  const[screen,setScreen]=useState("home");const[team,setTeam]=useState(null);const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState("en");const[theme,setTheme]=useState("light");
+  const[screen,setScreen]=useState("home");const[team,setTeamRaw]=useState(null);const[viewYear,setViewYear]=useState(null);
+  // Opening a team picks its year: "year=YYYY" in the link if present, else the default
+  const setTeam=tm=>{let y=null;try{const ym=window.location.hash.match(/[#&]year=(\d{4})/);if(tm&&ym&&window.location.hash.indexOf("team="+tm.id)>=0)y=clampYear(parseInt(ym[1]));}catch(e){}setViewYear(y);setTeamRaw(tm);};const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState("en");const[theme,setTheme]=useState("light");
   const th=TH[theme];const t=TX[lang];
 
   useEffect(()=>{(async()=>{
@@ -3789,20 +3855,24 @@ export default function App(){
 
   const open=async id=>{const ld=await db.ld(`team:${id}`,true);if(ld){setTeam(ld);setScreen("ws");window.location.hash=`team=${id}`;}else{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);}};
 
-  const update=u=>{setTeam(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>x.id===u.id?{...x,name:u.name,year:u.year,mc:u.members.length}:x);setMyTeams(ut);db.sv("my-teams",ut);};
+  const vy=team?(viewYear||defaultViewYear(team)):CY;
+  const changeYear=y=>{if(!team)return;const ny=clampYear(y);setViewYear(ny);try{window.history.replaceState(null,"","#team="+team.id+(ny===defaultViewYear(team)?"":"&year="+ny));}catch(e){}};
+
+  const update=u0=>{const u=mergeYearView(u0,team);setTeamRaw(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>x.id===u.id?{...x,name:u.name,year:u.year,mc:u.members.length}:x);setMyTeams(ut);db.sv("my-teams",ut);};
 
   const goHome=()=>{setTeam(null);setScreen("home");window.location.hash="";};
 
   if(screen==="ws"&&team) {
+    const tv=teamForYear(team,vy);
     // Check for special view modes via hash params
     const hash = window.location.hash;
     const viewMatch = hash.match(/view=(badge|json|print|tsv)/i);
     if (viewMatch) {
       const vw = viewMatch[1].toLowerCase();
       if (vw === "badge") return <ErrorBoundary><div style={{minHeight:"100vh",background:th.bg}}><BadgeView team={team} th={th} t={t}/></div></ErrorBoundary>;
-      if (vw === "print") return <ErrorBoundary><PrintView team={team} th={th} t={t}/></ErrorBoundary>;
+      if (vw === "print") return <ErrorBoundary><PrintView team={tv} th={th} t={t}/></ErrorBoundary>;
       if (vw === "tsv") {
-        const tsv = generateTSV(team,t);
+        const tsv = generateTSV(tv,t);
         return <ErrorBoundary><div style={{minHeight:"100vh",background:th.bg,padding:20,fontFamily:FM}}>
           <div style={{marginBottom:12,textAlign:"center"}}>
             <div style={{fontSize:14,fontWeight:700,color:th.tx,marginBottom:4}}>{t.sheetsTitle}</div>
@@ -3813,7 +3883,7 @@ export default function App(){
       }
       if (vw === "json") {
         const jsonData = JSON.stringify({
-          name: team.name, year: team.year, members: team.members.map(m => ({
+          name: tv.name, year: tv.year, members: tv.members.map(m => ({
             name: m.name, country: m.country,
             days: (m.days || []).sort(),
             daysCount: (m.days || []).length,
@@ -3825,7 +3895,7 @@ export default function App(){
         </div></ErrorBoundary>;
       }
     }
-    return <ErrorBoundary><WS team={team} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
+    return <ErrorBoundary><WS team={tv} rawTeam={team} onYear={changeYear} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
   }
   const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);db.del("team:"+id,true);};
   return <ErrorBoundary><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
