@@ -166,12 +166,40 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
 
   // Team-level protected fields
   const noAuthority = stored && !stored.ownerHash && !stored.approver && !storedMembers.some(m => m.isApprover);
-  const mayManage = !stored || owner || noAuthority || await approver();
+  // Teams with a creator: only the current approver (own PIN session) may hand the approver role over, normally by
+  // accepting a member's request in Approvals. Older teams keep the old rule.
+  const mayManage = !stored || (creatorId ? await approver() : (owner || noAuthority || await approver()));
   if (stored && !mayManage) {
     if ("approver" in stored) doc.approver = stored.approver; else delete doc.approver;
   }
   if (stored?.ownerHash && !owner) {
     for (const k of ["locked", "lockY"]) { if (k in stored) doc[k] = stored[k]; else delete doc[k]; }
+  }
+  // Approver request (teams with a creator): a PIN member may ask for themself or withdraw their own request; the
+  // current approver may clear it (accept or decline). Anything else keeps the stored value.
+  const reqKey = (r: unknown) => { const o = r as { id?: unknown; at?: unknown } | null; return o && typeof o.id === "string" ? o.id + "|" + String(o.at || "") : ""; };
+  if (creatorId) {
+    const oldR = stored?.approverReq as { id?: string } | undefined, newR = incoming.approverReq as { id?: string } | undefined;
+    if (reqKey(oldR) !== reqKey(newR)) {
+      let ok = false;
+      if (reqKey(newR)) { const id = String(newR!.id); ok = !!before.get(id)?.pinHash && id !== stored?.approver && await self(id); }
+      else ok = await approver() || (!!oldR?.id && await self(oldR.id));
+      if (!ok) { if (reqKey(oldR)) doc.approverReq = oldR; else delete doc.approverReq; }
+      else if (!reqKey(newR)) delete doc.approverReq;
+    } else if (!reqKey(newR)) delete doc.approverReq;
+  } else delete doc.approverReq;
+  // Forgotten-PIN requests: anyone may ask for a PIN member (they lost the PIN, so they have no token); only the
+  // approver, the owner or the member may remove a request. Entries for members without a PIN are dropped.
+  {
+    type PR = { id: string; at?: string };
+    const prs = (d: TeamDoc | null | undefined): PR[] => (Array.isArray(d?.pinResets) ? (d!.pinResets as PR[]) : []).filter(r => r && typeof r.id === "string");
+    const oldL = prs(stored), newL = prs(incoming);
+    const canClear = owner || await approver();
+    const res: PR[] = [];
+    for (const r of oldL) if (newL.some(x => x.id === r.id) || !(canClear || await self(r.id))) res.push({ id: r.id, at: String(r.at || "").slice(0, 40) });
+    for (const r of newL) if (!res.some(x => x.id === r.id) && !oldL.some(x => x.id === r.id)) res.push({ id: r.id, at: String(r.at || "").slice(0, 40) });
+    const fin = res.filter(r => before.get(r.id)?.pinHash).slice(-20);
+    if (fin.length) doc.pinResets = fin; else delete doc.pinResets;
   }
   // creatorId: set once, by the owner, when the team's first member is added; never changed afterwards
   if (creatorId) doc.creatorId = creatorId;
@@ -192,14 +220,22 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
     if (!mayRoles) { if (old && "role" in old) next.role = old.role; else delete next.role; }
     if (old?.pinHash && strip(old) !== strip(next) && !(await full(m.id))) {
       // Approver may change only approval fields of other members
-      if (await approver() && without(old, APPROVAL_FIELDS) === without(next, APPROVAL_FIELDS)) { out.push(next); continue; }
+      // (and the isApprover flag, which was already reverted above unless approver changes were allowed)
+      if (await approver() && without(old, [...APPROVAL_FIELDS, "isApprover"]) === without(next, [...APPROVAL_FIELDS, "isApprover"])) { out.push(next); continue; }
       out.push(old); reverted.add(m.id); continue;
+    }
+    // From Nov 2026 everyone needs a PIN: a member without one is read-only until they set it (only approvals,
+    // job title and the approver flag may still be changed by the people allowed to change those)
+    if (old && !old.pinHash && strip(old) !== strip(next)) {
+      const free = [...(await approver() ? APPROVAL_FIELDS : []), ...(mayManage ? ["isApprover"] : []), ...(mayRoles ? ["role"] : [])];
+      if (without(old, free) !== without(next, free)) { out.push(old); reverted.add(m.id); continue; }
     }
     out.push(next);
   }
-  // A protected member can only be removed with their token or the owner key
+  // A protected member can only be removed with their token or the owner key; one without a PIN only by the
+  // owner or the approver
   for (const [id, old] of before) {
-    if (old.pinHash && !out.some(m => m.id === id) && !(await full(id))) {
+    if (!out.some(m => m.id === id) && (old.pinHash ? !(await full(id)) : !(owner || await approver()))) {
       const idx = storedMembers.findIndex(x => x.id === id);
       out.splice(Math.min(idx, out.length), 0, old); reverted.add(id);
     }

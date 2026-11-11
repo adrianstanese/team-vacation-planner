@@ -1,7 +1,7 @@
 // Member PIN and team owner actions. POST { op, id, memberId, pin?, token?, owner? }
 //   verify → correct PIN gives a member token (and upgrades an old hash). Members without a PIN get no token.
 //   set    → sets or changes a member's PIN (changing needs that member's token or the owner key)
-//   reset  → owner removes a member's PIN
+//   reset  → owner (owner key) or the team's approver (approverId + their token) removes a member's PIN
 // Ownership is given only by the server when a team is first created (PUT /api/team returns the owner key)
 // or by the site admin (owner link); there is no way to claim an existing team.
 import { NextRequest, NextResponse } from "next/server";
@@ -20,7 +20,7 @@ function sameOrigin(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return j({ error: "Forbidden" }, 403);
-  let b: { op?: string; id?: string; memberId?: string; pin?: string; token?: string; owner?: string } = {};
+  let b: { op?: string; id?: string; memberId?: string; pin?: string; token?: string; owner?: string; approverId?: string } = {};
   try { b = await req.json(); } catch { return j({ error: "Bad request" }, 400); }
   const id = String(b.id || ""), mid = String(b.memberId || ""), op = String(b.op || "");
   if (!ID.test(id)) return j({ error: "Bad id" }, 400);
@@ -67,10 +67,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (op === "reset") {
-      if (!validOwner(doc, b.owner)) return j({ error: "Only the team owner can reset PINs" }, 403);
+      // The approver may reset a forgotten PIN with their own PIN session (not their own PIN)
+      const aid = String(b.approverId || "");
+      const ap = aid && aid !== mid ? members.find(x => x && x.id === aid && x.pinHash && (x.isApprover || x.id === doc.approver)) : null;
+      const apOk = !!ap && await validMemberToken(sql, id, aid, String(ap.pinHash), b.token);
+      if (!validOwner(doc, b.owner) && !apOk) return j({ error: "Only the approver or the team owner can reset PINs" }, 403);
       if (mid === doc.creatorId) return j({ error: "The team creator's PIN can only be changed by the creator (or, if forgotten, by the site admin)" }, 403);
+      const pr = (Array.isArray(doc.pinResets) ? doc.pinResets as { id?: string }[] : []).filter(r => r && r.id !== mid);
       if (!m.pinHash) return j({ ok: true });
-      const next = { ...doc, members: members.map(x => { if (x.id !== mid) return x; const c = { ...x }; delete c.pinHash; return c; }), log: log(`PIN reset by the team owner for ${name}`) };
+      const next: TeamDoc = { ...doc, members: members.map(x => { if (x.id !== mid) return x; const c = { ...x }; delete c.pinHash; return c; }), log: log(`PIN reset by the ${apOk ? "approver" : "team owner"} for ${name}`) };
+      if (pr.length) next.pinResets = pr; else delete next.pinResets;
       if (await save(next)) { await pinCleared(sql, id, mid); return j({ ok: true }); }
       continue;
     }
