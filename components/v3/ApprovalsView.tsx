@@ -161,7 +161,7 @@ export default function ApprovalsView({ team, yr, threshold, th, colorOf, onAppr
               const isWork = (k: string) => { const g = dateOf(k).getDay(); return (sevenDay || (g !== 0 && g !== 6)) && !hol.has(k); };
               const holIn = rs.reduce((n, r) => n + span(r).filter(k => hol.has(k)).length, 0);
               const others = team.members.filter(x => x.id !== m.id);
-              const last = ((team.log || []) as { t?: string; a?: string }[]).filter(e => e && typeof e.a === "string" && m.name && e.a.includes(m.name)).slice(-1)[0];
+              const last = ((team.log || []) as { t?: string; a?: string }[]).filter(e => { if (!e || typeof e.a !== "string" || !m.name) return false; const esc = m.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); return new RegExp("(^|[^\\p{L}])" + esc + "([^\\p{L}]|$)", "u").test(e.a); }).slice(-1)[0];
               const crowd = (k: string) => others.filter(x => (x.days || []).includes(k));
               return <>
                 <div className="v3-ap-stats">

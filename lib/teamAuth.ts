@@ -60,6 +60,7 @@ export function checkPin(pin: string, stored: string): { ok: boolean; legacy: bo
 
 // Records the attempt FIRST and then counts, so parallel guesses cannot all slip under the limit (race-safe)
 export async function pinAttempt(sql: Sql, team: string, member: string): Promise<boolean> {
+  if (Math.random() < 0.02) await sql`DELETE FROM pin_attempts WHERE at < now() - interval '1 day'`;
   await sql`INSERT INTO pin_attempts (team, member) VALUES (${team}, ${member})`;
   const [r] = await sql`SELECT COUNT(*)::int AS n FROM pin_attempts WHERE team = ${team} AND member = ${member} AND at > now() - interval '15 minutes'`;
   return Number(r?.n || 0) <= 5;
@@ -99,9 +100,12 @@ export function publicTeam<T extends TeamDoc>(doc: T): T {
   const out: TeamDoc = { ...doc };
   if (out.ownerHash) { delete out.ownerHash; out.hasOwner = true; }
   if (Array.isArray(out.members)) out.members = out.members.map(m => {
-    if (!m || typeof m !== "object" || !m.pinHash) return m;
-    const { pinHash: _ph, ...rest } = m; void _ph;
-    return { ...rest, hasPin: true };
+    if (!m || typeof m !== "object") return m;
+    const { pinHash: ph, resetHash: rh, resetExp: rx, ...rest } = m as Member & { resetHash?: string; resetExp?: number };
+    const o: Record<string, unknown> = { ...rest };
+    if (ph) o.hasPin = true;
+    if (!ph && rh && typeof rx === "number" && rx > Date.now()) o.resetPending = true;
+    return o as Member;
   });
   return out as T;
 }
@@ -113,9 +117,9 @@ function canon(v: unknown, key = ""): unknown {
   if (v && typeof v === "object") { const o: Record<string, unknown> = {}; for (const k of Object.keys(v as object).sort()) { const x = (v as Record<string, unknown>)[k]; if (x !== undefined) o[k] = canon(x, k); } return o; }
   return v;
 }
-const strip = (m: Member) => { const c: Record<string, unknown> = { ...m }; delete c.pinHash; delete c.hasPin; if (c.pto === null) delete c.pto; return JSON.stringify(canon(c)); };
+const strip = (m: Member) => { const c: Record<string, unknown> = { ...m }; delete c.pinHash; delete c.hasPin; delete c.resetHash; delete c.resetExp; delete c.resetPending; if (c.pto === null) delete c.pto; return JSON.stringify(canon(c)); };
 const APPROVAL_FIELDS = ["approved", "apY"];
-const without = (m: Member, keys: string[]) => { const c: Record<string, unknown> = { ...m }; delete c.pinHash; delete c.hasPin; if (c.pto === null) delete c.pto; for (const k of keys) delete c[k]; return JSON.stringify(canon(c)); };
+const without = (m: Member, keys: string[]) => { const c: Record<string, unknown> = { ...m }; delete c.pinHash; delete c.hasPin; delete c.resetHash; delete c.resetExp; delete c.resetPending; if (c.pto === null) delete c.pto; for (const k of keys) delete c[k]; return JSON.stringify(canon(c)); };
 // Tabs opened before the Nov 2026 update still hold old unsalted PIN hashes and send them back. Until this
 // date, such saves (no `base`) are treated like before: a matching legacy hash counts as proof, and a new
 // member may arrive with a legacy hash. After this date old tabs simply need a reload.
@@ -168,7 +172,8 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   const noAuthority = stored && !stored.ownerHash && !stored.approver && !storedMembers.some(m => m.isApprover);
   // Teams with a creator: only the current approver (own PIN session) may hand the approver role over, normally by
   // accepting a member's request in Approvals. Older teams keep the old rule.
-  const mayManage = !stored || (creatorId ? await approver() : (owner || noAuthority || await approver()));
+  // If the approver has no PIN (e.g. reset), the owner key or the creator's own session may manage, so a team is never stuck
+  const mayManage = !stored || (creatorId ? (await approver() || (approverIds.length === 0 && (owner || await self(creatorId)))) : (owner || noAuthority || await approver()));
   if (stored && !mayManage) {
     if ("approver" in stored) doc.approver = stored.approver; else delete doc.approver;
   }
@@ -182,7 +187,7 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
     const oldR = stored?.approverReq as { id?: string } | undefined, newR = incoming.approverReq as { id?: string } | undefined;
     if (reqKey(oldR) !== reqKey(newR)) {
       let ok = false;
-      if (reqKey(newR)) { const id = String(newR!.id); ok = !!before.get(id)?.pinHash && id !== stored?.approver && await self(id); }
+      if (reqKey(newR)) { const id = String(newR!.id); ok = !!before.get(id)?.pinHash && id !== stored?.approver && !(reqKey(oldR) && oldR?.id !== id) && await self(id); }
       else ok = await approver() || (!!oldR?.id && await self(oldR.id));
       if (!ok) { if (reqKey(oldR)) doc.approverReq = oldR; else delete doc.approverReq; }
       else if (!reqKey(newR)) delete doc.approverReq;
@@ -212,6 +217,11 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
     if (!m || typeof m !== "object" || typeof m.id !== "string") continue;
     const old = before.get(m.id);
     const next: Member = { ...m }; delete next.hasPin; delete next.pinHash;
+    const nx = next as Member & { resetHash?: unknown; resetExp?: unknown; resetPending?: unknown }; delete nx.resetHash; delete nx.resetExp; delete nx.resetPending;
+    const ox = old as (Member & { resetHash?: string; resetExp?: number }) | undefined;
+    if (ox?.resetHash) { nx.resetHash = ox.resetHash; nx.resetExp = ox.resetExp; }
+    // A new member may not copy the name of someone already in the team (impersonation)
+    if (!old && stored && typeof m.name === "string" && storedMembers.some(x => typeof x.name === "string" && x.name.trim().toLowerCase() === String(m.name).trim().toLowerCase())) { reverted.add(m.id); continue; }
     if (old?.pinHash) next.pinHash = old.pinHash;
     // Old tab adding a brand-new member with the PIN it hashed itself (transition window only)
     else if (!old && legacyOk && typeof m.pinHash === "string" && LEGACY_HASH.test(m.pinHash)) next.pinHash = m.pinHash;
@@ -221,13 +231,14 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
     if (old?.pinHash && strip(old) !== strip(next) && !(await full(m.id))) {
       // Approver may change only approval fields of other members
       // (and the isApprover flag, which was already reverted above unless approver changes were allowed)
-      if (await approver() && without(old, [...APPROVAL_FIELDS, "isApprover"]) === without(next, [...APPROVAL_FIELDS, "isApprover"])) { out.push(next); continue; }
+      const okKeys = [...((owner || await approver()) ? APPROVAL_FIELDS : []), ...(mayManage ? ["isApprover"] : []), ...(mayRoles ? ["role"] : [])];
+      if (okKeys.length && without(old, okKeys) === without(next, okKeys)) { out.push(next); continue; }
       out.push(old); reverted.add(m.id); continue;
     }
     // From Nov 2026 everyone needs a PIN: a member without one is read-only until they set it (only approvals,
     // job title and the approver flag may still be changed by the people allowed to change those)
     if (old && !old.pinHash && strip(old) !== strip(next)) {
-      const free = [...(await approver() ? APPROVAL_FIELDS : []), ...(mayManage ? ["isApprover"] : []), ...(mayRoles ? ["role"] : [])];
+      const free = [...((owner || await approver()) ? APPROVAL_FIELDS : []), ...(mayManage ? ["isApprover"] : []), ...(mayRoles ? ["role"] : [])];
       if (without(old, free) !== without(next, free)) { out.push(old); reverted.add(m.id); continue; }
     }
     out.push(next);
@@ -242,6 +253,7 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   }
   if (Array.isArray(incoming.members) || stored?.members) doc.members = out;
   if (doc.creatorId && !out.some(m => m.id === doc.creatorId)) delete doc.creatorId;
+  if (typeof doc.approver === "string" && !out.some(m => m.id === doc.approver)) doc.approver = null;
 
   // Trips of PIN-protected members follow the member's rights
   if (Array.isArray(incoming.trips) || Array.isArray(stored?.trips)) {

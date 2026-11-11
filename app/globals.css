@@ -274,3 +274,5 @@ html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-
 .tvp-drawer .tvp-mini:not(.tvp-mini-pin):not(.tvp-mini-ask) { border: none; color: #fff; background: linear-gradient(135deg, #F97316, #EA580C); box-shadow: 0 4px 12px rgba(234, 88, 12, .35); }
 .tvp-drawer .tvp-mini:not(.tvp-mini-pin):not(.tvp-mini-ask) b { background: #fff; color: #C2410C; }
 .tvp-aprole .tvp-mini { border: 1.5px solid #D6D3D1; background: transparent; color: inherit; box-shadow: none; }
+
+.tvp-code { margin: 14px 0 8px; padding: 14px; border-radius: 14px; background: #FFF7ED; color: #9A3412; font: 900 32px/1 ui-monospace, Menlo, monospace; letter-spacing: 6px; text-align: center; user-select: all; }

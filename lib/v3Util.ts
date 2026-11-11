@@ -45,7 +45,9 @@ export function pendingApprovals(team: TeamView, yr: number, threshold: number):
     .filter(m => m && m.id !== team.approver && !m.approved && (m.days || []).some(k => inYear(k, yr)))
     .map(m => {
       const ks = (m.days || []).filter(k => inYear(k, yr)).sort();
-      const overDays = ks.filter(k => (counts.get(k) || 0) >= lim);
+      // Clashes only from today on: past days can't be changed any more
+      const now = new Date(); const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const overDays = ks.filter(k => k >= today && (counts.get(k) || 0) >= lim);
       let worst: Pending["worst"] = null;
       for (const k of overDays) { const a = counts.get(k) || 0; if (!worst || a > worst.away) worst = { day: k, away: a }; }
       return { member: m, days: used(m, yr), ranges: ranges(ks), overDays, worst };

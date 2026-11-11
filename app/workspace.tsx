@@ -1356,6 +1356,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const[ownerMode,setOwnerMode]=useState(false);
   const[gStep,setGStep]=useState(()=>{try{const me=localStorage.getItem("tvp-me-"+team.id);const m=me&&team.members.find(x=>x.id===me);return m?(hasPinOf(m)?"pin":"setpin"):"choose";}catch(e){return "choose";}});
   const[gMid,setGMid]=useState(()=>{try{return localStorage.getItem("tvp-me-"+team.id)||null;}catch(e){return null;}});
+  const[resetCode,setResetCode]=useState(null);const[gCode,setGCode]=useState("");
   const[gPin,setGPin]=useState("");const[gPin2,setGPin2]=useState("");const[gErr,setGErr]=useState("");const[gName,setGName]=useState("");const[gCo,setGCo]=useState(null);const[gBusy,setGBusy]=useState(false);
 
   // ─── PIN access helper ────────────────────────────────────────────
@@ -1404,7 +1405,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   useEffect(()=>{if(unlockedId&&!ownerMode){try{localStorage.setItem(meKey,unlockedId);}catch(e){}}},[unlockedId]);
   useEffect(()=>{
     // Server undid a change to a PIN-protected member (e.g. the 12-hour PIN session ran out): ask for the PIN again
-    const h=()=>{flash(X("reverted"));setUnlockedId(null);};
+    const h=()=>{flash(X("reverted"));setUnlockedId(cur=>{if(cur){try{const k=authKey(team.id);const t0=JSON.parse(sessionStorage.getItem(k)||"{}");delete t0[cur];sessionStorage.setItem(k,JSON.stringify(t0));}catch(e){}setGMid(cur);setGStep("pin");}return null;});};
     const e=ev=>flash(String((ev&&ev.detail)||"Not saved"));
     window.addEventListener("tvp-reverted",h);window.addEventListener("tvp-save-error",e);
     return()=>{window.removeEventListener("tvp-reverted",h);window.removeEventListener("tvp-save-error",e);};
@@ -1432,12 +1433,14 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const pendN0=(team.approver?pendingApprovals(team,yr,threshold).length:0)+(team.creatorId&&team.approverReq&&team.approverReq.id!==team.approver&&team.members.some(x=>x.id===team.approverReq.id&&hasPinOf(x))?1:0);
   const unlockedIsApprover=!!unlockedId&&(team.approver===unlockedId||!!(team.members.find(x=>x.id===unlockedId)||{}).isApprover);
   // Teams with a creator: only the current approver sees Approvals (the owner browser too while the creator is still the approver)
-  const canApprove=team.creatorId?(unlockedIsApprover||(!!getOwner(team.id)&&team.approver===team.creatorId)):(!!getOwner(team.id)||unlockedIsApprover);
+  // No approver with a PIN left (removed, reset): the owner browser or the creator may manage approvals again
+  const apHasPin=team.members.some(x=>hasPinOf(x)&&(x.isApprover||x.id===team.approver));
+  const canApprove=team.creatorId?(unlockedIsApprover||(!!getOwner(team.id)&&(team.approver===team.creatorId||!apHasPin))||(!apHasPin&&!!unlockedId&&unlockedId===team.creatorId)):(!!getOwner(team.id)||unlockedIsApprover);
   const pinResets=(Array.isArray(team.pinResets)?team.pinResets:[]).filter(r=>r&&team.members.some(x=>x.id===r.id&&hasPinOf(x)));
   const pendN=pendN0+(canApprove?pinResets.length:0);
   const resetPinFor=async id=>{const who=(team.members.find(x=>x.id===id)||{}).name||"";await waitIdle(team.id);
     const own=getOwner(team.id);const body:any={op:"reset",id:team.id,memberId:id};if(unlockedIsApprover){body.approverId=unlockedId;body.token=getTokens(team.id)[unlockedId];}if(own)body.owner=own;
-    const r=await teamAuth(body);if(r.ok){flash(V("prDone",{n:who}));syncReload(team.id,false);}else flash(r.error||"Not reset");};
+    const r=await teamAuth(body);if(r.ok){syncReload(team.id,false);if(r.code)setResetCode({n:who,c:r.code});else flash(V("prDone",{n:who}));}else flash(r.error||"Not reset");};
   const forgotPin=id=>{const cur=teamRef.current;if((cur.pinResets||[]).some(r=>r&&r.id===id)){setGErr(V("gtFpAlready"));return;}
     updateWithHistory({...cur,pinResets:[...(cur.pinResets||[]),{id,at:new Date().toISOString()}],log:addLogEntry(cur,((cur.members.find(x=>x.id===id)||{}).name||"A member")+" asked for a PIN reset")});setGErr(V("gtFpSent"));};
   const apReq=team.creatorId&&team.approverReq&&team.members.find(x=>x.id===team.approverReq.id&&x.id!==team.approver&&hasPinOf(x))?team.approverReq:null;
@@ -1478,15 +1481,16 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     const teamHasApprover=!!team.approver||team.members.some(x=>x.isApprover);
     const becomeApprover=isCreator?!teamHasApprover:(nIsApprover&&!teamHasApprover);
     const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:becomeApprover||!team.approver,isApprover:becomeApprover};
-    const co=EU_C.find(c=>c.c===nc);
-    const updTeam={...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`+(isCreator?" as creator and approver":""))};
-    if(becomeApprover&&!team.approver)updTeam.approver=nm.id;
-    if(isCreator)updTeam.creatorId=nm.id;
-    updateWithHistory(updTeam);
+    void becomeApprover;
+    // Member and PIN are saved together by the server (no moment where the new member has no PIN)
+    await waitIdle(team.id);
+    const r=await teamAuth({op:"join",id:team.id,memberId:nm.id,pin:pinForNew,member:{name:n,country:nc,region:nr||null},creator:isCreator,owner:isCreator?getOwner(team.id):undefined});
+    if(!r.ok){flash(r.code==="dup"?V("dupName"):(r.error||"Not saved"));return;}
+    const me=isCreator||ownerMode||!unlockedId;
+    if(me&&r.token)setToken(team.id,nm.id,r.token);
+    await syncReload(team.id,false);
     // Signed in as someone: adding a colleague doesn't switch you to them
-    if(isCreator||ownerMode||!unlockedId){setAId(nm.id);setUnlockedId(nm.id);}
-    // The PIN is hashed and stored by the server once the new member is saved
-    if(pinForNew)(async()=>{await waitIdle(team.id);const r=await teamAuth({op:"set",id:team.id,memberId:nm.id,pin:pinForNew});if(r.ok&&r.token){setToken(team.id,nm.id,r.token);syncReload(team.id,false);}else flash(r.error||"PIN not saved");})();
+    if(me){setAId(nm.id);setUnlockedId(nm.id);}
     setAdding(false);
     setNn("");setNc(null);setNr(null);
     setNPin("");setNIsApprover(false);
@@ -1517,7 +1521,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     updateWithHistory({...team,comments:c,log:addLogEntry(team,`${by} commented on ${day}`)});setCommentText("");
   };
   // Job titles: set by the team creator/owner (teams without an owner: anyone)
-  const canEditRoles=!team.hasOwner||!!getOwner(team.id);
+  // Job titles: the owner browser, or the creator signed in on any device (teams without a creator: as before)
+  const canEditRoles=!!getOwner(team.id)||(team.creatorId?unlockedId===team.creatorId:!team.hasOwner);
   const setRole=(id,val)=>{const cur=teamRef.current;updateWithHistory({...cur,members:cur.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.role=String(val).slice(0,40);else delete nx.role;return nx;})});};
   const setGroup=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.group=val.slice(0,24);else delete nx.group;return nx;})});};
   const setRegion=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
@@ -1654,13 +1659,15 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     if(r.ok&&r.token){setToken(team.id,m.id,r.token);setUnlockedId(m.id);setAId(m.id);gReset();return;}
     setGErr(r.status===429?(r.error||"Too many tries"):X("pinWrong"));setGPin("");};
   const gSetPin=async()=>{const m=team.members.find(x=>x.id===gMid);if(!m||gPin.length!==6||gPin!==gPin2||gBusy)return;setGBusy(true);await waitIdle(team.id);
-    const r=await teamAuth({op:"set",id:team.id,memberId:m.id,pin:gPin});setGBusy(false);
-    if(r.ok&&r.token){setToken(team.id,m.id,r.token);syncReload(team.id,false);setUnlockedId(m.id);setAId(m.id);gReset();flash(X("pinSet"));}else setGErr(r.error||"PIN not saved");};
+    const r=await teamAuth({op:"set",id:team.id,memberId:m.id,pin:gPin,code:m.resetPending?gCode:undefined});setGBusy(false);
+    if(r.ok&&r.token){setGCode("");setToken(team.id,m.id,r.token);syncReload(team.id,false);setUnlockedId(m.id);setAId(m.id);gReset();flash(X("pinSet"));}else setGErr(r.error||"PIN not saved");};
   const gJoin=async()=>{const n=gName.trim();if(!n||!gCo||gPin.length!==6||gPin!==gPin2||gBusy)return;if(team.members.length>=50){flash(t.mx);return;}
-    setGBusy(true);const cur=teamRef.current;const nm={id:gid(),name:n.slice(0,30),country:gCo,region:null,days:[],pto:null,approved:!cur.approver,isApprover:false};const co=EU_C.find(c=>c.c===gCo);
-    updateWithHistory({...cur,members:[...cur.members,nm],log:addLogEntry(cur,`${nm.name} (${(co&&co.f)||""} ${(co&&co.n)||gCo}) joined the team`)});
-    setUnlockedId(nm.id);setAId(nm.id);const pin=gPin;gReset();setGName("");setGCo(null);
-    await waitIdle(team.id);const r=await teamAuth({op:"set",id:team.id,memberId:nm.id,pin});if(r.ok&&r.token){setToken(team.id,nm.id,r.token);syncReload(team.id,false);}else flash(r.error||"PIN not saved");};
+    setGBusy(true);const id=gid();await waitIdle(team.id);
+    // Member and PIN are created together by the server
+    const r=await teamAuth({op:"join",id:team.id,memberId:id,pin:gPin,member:{name:n.slice(0,30),country:gCo}});
+    if(!r.ok||!r.token){setGBusy(false);setGErr(r.code==="dup"?V("dupName"):(r.error||"Not saved"));return;}
+    setToken(team.id,id,r.token);await syncReload(team.id,false);
+    setUnlockedId(id);setAId(id);gReset();setGName("");setGCo(null);};
   // This tab already holds a PIN session for the remembered person: the effect above signs them in, so no gate flash
   const tokMe=(()=>{try{const me=localStorage.getItem(meKey);return me&&getTokens(team.id)[me]&&team.members.some(x=>x.id===me&&hasPinOf(x))?me:null;}catch(e){return null;}})();
   const gOpen=team.members.length>0&&!unlockedId&&!ownerMode&&!tokMe;
@@ -1684,10 +1691,11 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           :<button type="button" className="tvp-glink" style={{color:th.ac}} onClick={()=>forgotPin(gM.id)}>{V("gtForgot")}</button>}
       </div>}
       {gStep==="setpin"&&gM&&<div className="tvp-gate-form">
-        <small className="tvp-gnote" style={{color:th.t2}}>{V("gtSetPin",{n:gM.name||""})}</small>
-        {pinBox(gPin,setGPin,V("pinReqAll"),()=>{},true)}{pinBox(gPin2,setGPin2,X("confirmPin"),gSetPin,false)}
+        <small className="tvp-gnote" style={{color:th.t2}}>{gM.resetPending?V("gtCodeHelp"):V("gtSetPin",{n:gM.name||""})}</small>
+        {gM.resetPending&&<input value={gCode} onChange={e=>{setGCode(e.target.value.replace(/\D/g,"").slice(0,8));setGErr("");}} inputMode="numeric" autoComplete="one-time-code" placeholder={V("gtCode")} aria-label={V("gtCode")} className="tvp-gin" style={{borderColor:gCode.length===8?"#10B981":th.gbd,background:th.sf,color:th.tx,letterSpacing:3,textAlign:"center"}} autoFocus/>}
+        {pinBox(gPin,setGPin,V("pinReqAll"),()=>{},!gM.resetPending)}{pinBox(gPin2,setGPin2,X("confirmPin"),gSetPin,false)}
         {gPin2.length===6&&gPin!==gPin2&&<small className="tvp-gerr">{X("pinMismatch")}</small>}
-        <button type="button" className="v3-btn v3-primary tvp-gbtn" style={{background:th.ac}} disabled={gPin.length!==6||gPin!==gPin2||gBusy} onClick={gSetPin}>{X("savePin")}</button>
+        <button type="button" className="v3-btn v3-primary tvp-gbtn" style={{background:th.ac}} disabled={gPin.length!==6||gPin!==gPin2||gBusy||(!!gM.resetPending&&gCode.length!==8)} onClick={gSetPin}>{X("savePin")}</button>
       </div>}
       {gStep==="new"&&<div className="tvp-gate-form">
         <input value={gName} onChange={e=>setGName(e.target.value)} maxLength={30} placeholder={V("gtName")} aria-label={V("gtName")} className="tvp-gin" style={{borderColor:th.gbd,background:th.sf,color:th.tx}} autoFocus/>
@@ -1921,7 +1929,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
               </div>;})}</div>;
           })()}
         </Fragment>}
-        {view==="approvals"&&canApprove&&<ApprovalsView team={team} yr={yr} threshold={threshold} th={th} colorOf={colorOf} onApprove={approveIds} onRequest={requestChanges} onRevoke={revokeApproval} onOneByOne={()=>setShowInbox(true)} onTurnOn={getOwner(team.id)?turnOnApprovals:null} apReq={apReq} onAcceptReq={acceptAsk} onDeclineReq={declineAsk} pinResets={pinResets} onResetPin={resetPinFor} holOf={holOf} sevenDay={!!team.w7}/>}
+        {view==="approvals"&&canApprove&&<ApprovalsView team={team} yr={yr} threshold={threshold} th={th} colorOf={colorOf} onApprove={approveIds} onRequest={requestChanges} onRevoke={revokeApproval} onOneByOne={()=>setShowInbox(true)} onTurnOn={getOwner(team.id)||(team.creatorId&&unlockedId===team.creatorId)?turnOnApprovals:null} apReq={apReq} onAcceptReq={acceptAsk} onDeclineReq={declineAsk} pinResets={pinResets} onResetPin={resetPinFor} holOf={holOf} sevenDay={!!team.w7}/>}
         {view==="trips"&&<TripsView team={team} onUpdate={updateWithHistory} th={th} t={t} yr={yr} holSet={holSet}/>}
         {view==="analytics"&&<AnalyticsDashboard team={team} yr={yr} th={th} t={t}/>}
         {showInbox&&<ApprovalInbox open onClose={()=>setShowInbox(false)} team={team} yr={yr} threshold={threshold} th={th} colorOf={colorOf} onApprove={approveIds} onRequest={requestChanges}/>}
@@ -2054,5 +2062,12 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     {pinModalEl}
     {setPinModalEl}
     {gateEl}
+    {resetCode&&<div className="tvp-gate" role="dialog" aria-modal="true" aria-labelledby="tvp-code-t"><div className="tvp-gate-card" style={{background:th.bg,color:th.tx}}>
+      <h2 id="tvp-code-t" style={{margin:"0 0 6px",fontSize:18}}>🔑 {V("prCodeT",{n:resetCode.n})}</h2>
+      <div className="tvp-code" aria-label={resetCode.c.split("").join(" ")}>{resetCode.c.slice(0,4)} {resetCode.c.slice(4)}</div>
+      <p className="tvp-gnote" style={{color:th.t2}}>{V("prCodeD",{n:resetCode.n})}</p>
+      <div className="tvp-gate-foot"><button type="button" className="tvp-glink" style={{color:th.ac}} onClick={()=>{try{navigator.clipboard.writeText(resetCode.c);flash(t.cp);}catch(e){}}} aria-label={resetCode.c} title={resetCode.c}><Ic n="copy" s={16} c={th.ac}/></button>
+      <button type="button" className="v3-btn v3-primary" style={{background:th.ac}} autoFocus onClick={()=>setResetCode(null)}>{V("prCodeOk")}</button></div>
+    </div></div>}
   </div>;
 }
