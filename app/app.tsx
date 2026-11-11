@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import qrcode from "qrcode-generator";
 
 // ─── PIN hashing (SHA-256) ──────────────────────────────────────────
 const hashPin = async (pin) => {
@@ -1445,38 +1446,17 @@ function findBridgeDays(country, year) {
 
 // ─── QR Code Generator (pure SVG, no library) ───────────────────
 function QRCode({ data, size = 160, th }) {
-  // Simple QR-like visual using a hash-based pattern (not a real QR scanner-readable code)
-  // For a real QR, we'd need a library. This creates a visual representation + the text URL.
-  const modules = 21;
-  const cellSize = size / modules;
-  // Generate deterministic pattern from data string
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) hash = ((hash << 5) - hash + data.charCodeAt(i)) | 0;
-  const rng = (i) => { let h = hash + i * 2654435761; h = ((h >> 16) ^ h) * 0x45d9f3b; h = ((h >> 16) ^ h) * 0x45d9f3b; return ((h >> 16) ^ h) & 1; };
-
-  const cells = [];
-  for (let y = 0; y < modules; y++) {
-    for (let x = 0; x < modules; x++) {
-      // Finder patterns (corners)
-      const inFinder = (cx, cy) => x >= cx && x < cx + 7 && y >= cy && y < cy + 7;
-      const finderFill = (cx, cy) => {
-        const rx = x - cx, ry = y - cy;
-        if (rx === 0 || rx === 6 || ry === 0 || ry === 6) return true;
-        if (rx >= 2 && rx <= 4 && ry >= 2 && ry <= 4) return true;
-        return false;
-      };
-      let fill = false;
-      if (inFinder(0, 0)) fill = finderFill(0, 0);
-      else if (inFinder(modules - 7, 0)) fill = finderFill(modules - 7, 0);
-      else if (inFinder(0, modules - 7)) fill = finderFill(0, modules - 7);
-      else fill = rng(y * modules + x) === 1;
-
-      if (fill) cells.push(<rect key={`${x}-${y}`} x={x * cellSize} y={y * cellSize} width={cellSize} height={cellSize} fill={th.tx} />);
-    }
-  }
-  return <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ borderRadius: 8 }}>
-    <rect width={size} height={size} fill="#fff" rx={8} />
-    {cells}
+  // Real, scannable QR code (error correction M), drawn as one SVG path with a 4-module quiet zone
+  let path = "", n = 21;
+  try {
+    const qr = qrcode(0, "M"); qr.addData(data); qr.make();
+    n = qr.getModuleCount();
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) path += `M${c + 4} ${r + 4}h1v1h-1z`;
+  } catch (e) { path = ""; }
+  const total = n + 8;
+  return <svg width={size} height={size} viewBox={`0 0 ${total} ${total}`} shapeRendering="crispEdges" role="img" aria-label="QR code" style={{ borderRadius: 8, display: "block" }}>
+    <rect width={total} height={total} fill="#fff" />
+    <path d={path} fill="#111827" />
   </svg>;
 }
 
@@ -2409,6 +2389,8 @@ function ShareModal({teamId,teamName,onClose,th,t}){
   const[cp,setCp]=useState(false);const[tab,setTab]=useState("link");
   const link=`${window.location.origin}${window.location.pathname}#team=${teamId}`;
   const embedCode=getEmbedCode(teamId);
+  const feedUrl=`${window.location.origin}/api/ical?team=${teamId}`;
+  const webcalUrl=feedUrl.replace(/^https?:/,"webcal:");
   const copy=(text)=>{try{navigator.clipboard.writeText(text);}catch(e){};setCp(true);setTimeout(()=>setCp(false),2500);};
 
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
@@ -2434,12 +2416,14 @@ function ShareModal({teamId,teamName,onClose,th,t}){
       {tab==="ical"&&<Fragment>
         <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>iCal Subscribe URL</p>
         <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>Add this URL to Google Calendar, Outlook, or Apple Calendar. It updates automatically when vacations change.</p>
-        <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{"webcal://" + window.location.host + window.location.pathname + "?team=" + teamId + "&view=ics"}</div>
-        <Btn th={th} onClick={()=>copy("webcal://" + window.location.host + window.location.pathname + "?team=" + teamId + "&view=ics")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center",marginBottom:8}}>{cp?t.cp:t.copySubURL}</Btn>
+        <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{feedUrl}</div>
+        <Btn th={th} onClick={()=>copy(feedUrl)} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center",marginBottom:8}}>{cp?t.cp:t.copySubURL}</Btn>
+        <a href={webcalUrl} style={{display:"block",textAlign:"center",fontSize:12,fontWeight:600,color:th.ac,marginBottom:10,textDecoration:"none"}}>Open in my calendar app →</a>
         <div style={{fontSize:11,color:th.t3,lineHeight:1.6}}>
           <div style={{marginBottom:4}}><strong style={{color:th.tx}}>Google Calendar:</strong> Settings → Add calendar → From URL → paste</div>
           <div style={{marginBottom:4}}><strong style={{color:th.tx}}>Outlook:</strong> Add calendar → Subscribe from web → paste</div>
           <div><strong style={{color:th.tx}}>Apple Calendar:</strong> File → New Calendar Subscription → paste</div>
+          <div style={{marginTop:6}}>Calendar apps refresh subscriptions on their own schedule (Google: every few hours).</div>
         </div>
       </Fragment>}
       {tab==="widget"&&<Fragment>
