@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   COOKIE, adminConfigured, adminDb, checkCredentials, clearFailures, clientIp, isAdmin, logAction,
-  makeSession, recordFailure, sameOrigin, tooManyAttempts,
+  makeSession, purgeOld, sameOrigin, tooManyAttempts,
 } from "@/lib/adminAuth";
 import type { Sql } from "@/lib/db";
 import { newOwnerKey } from "@/lib/teamAuth";
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
       WHERE expires_at > now() GROUP BY 1 ORDER BY 2 DESC LIMIT 12`;
     const months = await sql`SELECT substr(data->>'createdAt', 1, 7) AS month, COUNT(*)::int AS n FROM teams
       WHERE data->>'createdAt' IS NOT NULL GROUP BY 1 ORDER BY 1 DESC LIMIT 12`;
-    const [trash] = await sql`SELECT COUNT(*)::int AS n FROM teams_trash`;
+    const [trash] = await sql`SELECT COUNT(DISTINCT id)::int AS n FROM team_trash`;
     let visits = 0;
     try { const [v] = await sql`SELECT COUNT(*)::int AS n FROM visits`; visits = Number(v?.n || 0); } catch { /* table may not exist locally */ }
     return json({ ...t, countries, months: months.reverse(), trash: Number(trash?.n || 0), visits });
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     if (!rows.length) return json({ error: "Team not found" }, 404);
     const data = rows[0].data as Team;
     // Never send PIN hashes to the browser, only whether a PIN is set
-    const members = (data.members || []).map(m => { const { pinHash, ...rest } = m; return { ...rest, hasPin: !!pinHash }; });
+    const members = (Array.isArray(data.members) ? data.members : []).filter(m => m && typeof m === "object").map(m => { const { pinHash, ...rest } = m; return { ...rest, hasPin: !!pinHash }; });
     const { ownerHash, ...rest } = data as Team & { ownerHash?: string };
     return json({ team: { ...rest, hasOwner: !!ownerHash, members }, updated_at: rows[0].updated_at, expires_at: rows[0].expires_at });
   }
@@ -106,15 +106,19 @@ export async function GET(req: NextRequest) {
     const rows = await sql`SELECT data FROM teams WHERE id = ${id}`;
     if (!rows.length) return json({ error: "Team not found" }, 404);
     await logAction(sql, "export", id);
-    return new NextResponse(JSON.stringify(rows[0].data, null, 2), {
+    const data = { ...(rows[0].data as Team) } as Team & { ownerHash?: string };
+    delete data.ownerHash;
+    data.members = (data.members || []).filter(Boolean).map(m => { const c = { ...m }; delete c.pinHash; return c; });
+    return new NextResponse(JSON.stringify(data, null, 2), {
       headers: { ...NO_STORE, "Content-Type": "application/json", "Content-Disposition": `attachment; filename="team-${id}.json"` },
     });
   }
 
   if (op === "trash") {
-    const rows = await sql`SELECT id, data->>'name' AS name, deleted_at,
+    // Latest copy per team id (the trash keeps every deleted version for 30 days)
+    const rows = await sql`SELECT * FROM (SELECT DISTINCT ON (id) id, data->>'name' AS name, deleted_at,
         jsonb_array_length(CASE WHEN jsonb_typeof(data->'members') = 'array' THEN data->'members' ELSE '[]'::jsonb END) AS members
-      FROM teams_trash ORDER BY deleted_at DESC LIMIT 100`;
+      FROM team_trash ORDER BY id, deleted_at DESC) t ORDER BY deleted_at DESC LIMIT 100`;
     return json({ teams: rows });
   }
 
@@ -132,6 +136,7 @@ export async function POST(req: NextRequest) {
   try { body = await req.json(); } catch { return json({ error: "Bad request" }, 400); }
   const op = String(body.op || "");
   const sql = await adminDb();
+  await purgeOld(sql);
 
   if (op === "login") {
     const ip = clientIp(req);
@@ -141,12 +146,11 @@ export async function POST(req: NextRequest) {
     }
     const ok = checkCredentials(String(body.username || "").slice(0, 64), String(body.password || "").slice(0, 200));
     if (!ok) {
-      await recordFailure(sql, ip);
       await sleep(600);
       return json({ error: "Wrong username or password." }, 401);
     }
     await clearFailures(sql, ip);
-    await logAction(sql, "login", null, ip.replace(/\d+$/, "x"));
+    await logAction(sql, "login", null, "");
     const s = makeSession();
     const res = json({ ok: true });
     res.cookies.set(COOKIE, s.value, { httpOnly: true, secure: true, sameSite: "strict", path: "/", maxAge: s.maxAge });
@@ -235,28 +239,30 @@ export async function POST(req: NextRequest) {
 
   if (action === "trash") {
     const moved = await sql`WITH gone AS (DELETE FROM teams WHERE id = ${id} RETURNING id, data, updated_at, expires_at)
-      INSERT INTO teams_trash (id, data, updated_at, expires_at, deleted_at)
-      SELECT id, data, updated_at, expires_at, now() FROM gone
-      ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at, expires_at = EXCLUDED.expires_at, deleted_at = now()
-      RETURNING id`;
+      INSERT INTO team_trash (id, data, updated_at, expires_at) SELECT id, data, updated_at, expires_at FROM gone RETURNING id`;
     if (!moved.length) return json({ ok: false, error: "Team not found" }, 404);
     await logAction(sql, "trash", id);
     return json({ ok: true });
   }
 
   if (action === "restore") {
-    const back = await sql`WITH gone AS (DELETE FROM teams_trash WHERE id = ${id} RETURNING id, data, updated_at, expires_at)
+    // Restore the latest copy, only if the id is free (the trash copy is never lost on a failed restore)
+    const live = await sql`SELECT 1 FROM teams WHERE id = ${id}`;
+    if (live.length) return json({ ok: false, error: "A team with this id exists already" }, 409);
+    const [last] = await sql`SELECT tid FROM team_trash WHERE id = ${id} ORDER BY deleted_at DESC LIMIT 1`;
+    if (!last) return json({ ok: false, error: "Not in trash" }, 404);
+    const back = await sql`WITH gone AS (DELETE FROM team_trash WHERE id = ${id} RETURNING tid, id, data, updated_at, expires_at)
       INSERT INTO teams (id, data, updated_at, expires_at)
-      SELECT id, data, now(), GREATEST(COALESCE(expires_at, now()), now() + interval '30 days') FROM gone
+      SELECT id, data, now(), GREATEST(COALESCE(expires_at, now()), now() + interval '30 days') FROM gone WHERE tid = ${last.tid}
       ON CONFLICT (id) DO NOTHING RETURNING id`;
-    if (!back.length) return json({ ok: false, error: "Not in trash, or a team with this id already exists" }, 409);
+    if (!back.length) return json({ ok: false, error: "Restore failed, try again" }, 409);
     await logAction(sql, "restore", id);
     return json({ ok: true });
   }
 
   if (action === "purge") {
     if (body.confirm !== id) return json({ error: "Type the team id to confirm" }, 400);
-    const gone = await sql`DELETE FROM teams_trash WHERE id = ${id} RETURNING id`;
+    const gone = await sql`DELETE FROM team_trash WHERE id = ${id} RETURNING id`;
     if (!gone.length) return json({ ok: false, error: "Not in trash" }, 404);
     await logAction(sql, "purge", id);
     return json({ ok: true });

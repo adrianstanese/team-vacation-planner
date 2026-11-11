@@ -583,6 +583,19 @@ const dk=(y,m,d)=>`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0
 const pk=k=>{const[y,m,d]=k.split("-").map(Number);return{y,m:m-1,d};};
 const isWe=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
 const N=new Date(),CY=N.getFullYear(),CM=N.getMonth(),CD=N.getDate();
+// Reports and exports only ever see well-formed values (stops HTML hidden in a year, date or number field)
+const ISO_DATE=/^\d{4}-\d{2}-\d{2}$/;
+const safeYear=t=>{const y=Number(t&&t.year);return Number.isInteger(y)&&y>=2000&&y<=2100?y:CY;};
+function reportSafe(team){
+  const isObj=v=>!!v&&typeof v==="object";
+  return {...team,year:safeYear(team),name:String(team&&team.name||""),
+    members:(Array.isArray(team&&team.members)?team.members:[]).filter(isObj).map(m=>({...m,name:String(m.name||""),
+      country:typeof m.country==="string"&&/^[A-Z]{2}$/.test(m.country)?m.country:null,
+      days:(Array.isArray(m.days)?m.days:[]).filter(d=>typeof d==="string"&&ISO_DATE.test(d)),
+      half:(Array.isArray(m.half)?m.half:[]).filter(d=>typeof d==="string"&&ISO_DATE.test(d)),
+      pto:Number.isFinite(Number(m.pto))&&m.pto!==null&&m.pto!==""?Number(m.pto):null})),
+    trips:(Array.isArray(team&&team.trips)?team.trips:[]).filter(t=>isObj(t)&&ISO_DATE.test(String(t.start))&&ISO_DATE.test(String(t.end)))};
+}
 
 // Team links arrive as #team=ID (app) or ?team=ID (widget/embed); read both
 const linkParams=()=>{try{return (window.location.hash||"")+"&"+(window.location.search||"").replace(/^\?/,"");}catch(e){return "";}};
@@ -607,7 +620,7 @@ function teamForYear(raw,yr){
   const p=yr+"-",base=baseYearOf(raw);
   const v={...raw,year:yr,_vy:yr};
   const cmax=Math.max(0,Math.min(60,Number(raw.carryMax)||0));
-  v.members=(raw.members||[]).map(m=>{
+  v.members=(Array.isArray(raw.members)?raw.members:[]).filter(m=>m&&typeof m==="object").map(m=>{
     const nm={...m};
     if(Array.isArray(m.days))nm.days=m.days.filter(d=>typeof d!=="string"||d.indexOf(p)===0);
     if(Array.isArray(m.half))nm.half=m.half.filter(d=>typeof d!=="string"||d.indexOf(p)===0);
@@ -676,42 +689,65 @@ const hasPinOf=m=>!!(m&&(m.hasPin||m.pinHash));
 const waitIdle=async id=>{for(let i=0;i<100&&!syncIdle(id);i++)await new Promise(r=>setTimeout(r,100));};
 async function teamAuth(body){try{const r=await fetch("/api/team/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));return {ok:r.ok,status:r.status,...j};}catch(e){return {ok:false,status:0,error:"offline"};}}
 function syncNotify(id,doc){SYNC.listeners.forEach(fn=>{try{fn(id,doc);}catch(e){}});}
-// Reload a team from the server and show it (after the server refused part of a save, or after a PIN change)
+// Reload a team from the server and show it (after the server refused part of a save, or after a PIN change).
+// Never while an edit is still waiting to be saved: that edit would disappear from the screen.
 async function syncReload(id,reverted){
-  try{const r=await fetch(API_BASE+"?id="+id,{cache:"no-store"});if(!r.ok)return;const d=await r.json();if(!d)return;const v=r.headers.get("X-Updated-At");if(v&&syncIdle(id)){SYNC.VER[id]=v;SYNC.BASE[id]=JSON.stringify(d);}syncNotify(id,d);if(reverted)window.dispatchEvent(new CustomEvent("tvp-reverted"));}catch(e){}
+  try{
+    if(reverted)window.dispatchEvent(new CustomEvent("tvp-reverted"));
+    if(!syncIdle(id))return;
+    const r=await fetch(API_BASE+"?id="+id,{cache:"no-store"});if(!r.ok)return;const d=await r.json();if(!d||!syncIdle(id))return;
+    const v=r.headers.get("X-Updated-At");if(v){SYNC.VER[id]=v;SYNC.BASE[id]=JSON.stringify(d);}syncNotify(id,d);
+  }catch(e){}
+}
+const putTeam=(id,data)=>fetch(API_BASE+"?id="+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,data,base:SYNC.VER[id]||null,tokens:getTokens(id),owner:getOwner(id)||undefined})});
+// After a successful save: remember the version, keep the owner key of a brand-new team, react to reverts
+async function syncAccepted(id,res,doc){
+  const j=await res.json().catch(()=>({}));
+  if(j&&j.owner)setOwner(id,j.owner);
+  if(j&&j.v){SYNC.VER[id]=j.v;SYNC.BASE[id]=JSON.stringify(doc);}
+  if(j&&j.reverted&&j.reverted.length)syncReload(id,true);
 }
 async function syncFlush(id){
   if(SYNC.INFLIGHT[id])return;
   while(SYNC.PENDING[id]){
     const doc=SYNC.PENDING[id];delete SYNC.PENDING[id];
     SYNC.INFLIGHT[id]=true;
+    let retry=false;
     try{
-      const proof={tokens:getTokens(id),owner:getOwner(id)||undefined};
-      let res=await fetch(API_BASE+"?id="+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,data:doc,base:SYNC.VER[id]||null,...proof})});
+      let res=await putTeam(id,doc);
       if(res.status===409){
+        // Someone else saved in between: 3-way merge their version with ours and save again
         const cur=await res.json();
         const base=SYNC.BASE[id]?JSON.parse(SYNC.BASE[id]):null;
-        // Newer local edits queued meanwhile are merged on top of this one
-        const mineNow=SYNC.PENDING[id]||doc;delete SYNC.PENDING[id];
-        const merged=mergeTeam(base,mineNow,cur.data);
+        const mine=SYNC.PENDING[id]||doc;delete SYNC.PENDING[id];
+        const merged=mergeTeam(base,mine,cur.data);
         SYNC.VER[id]=cur.v;SYNC.BASE[id]=JSON.stringify(cur.data);
-        res=await fetch(API_BASE+"?id="+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,data:merged,base:cur.v,...proof})});
-        if(res.ok){const j=await res.json();SYNC.VER[id]=j.v||null;SYNC.BASE[id]=JSON.stringify(merged);if(j.reverted&&j.reverted.length)syncReload(id,true);}
-        else if(res.status===409){SYNC.PENDING[id]=merged;}
-        syncNotify(id,merged);
+        res=await putTeam(id,merged);
+        if(res.ok){
+          await syncAccepted(id,res,merged);
+          // Edits made while the retry was in flight are rebased onto the merged result, never over it
+          if(SYNC.PENDING[id]){SYNC.PENDING[id]=mergeTeam(mine,SYNC.PENDING[id],merged);syncNotify(id,SYNC.PENDING[id]);}
+          else syncNotify(id,merged);
+        }else{
+          SYNC.PENDING[id]=SYNC.PENDING[id]?mergeTeam(mine,SYNC.PENDING[id],merged):merged;
+          syncNotify(id,SYNC.PENDING[id]);
+          if(res.status!==409)retry=true;
+        }
       }else if(res.ok){
+        await syncAccepted(id,res,doc);
+      }else if(res.status===429||res.status>=500){
+        // Busy or rate-limited: keep the newest edit and try again
+        if(!SYNC.PENDING[id])SYNC.PENDING[id]=doc;retry=true;
+      }else{
         const j=await res.json().catch(()=>({}));
-        if(j&&j.v){SYNC.VER[id]=j.v;SYNC.BASE[id]=JSON.stringify(doc);}
-        if(j&&j.reverted&&j.reverted.length)syncReload(id,true);
+        window.dispatchEvent(new CustomEvent("tvp-save-error",{detail:j&&j.error||"Not saved"}));
       }
     }catch(e){
-      // Offline or server error: keep the newest edit queued and try again shortly
-      if(!SYNC.PENDING[id])SYNC.PENDING[id]=doc;
-      SYNC.INFLIGHT[id]=false;
-      setTimeout(()=>syncFlush(id),5000);
-      return;
+      // Offline: keep the newest edit queued
+      if(!SYNC.PENDING[id])SYNC.PENDING[id]=doc;retry=true;
     }
     SYNC.INFLIGHT[id]=false;
+    if(retry){setTimeout(()=>syncFlush(id),5000);return;}
   }
 }
 const db={
@@ -762,7 +798,7 @@ function withBusy(p){try{document.body.style.cursor="progress";}catch(e){}return
 
 // ─── Excel export (.xlsx) ────────────────────────────────────────
 function exportXLSX(team, t){
-  var yr = team.year || CY;
+  var yr = safeYear(team);
   var hols = new Set<string>(); team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){hols.add(h);}); });
   var name = fileBase(team.name)+"_"+yr+".xlsx";
   return withBusy((async function(){
@@ -806,7 +842,8 @@ function downloadICS(member, teamName) {
 
 // ─── PDF Report ──────────────────────────────────────────────────
 function generatePDFReport(team, t) {
-  var yr = team.year || CY;
+  team = reportSafe(team);
+  var yr = safeYear(team);
   var months = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
 
@@ -986,7 +1023,8 @@ function generatePDFReport(team, t) {
 }
 
 function generateApprovedPDF(team, t) {
-  var yr = team.year || CY;
+  team = reportSafe(team);
+  var yr = safeYear(team);
   var MO = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var moS = MO.map(function(m){return m.slice(0,3);});
   var DL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
@@ -1170,7 +1208,8 @@ function _fd2(dt,mo){return dt.getDate()+" "+mo[dt.getMonth()];}
 
 // ─── Print Report (opens formatted view in new window with print dialog) ──
 function printReport(team, t) {
-  var yr = team.year || CY;
+  team = reportSafe(team);
+  var yr = safeYear(team);
   var months = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
 
@@ -1342,6 +1381,7 @@ function getEmbedCode(teamId) {
 
 // ─── iCal Team Subscription Feed ─────────────────────────────────
 function generateTeamICS(team) {
+  team = reportSafe(team);
   const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TeamVacationPlanner//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",`X-WR-CALNAME:${team.name} Vacations`];
   team.members.forEach(m => {
     (m.days || []).sort().forEach(d => {
@@ -1355,7 +1395,7 @@ function generateTeamICS(team) {
   });
   // Also add team holidays
   const countries = new Set(); team.members.forEach(m => { if (m.country) countries.add(m.country); });
-  const yr = team.year || CY;
+  const yr = safeYear(team);
   countries.forEach(cc => {
     computeHolidays(cc, yr).forEach(h => {
       const p = pk(h);
@@ -1391,7 +1431,7 @@ function detectHolidayClashes(member, year) {
 
 // ─── Print View Component ────────────────────────────────────────
 function PrintView({ team, th, t }) {
-  const yr = team.year || CY;
+  const yr = safeYear(team);
   const holSets = {};
   team.members.forEach(m => { if (m.country) holSets[m.country] = new Set(computeHolidays(m.country, yr)); });
   const allHols = new Set();
@@ -1579,7 +1619,8 @@ function QRCode({ data, size = 160, th }) {
 
 // ─── CSV Export ──────────────────────────────────────────────────
 function exportCSV(team, t) {
-  const yr = team.year || CY;
+  team = reportSafe(team);
+  const yr = safeYear(team);
   let csv = "Name,Country,Start Date,End Date\n";
   team.members.forEach(m => {
     const co = m.country ? (EU_C.find(c => c.c === m.country)||{}).n || m.country : "";
@@ -1853,7 +1894,8 @@ function ChangeLogView({ team, th, t }) {
 
 // ─── XLSX Export (rich SpreadsheetML with calendar grid, timeline, stats) ────
 function exportXLSLegacy(team, t) {
-  var yr = team.year || CY;
+  team = reportSafe(team);
+  var yr = safeYear(team);
   var months = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
   var mColors = ["#3B82F6","#EC4899","#10B981","#F59E0B","#6366F1","#F43F5E","#14B8A6","#F97316","#A855F7","#06B6D4","#EF4444","#84CC16","#F472B6","#0EA5E9","#FBBF24","#818CF8","#34D399","#F87171","#8B5CF6","#2DD4BF","#EAB308","#D946EF","#22D3EE","#FB7185","#4ADE80"];
@@ -2020,7 +2062,8 @@ function exportXLSLegacy(team, t) {
 
 // ─── TSV Export for Google Sheets IMPORTDATA ─────────────────────
 function generateTSV(team, t) {
-  const yr = team.year || CY;
+  team = reportSafe(team);
+  const yr = safeYear(team);
   let tsv = "Name\tCountry\tStart\tEnd\tDays\n";
   team.members.forEach(m => {
     const co = m.country ? (EU_C.find(c => c.c === m.country)||{}).n || "" : "";
@@ -3677,7 +3720,13 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   // Undo steps belong to the year they were made in: start clean when the year changes
   useEffect(()=>{historyRef.current=[];redoRef.current=[];},[team.year]);
 
-  useEffect(()=>{const h=()=>flash(X("reverted"));window.addEventListener("tvp-reverted",h);return()=>window.removeEventListener("tvp-reverted",h);},[]);
+  useEffect(()=>{
+    // Server undid a change to a PIN-protected member (e.g. the 12-hour PIN session ran out): ask for the PIN again
+    const h=()=>{flash(X("reverted"));setUnlockedId(null);};
+    const e=ev=>flash(String((ev&&ev.detail)||"Not saved"));
+    window.addEventListener("tvp-reverted",h);window.addEventListener("tvp-save-error",e);
+    return()=>{window.removeEventListener("tvp-reverted",h);window.removeEventListener("tvp-save-error",e);};
+  },[]);
   // Keyboard shortcuts for undo/redo
   useEffect(()=>{const h=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==="z"){e.preventDefault();if(e.shiftKey)redo();else undo();}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[team]);
 
@@ -4293,8 +4342,8 @@ export default function App(){
   const cL=l=>{setLang(l);db.sv("drift-lang",l);};const cT=t=>{setTheme(t);db.sv("drift-theme",t);};
 
   const create=(name,year,ww)=>{const nt={id:gid(),name,year,members:[],createdAt:new Date().toISOString(),locked:false,w7:ww==="7"};setTeam(nt);setScreen("ws");window.location.hash=`team=${nt.id}`;const u=[...myTeams,{id:nt.id,name,year,mc:0}];setMyTeams(u);db.sv(`team:${nt.id}`,nt,true);db.sv("my-teams",u);
-    // The creator becomes the team owner (can reset PINs, delete the team)
-    (async()=>{await waitIdle(nt.id);const r=await teamAuth({op:"claim",id:nt.id});if(r.ok&&r.owner){setOwner(nt.id,r.owner);syncReload(nt.id,false);}})();};
+    // The creator becomes the team owner: the server returns the owner key with the first save (syncAccepted)
+    (async()=>{await waitIdle(nt.id);syncReload(nt.id,false);})();};
 
   const join=async(code,onErr)=>{let id=code;const m=code.match(/team=([a-z0-9]+)/i);if(m)id=m[1];id=id.replace(/[^a-z0-9]/gi,"");const ld=await db.ld(`team:${id}`,true);if(ld){setTeam(ld);setScreen("ws");window.location.hash=`team=${id}`;if(!myTeams.find(x=>x.id===id)){const u=[...myTeams,{id,name:ld.name,year:ld.year,mc:ld.members.length}];setMyTeams(u);db.sv("my-teams",u);}}else onErr(t.nf);};
 
@@ -4313,15 +4362,20 @@ export default function App(){
   const openId=team&&team.id;
   useEffect(()=>{
     if(!openId)return;
+    if(/view=(badge|json|print|tsv)/i.test(linkParams()))return; // widgets reload themselves every 30 min
     let busy=false;
     const refresh=async()=>{
       if(busy||document.visibilityState!=="visible"||!syncIdle(openId))return;
       busy=true;
       try{const fresh=await db.ld(`team:${openId}`,true);if(fresh&&syncIdle(openId))setTeamRaw(cur=>cur&&cur.id===openId&&JSON.stringify(cur)!==JSON.stringify(fresh)?fresh:cur);}finally{busy=false;}
     };
-    const iv=setInterval(refresh,90000);
+    // Background refresh only while someone is actually using the page (10 min idle → stop), so a
+    // forgotten tab or wall screen doesn't keep the database awake; focus/visibility still refresh
+    let lastInput=Date.now();const touch=()=>{lastInput=Date.now();};
+    ["pointerdown","keydown","wheel","touchstart"].forEach(ev=>window.addEventListener(ev,touch,{passive:true}));
+    const iv=setInterval(()=>{if(Date.now()-lastInput<10*60*1000)refresh();},90000);
     document.addEventListener("visibilitychange",refresh);window.addEventListener("focus",refresh);
-    return()=>{clearInterval(iv);document.removeEventListener("visibilitychange",refresh);window.removeEventListener("focus",refresh);};
+    return()=>{clearInterval(iv);["pointerdown","keydown","wheel","touchstart"].forEach(ev=>window.removeEventListener(ev,touch));document.removeEventListener("visibilitychange",refresh);window.removeEventListener("focus",refresh);};
   },[openId]);
 
   const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);try{localStorage.removeItem("team:"+id);}catch(e){}};
@@ -4371,5 +4425,5 @@ export default function App(){
     return <ErrorBoundary><WS team={tv} rawTeam={team} onYear={changeYear} onUpdate={update} onGoHome={goHome} onDeleteForever={deleteForever} th={thv} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
   }
   // "Remove" on the front page only takes the team off this browser's list; the team stays for everyone else
-  return <ErrorBoundary><Link href="/admin" prefetch={false} aria-label="Admin sign-in" style={{position:"fixed",right:6,bottom:4,zIndex:5,fontSize:10,fontFamily:F,color:th.t3,opacity:.28,textDecoration:"none",padding:"2px 4px"}}>admin</Link><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
+  return <ErrorBoundary><Link href="/admin" prefetch={false} rel="nofollow" aria-label="Admin sign-in" style={{position:"fixed",right:6,bottom:4,zIndex:5,fontSize:10,fontFamily:F,color:th.t3,opacity:.28,textDecoration:"none",padding:"2px 4px"}}>admin</Link><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
 }

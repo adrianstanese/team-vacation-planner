@@ -1,21 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://vacationplanner.team/</loc>
-    <lastmod>2026-04-14</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="en" href="https://vacationplanner.team/" />
-    <xhtml:link rel="alternate" hreflang="fr" href="https://vacationplanner.team/?lang=fr" />
-    <xhtml:link rel="alternate" hreflang="de" href="https://vacationplanner.team/?lang=de" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://vacationplanner.team/?lang=es" />
-    <xhtml:link rel="alternate" hreflang="pt" href="https://vacationplanner.team/?lang=pt" />
-    <xhtml:link rel="alternate" hreflang="ro" href="https://vacationplanner.team/?lang=ro" />
-    <xhtml:link rel="alternate" hreflang="hu" href="https://vacationplanner.team/?lang=hu" />
-    <xhtml:link rel="alternate" hreflang="sv" href="https://vacationplanner.team/?lang=sv" />
-    <xhtml:link rel="alternate" hreflang="it" href="https://vacationplanner.team/?lang=it" />
-    <xhtml:link rel="alternate" hreflang="bg" href="https://vacationplanner.team/?lang=bg" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://vacationplanner.team/" />
+    <loc>https://www.vacationplanner.team/</loc>
+    <lastmod>2026-11-11</lastmod>
   </url>
 </urlset>

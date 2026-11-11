@@ -29,4 +29,4 @@ Team Vacation Planner helps teams coordinate their time off. Team members add th
 
 ## URL
 
-https://vacationplanner.team
+https://www.vacationplanner.team

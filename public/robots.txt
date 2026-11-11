@@ -2,26 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api/
+Allow: /api/ical
+Disallow: /*?_rsc=
+Disallow: /*&_rsc=
 
-User-agent: GPTBot
-Allow: /
-
-User-agent: ChatGPT-User
-Allow: /
-
-User-agent: Claude-Web
-Allow: /
-
-User-agent: Anthropic-AI
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-Sitemap: https://vacationplanner.team/sitemap.xml
+Sitemap: https://www.vacationplanner.team/sitemap.xml

@@ -6,7 +6,7 @@ import { Plus_Jakarta_Sans, Figtree } from "next/font/google";
 const display = Plus_Jakarta_Sans({ subsets: ["latin", "latin-ext"], weight: ["700", "800"], variable: "--font-display", display: "swap" });
 const body = Figtree({ subsets: ["latin", "latin-ext"], weight: ["400", "600", "700", "800"], variable: "--font-body", display: "swap" });
 
-const SITE_URL = "https://vacationplanner.team";
+const SITE_URL = "https://www.vacationplanner.team";
 const SITE_NAME = "Team Vacation Planner";
 const DESCRIPTION = "Free team vacation planner for teams up to 50. Plan vacations, see who's away, avoid overlaps. 55 countries, regional holidays, public holidays 2026–2035, heatmap, timeline, coverage dashboard. No login required.";
 const OG_IMAGE = `${SITE_URL}/og-image.png`;
@@ -58,12 +58,6 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: SITE_URL,
-    languages: {
-      en: SITE_URL, fr: `${SITE_URL}?lang=fr`, de: `${SITE_URL}?lang=de`,
-      es: `${SITE_URL}?lang=es`, pt: `${SITE_URL}?lang=pt`, ro: `${SITE_URL}?lang=ro`,
-      hu: `${SITE_URL}?lang=hu`, sv: `${SITE_URL}?lang=sv`, it: `${SITE_URL}?lang=it`,
-      bg: `${SITE_URL}?lang=bg`,
-    },
   },
   category: "Productivity",
 };
@@ -78,7 +72,7 @@ const jsonLd = {
       softwareVersion: "6.0",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       featureList: [
-        "Team vacation calendar for up to 25 members",
+        "Team vacation calendar for up to 50 members",
         "Public holidays for 55 countries (2026–2035)",
         "Regional holidays for Spain, Germany, Switzerland, Australia, Canada",
         "PTO balance tracker with progress bar",
@@ -87,7 +81,7 @@ const jsonLd = {
         "iCal subscribe URL for Google Calendar and Outlook",
         "Heatmap, Timeline, Coverage Dashboard views",
         "ICS, PDF, CSV, Excel, TSV export",
-        "11 languages, 3 themes, Apple Liquid Glass design",
+        "11 languages, 3 themes, frosted-glass design",
         "No login or account required",
       ],
     },
@@ -99,9 +93,9 @@ const jsonLd = {
         { "@type": "Question", name: "How many countries are supported?",
           acceptedAnswer: { "@type": "Answer", text: "55 countries across Europe, Middle East, South America, and Africa. Regional holidays for Spain (17 communities), Germany (16 states), Switzerland (6 cantons), Australia (6 states), and Canada (4 provinces)." }},
         { "@type": "Question", name: "Do I need to create an account?",
-          acceptedAnswer: { "@type": "Answer", text: "No. Zero accounts, zero passwords. Create a team, get a shareable link, anyone with that link can view and edit." }},
+          acceptedAnswer: { "@type": "Answer", text: "No. There are no accounts or passwords. Create a team and share its link; anyone with the link can view the team, and members can protect their own entries with a PIN." }},
         { "@type": "Question", name: "Is it really free?",
-          acceptedAnswer: { "@type": "Answer", text: "Yes, completely free with no premium tiers, no ads, and no hidden costs." }},
+          acceptedAnswer: { "@type": "Answer", text: "Yes. It is free, with no premium tiers, no ad networks and no tracking. You may see a link to Workoșenie, another tool by the same maker." }},
       ],
     },
     { "@type": "Organization", "@id": `${SITE_URL}/#org`, name: SITE_NAME, url: SITE_URL },

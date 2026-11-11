@@ -9,7 +9,7 @@ import { getSql, type Sql } from "@/lib/db";
 export const COOKIE = "tvp_admin";
 const SESSION_HOURS = 8;
 const MAX_IP_FAILS = 5;        // per IP per 15 minutes
-const MAX_GLOBAL_FAILS = 25;   // all IPs per hour: protects a short password against distributed guessing
+const MAX_GLOBAL_FAILS = 200;  // all IPs per hour: caps distributed guessing without letting strangers lock the admin out cheaply
 
 export function adminConfigured(): boolean {
   return !!(process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD_HASH);
@@ -70,7 +70,8 @@ export function validSession(value: string | undefined): boolean {
 }
 
 export function clientIp(req: NextRequest): string {
-  return (req.headers.get("x-real-ip") || req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown").trim().slice(0, 64);
+  // Vercel's edge sets x-real-ip and overwrites any value a client sends; nothing else is trusted
+  return (req.headers.get("x-real-ip") || "unknown").trim().slice(0, 64);
 }
 
 // Blocks cross-site requests: state-changing admin calls must come from this site's own pages
@@ -90,23 +91,45 @@ export async function adminDb(): Promise<Sql> {
   ready ||= (async () => {
     await sql`CREATE TABLE IF NOT EXISTS admin_attempts (ip text NOT NULL, at timestamptz NOT NULL DEFAULT now())`;
     await sql`CREATE TABLE IF NOT EXISTS admin_log (id bigserial PRIMARY KEY, at timestamptz NOT NULL DEFAULT now(), action text NOT NULL, team_id text, detail text)`;
-    await sql`CREATE TABLE IF NOT EXISTS teams_trash (id text PRIMARY KEY, data jsonb NOT NULL, updated_at timestamptz, expires_at timestamptz, deleted_at timestamptz NOT NULL DEFAULT now())`;
+    await sql`CREATE TABLE IF NOT EXISTS team_trash (tid bigserial PRIMARY KEY, id text NOT NULL, data jsonb NOT NULL, updated_at timestamptz, expires_at timestamptz, deleted_at timestamptz NOT NULL DEFAULT now())`;
+    await sql`CREATE INDEX IF NOT EXISTS team_trash_id ON team_trash (id)`;
+    await sql`CREATE TABLE IF NOT EXISTS team_creates (ip text NOT NULL, at timestamptz NOT NULL DEFAULT now())`;
   })().catch(e => { ready = null; throw e; });
   await ready;
   return sql;
 }
 
+// Retention (privacy notice): expired teams → trash; trash erased after 30 days; admin log kept 12 months;
+// login attempts 1 day. Runs at most once an hour per server instance, inside normal requests (no cron).
+let lastPurge = 0;
+export async function purgeOld(sql: Sql) {
+  if (Date.now() - lastPurge < 3600_000) return;
+  lastPurge = Date.now();
+  try {
+    await sql`CREATE TABLE IF NOT EXISTS team_trash (tid bigserial PRIMARY KEY, id text NOT NULL, data jsonb NOT NULL, updated_at timestamptz, expires_at timestamptz, deleted_at timestamptz NOT NULL DEFAULT now())`;
+    await sql`CREATE INDEX IF NOT EXISTS team_trash_id ON team_trash (id)`;
+    await sql`CREATE TABLE IF NOT EXISTS team_creates (ip text NOT NULL, at timestamptz NOT NULL DEFAULT now())`;
+    await sql`WITH gone AS (DELETE FROM teams WHERE expires_at < now() RETURNING id, data, updated_at, expires_at)
+      INSERT INTO team_trash (id, data, updated_at, expires_at) SELECT id, data, updated_at, expires_at FROM gone`;
+    await sql`DELETE FROM team_trash WHERE deleted_at < now() - interval '30 days'`;
+    await sql`DELETE FROM team_creates WHERE at < now() - interval '1 day'`;
+    await sql`CREATE TABLE IF NOT EXISTS admin_log (id bigserial PRIMARY KEY, at timestamptz NOT NULL DEFAULT now(), action text NOT NULL, team_id text, detail text)`;
+    await sql`DELETE FROM admin_log WHERE at < now() - interval '12 months'`;
+    await sql`CREATE TABLE IF NOT EXISTS admin_attempts (ip text NOT NULL, at timestamptz NOT NULL DEFAULT now())`;
+    await sql`DELETE FROM admin_attempts WHERE at < now() - interval '1 day'`;
+    await sql`CREATE TABLE IF NOT EXISTS pin_attempts (team text NOT NULL, member text NOT NULL, at timestamptz NOT NULL DEFAULT now())`;
+    await sql`DELETE FROM pin_attempts WHERE at < now() - interval '1 day'`;
+  } catch (e) { lastPurge = 0; console.error("purge failed", e instanceof Error ? e.message : "error"); }
+}
+
+// Records the attempt FIRST, then counts it (race-safe: parallel guesses all count). Cleared on success.
 export async function tooManyAttempts(sql: Sql, ip: string): Promise<boolean> {
+  await sql`INSERT INTO admin_attempts (ip) VALUES (${ip})`;
   const [a] = await sql`SELECT
       COUNT(*) FILTER (WHERE ip = ${ip} AND at > now() - interval '15 minutes')::int AS mine,
       COUNT(*) FILTER (WHERE at > now() - interval '1 hour')::int AS everyone
     FROM admin_attempts WHERE at > now() - interval '1 hour'`;
-  return Number(a?.mine || 0) >= MAX_IP_FAILS || Number(a?.everyone || 0) >= MAX_GLOBAL_FAILS;
-}
-
-export async function recordFailure(sql: Sql, ip: string) {
-  await sql`INSERT INTO admin_attempts (ip) VALUES (${ip})`;
-  await sql`DELETE FROM admin_attempts WHERE at < now() - interval '1 day'`;
+  return Number(a?.mine || 0) > MAX_IP_FAILS || Number(a?.everyone || 0) > MAX_GLOBAL_FAILS;
 }
 
 export async function clearFailures(sql: Sql, ip: string) {

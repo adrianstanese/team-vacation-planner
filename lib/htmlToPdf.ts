@@ -9,13 +9,15 @@ export async function downloadHtmlAsPdf(html: string, filename: string): Promise
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
+  // No scripts may ever run inside the report frame (html2canvas only needs to read its DOM)
+  frame.setAttribute("sandbox", "allow-same-origin");
   frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1123px;height:794px;border:0;";
   document.body.appendChild(frame);
   try {
     const doc = frame.contentDocument!;
     doc.open(); doc.write(html); doc.close();
     // Reports may auto-print; neutralise that inside the hidden frame
-    try { (frame.contentWindow as Window).print = () => {}; } catch { /* ignore */ }
+
     await new Promise(r => setTimeout(r, 150));
     try { await (doc as Document & { fonts?: FontFaceSet }).fonts?.ready; } catch { /* ignore */ }
     const body = doc.body;

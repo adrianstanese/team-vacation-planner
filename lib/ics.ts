@@ -7,7 +7,7 @@ export type TeamDoc = { id: string; name?: string; year?: number; approver?: str
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function esc(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r\n?|\n/g, "\\n");
 }
 
 // Fold lines longer than 75 octets (RFC 5545 §3.1)
@@ -54,7 +54,7 @@ function isApproved(team: TeamDoc, m: Member, year: number): boolean {
 export function buildTeamFeed(team: TeamDoc, opts: { memberId?: string; origin: string; now?: Date }): string {
   const stamp = (opts.now || new Date()).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const name = team.name || "Team";
-  const members = (team.members || []).filter(m => !opts.memberId || m.id === opts.memberId);
+  const members = (Array.isArray(team.members) ? team.members : []).filter(m => m && typeof m === "object" && (!opts.memberId || m.id === opts.memberId));
   const lines = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Team Vacation Planner//vacationplanner.team//EN",
     "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
