@@ -24,6 +24,7 @@ const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr
 const TimeTravel=nextDynamic(()=>import("@/components/v3/TimeTravel"),{ssr:false});
 
 const Wrapped=nextDynamic(()=>import("@/components/v3/Wrapped"),{ssr:false});
+const ApprovalsView=nextDynamic(()=>import("@/components/v3/ApprovalsView"),{ssr:false});
 
 // Public holidays of a member for a year, cached by country + region
 const HOL_CACHE=new Map();
@@ -1408,6 +1409,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   // Export code loads ahead of the first click, so print windows open straight from the click (popup blockers)
   useEffect(()=>{const t0=setTimeout(()=>{import("./reports").catch(()=>{});},1200);return()=>clearTimeout(t0);},[]);
   const pendN=team.approver?pendingApprovals(team,yr,threshold).length:0;
+  const canApprove=!!getOwner(team.id)||(!!unlockedId&&(team.approver===unlockedId||!!(team.members.find(x=>x.id===unlockedId)||{}).isApprover));
+  const revokeApproval=id=>{const cur=teamRef.current;const m=cur.members.find(x=>x.id===id);updateWithHistory({...cur,members:cur.members.map(x=>x.id===id?{...x,approved:false}:x),log:addLogEntry(cur,((m&&m.name)||"Member")+" approval revoked")});};
+  const turnOnApprovals=mid=>{const cur=teamRef.current;updateWithHistory({...cur,approver:mid,members:cur.members.map(x=>x.id===mid?{...x,isApprover:true,approved:true}:x),log:addLogEntry(cur,"Approvals turned on")});};
   const wrOk=team.members.reduce((n,m)=>n+(m.days||[]).filter(k=>typeof k==="string"&&k.startsWith(yr+"-")).length,0)>=5;
   const approveIds=ids=>{if(!ids.length)return;const cur=teamRef.current;const set=new Set(ids);const names=cur.members.filter(m=>set.has(m.id)).map(m=>m.name||"Member");
     updateWithHistory({...cur,members:cur.members.map(mm=>set.has(mm.id)?{...mm,approved:true}:mm),log:addLogEntry(cur,names.join(", ")+" approved")});flash(V("approvedToast",{n:ids.length}));};
@@ -1424,23 +1428,29 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     let when=at;try{when=new Date(at).toLocaleString(dateLocale(),{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});}catch(e){}
     updateWithHistory({...cur,members,log:addLogEntry(cur,"Restored "+yr+" days to the version from "+when)});flash(V("ttRestored",{d:when}));};
 
+  // Creator = the first member, added from the browser that created the team (it holds the owner key)
+  const firstIsCreator=team.members.length===0&&!team.creatorId&&!!getOwner(team.id);
   const startAdd=()=>{if(locked){flash(t.locked);return;}if(team.members.length>=50){flash(t.mx);return;}setAdding(true);setNn("");setNc(null);setNr(null);};
   const confirmAdd=async()=>{
     const n=nn.trim();
     if(!n||!nc)return;
-    if(nPin.length!==6||!/^\d{6}$/.test(nPin)){flash(X("pin6"));return;}
+    // The first person the team owner adds is the creator: approver automatically, and a PIN is required.
+    // Everyone else may be added with or without a PIN. Teams that already have members are not affected.
+    const isCreator=firstIsCreator;
+    if((isCreator||nPin.length>0)&&!/^\d{6}$/.test(nPin)){flash(X("pin6"));return;}
     const pinForNew=nPin;
     const teamHasApprover=!!team.approver||team.members.some(x=>x.isApprover);
-    const becomeApprover=nIsApprover&&!teamHasApprover;
-    const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:!team.approver,isApprover:becomeApprover};
+    const becomeApprover=isCreator?!teamHasApprover:(nIsApprover&&!teamHasApprover);
+    const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:becomeApprover||!team.approver,isApprover:becomeApprover};
     const co=EU_C.find(c=>c.c===nc);
-    const updTeam={...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)};
+    const updTeam={...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`+(isCreator?" as creator and approver":""))};
     if(becomeApprover&&!team.approver)updTeam.approver=nm.id;
+    if(isCreator)updTeam.creatorId=nm.id;
     updateWithHistory(updTeam);
     setAId(nm.id);
     setUnlockedId(nm.id);
     // The PIN is hashed and stored by the server once the new member is saved
-    (async()=>{await waitIdle(team.id);const r=await teamAuth({op:"set",id:team.id,memberId:nm.id,pin:pinForNew});if(r.ok&&r.token){setToken(team.id,nm.id,r.token);syncReload(team.id,false);}else flash(r.error||"PIN not saved");})();
+    if(pinForNew)(async()=>{await waitIdle(team.id);const r=await teamAuth({op:"set",id:team.id,memberId:nm.id,pin:pinForNew});if(r.ok&&r.token){setToken(team.id,nm.id,r.token);syncReload(team.id,false);}else flash(r.error||"PIN not saved");})();
     setAdding(false);
     setNn("");setNc(null);setNr(null);
     setNPin("");setNIsApprover(false);
@@ -1558,7 +1568,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         {pinErr&&<div style={{color:"#EF4444",fontSize:11,fontWeight:600,marginTop:6,textAlign:"center",fontFamily:F}}>{X("pinWrong")}</div>}
         <div style={{display:"flex",gap:8,marginTop:16}}>
           <button onClick={tryUnlock} disabled={pinInput.length!==6} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:pinInput.length===6?th.ac:th.t3,color:"#fff",fontSize:13,fontWeight:700,fontFamily:F,cursor:pinInput.length===6?"pointer":"not-allowed",opacity:pinInput.length===6?1:0.5}}>{X("unlock")}</button>
-          {getOwner(team.id)&&<button onClick={async()=>{const who=(team.members.find(x=>x.id===pinPrompt)||{}).name||"";if(!window.confirm(X("ownerResetQ",{n:who})))return;await waitIdle(team.id);const r=await teamAuth({op:"reset",id:team.id,memberId:pinPrompt,owner:getOwner(team.id)});if(r.ok){flash(X("ownerResetDone",{n:who}));syncReload(team.id,false);setPinPrompt(null);setPinInput("");}else flash(r.error||"Not reset");}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid #FECACA",background:"transparent",color:"#B91C1C",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer"}}>{X("ownerReset")}</button>}
+          {getOwner(team.id)&&pinPrompt!==team.creatorId&&<button onClick={async()=>{const who=(team.members.find(x=>x.id===pinPrompt)||{}).name||"";if(!window.confirm(X("ownerResetQ",{n:who})))return;await waitIdle(team.id);const r=await teamAuth({op:"reset",id:team.id,memberId:pinPrompt,owner:getOwner(team.id)});if(r.ok){flash(X("ownerResetDone",{n:who}));syncReload(team.id,false);setPinPrompt(null);setPinInput("");}else flash(r.error||"Not reset");}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid #FECACA",background:"transparent",color:"#B91C1C",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer"}}>{X("ownerReset")}</button>}
           <button onClick={()=>{setPinPrompt(null);setPinInput("");setPinErr(false);}} style={{padding:"10px 16px",borderRadius:10,border:"1px solid "+th.bd,background:"transparent",color:th.t2,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer"}}>{X("cancel")}</button>
         </div>
       </div>
@@ -1617,7 +1627,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         <LangDrop lang={lang} set={setLang} th={th}/>
         <button onClick={()=>setSettings(!settings)} aria-label="Settings" aria-expanded={settings} title="Settings" style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
         {!mob&&<div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 8px",background:"rgba(139,92,246,.1)",borderRadius:10}}><span style={{width:6,height:6,borderRadius:"50%",background:"#22C55E",animation:"pulse 2s 3"}}></span><span style={{fontSize:9,fontWeight:600,color:"#6D28D9",fontFamily:FM}}>{t.live||"Live"}</span></div>}
-        {!!team.approver&&<button type="button" className="v3-inbox-btn" onClick={()=>setShowInbox(true)} aria-label={V("inboxBadge",{n:pendN})} title={V("inbox")} style={{color:th.ac,background:th.al,borderColor:th.gbd||th.bd}}>✓{!mob&&<span>{V("inbox")}</span>}{pendN>0&&<b>{pendN}</b>}</button>}
+        {false&&<button type="button" className="v3-inbox-btn" onClick={()=>setShowInbox(true)} aria-label={V("inboxBadge",{n:pendN})} title={V("inbox")} style={{color:th.ac,background:th.al,borderColor:th.gbd||th.bd}}>✓{!mob&&<span>{V("inbox")}</span>}{pendN>0&&<b>{pendN}</b>}</button>}
         <Btn th={th} v="secondary" sz="sm" icon="share" onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
         <CoffeeButton lang={lang} iconOnly={mob}/>
 
@@ -1659,6 +1669,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     {/* View tabs */}
     {!mob&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"6px 14px",display:"flex",gap:3,overflowX:"auto",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
       {views.map(v=> <button key={v.k} onClick={()=>{if(v.k===view)return;withTransition(()=>flushSync(()=>{setView(v.k);setVk(function(p){return p+1;});}));}} style={{padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?(v.k==="trips"?"1.5px solid #D97706":`1.5px solid ${th.ac}`):`1px solid transparent`,background:v.k===view?(v.k==="trips"?"#FAEEDA":th.al):"transparent",color:v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3}/>{v.l}</button>)}
+      {canApprove&&<button type="button" className="v3-ap-tab" aria-pressed={view==="approvals"} aria-label={V("inboxBadge",{n:pendN})} onClick={()=>{if(view==="approvals")return;withTransition(()=>flushSync(()=>{setView("approvals");setVk(function(p){return p+1;});}));}}>✓ {V("inbox")}{pendN>0&&<b>{pendN}</b>}</button>}
     </div>}
 
     <div style={{display:"flex",flex:1,overflow:"clip"}}>
@@ -1682,9 +1693,10 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
               <option value="">{defaultRegionName(nc)?V("regDefault",{r:defaultRegionName(nc)}):(t.natOnly||"National only")}</option>
               {REGIONS[nc].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
             </select>}
-            <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={nPin} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setNPin(v);}} placeholder="6-digit PIN (required)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${nPin.length===6?"#10B981":th.bd}`,fontSize:13,fontFamily:F,color:th.tx,background:th.bg,outline:"none",letterSpacing:6,textAlign:"center"}}/>
-            {!team.approver&&!team.members.some(x=>x.isApprover)&&<label style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",cursor:"pointer",fontSize:11,fontWeight:600,color:th.t2}}><input type="checkbox" checked={nIsApprover} onChange={e=>setNIsApprover(e.target.checked)} style={{width:14,height:14,accentColor:th.ac,cursor:"pointer"}}/>Approver (can manage all members)</label>}
-            <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc||nPin.length!==6} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>{setAdding(false);setNn("");setNc(null);setNr(null);setNPin("");setNIsApprover(false);}}>{t.can}</Btn></div>
+            <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={nPin} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setNPin(v);}} placeholder={firstIsCreator?V("pinReq"):V("pinOpt")} aria-label={firstIsCreator?V("pinReq"):V("pinOpt")} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${nPin.length===6?"#10B981":th.bd}`,fontSize:13,fontFamily:F,color:th.tx,background:th.bg,outline:"none",letterSpacing:6,textAlign:"center"}}/>
+            {firstIsCreator&&<div style={{fontSize:11,fontWeight:600,color:th.ac,background:th.al,borderRadius:8,padding:"6px 10px",lineHeight:1.35}}>👑 {V("creatorHint")}</div>}
+            {!firstIsCreator&&!team.approver&&!team.members.some(x=>x.isApprover)&&<label style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",cursor:"pointer",fontSize:11,fontWeight:600,color:th.t2}}><input type="checkbox" checked={nIsApprover} onChange={e=>setNIsApprover(e.target.checked)} style={{width:14,height:14,accentColor:th.ac,cursor:"pointer"}}/>Approver (can manage all members)</label>}
+            <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc||(firstIsCreator?nPin.length!==6:(nPin.length>0&&nPin.length!==6))} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>{setAdding(false);setNn("");setNc(null);setNr(null);setNPin("");setNIsApprover(false);}}>{t.can}</Btn></div>
           </div>}
           {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{
               if(m.id===aId){setAId(null);return;}
@@ -1809,6 +1821,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
               </div>;})}</div>;
           })()}
         </Fragment>}
+        {view==="approvals"&&canApprove&&<ApprovalsView team={team} yr={yr} threshold={threshold} th={th} colorOf={colorOf} onApprove={approveIds} onRequest={requestChanges} onRevoke={revokeApproval} onOneByOne={()=>setShowInbox(true)} onTurnOn={getOwner(team.id)?turnOnApprovals:null}/>}
         {view==="trips"&&<TripsView team={team} onUpdate={updateWithHistory} th={th} t={t} yr={yr} holSet={holSet}/>}
         {view==="analytics"&&<AnalyticsDashboard team={team} yr={yr} th={th} t={t}/>}
         {showInbox&&<ApprovalInbox open onClose={()=>setShowInbox(false)} team={team} yr={yr} threshold={threshold} th={th} colorOf={colorOf} onApprove={approveIds} onRequest={requestChanges}/>}
@@ -1827,6 +1840,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         <Ic n={v.i} s={18} c={v.k===view?th.ac:th.t3}/>
         <span style={{fontSize:9,fontWeight:v.k===view?700:500,color:v.k===view?th.ac:th.t3,fontFamily:F}}>{v.l}</span>
       </button>;})}
+      {canApprove&&<button type="button" onClick={function(){setView("approvals");}} aria-label={V("inboxBadge",{n:pendN})} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",color:view==="approvals"?"#15803D":th.t3,fontSize:9,fontWeight:800,fontFamily:F,position:"relative"}}><span style={{fontSize:15,lineHeight:1}}>✓</span>{V("inbox")}{pendN>0&&<span style={{position:"absolute",top:0,right:2,minWidth:15,height:15,borderRadius:99,background:"#DC2626",color:"#fff",fontSize:9,display:"grid",placeItems:"center",padding:"0 3px"}}>{pendN}</span>}</button>}
     </div>}
 
     

@@ -16,6 +16,7 @@ export function cleanTeam(input: Obj): Obj {
   if ("logo" in t && !(typeof t.logo === "string" && t.logo.length < 60000 && LOGO.test(t.logo))) delete t.logo;
   if ("accentColor" in t && !(typeof t.accentColor === "string" && /^#[0-9A-Fa-f]{6}$/.test(t.accentColor))) delete t.accentColor;
   if ("carryMax" in t) { const c = int(t.carryMax, 0, 60); if (!c) delete t.carryMax; else t.carryMax = c; }
+  if ("creatorId" in t && !(typeof t.creatorId === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(t.creatorId))) delete t.creatorId;
   if ("threshold" in t) { const c = int(t.threshold, 1, 50); if (c === undefined) delete t.threshold; else t.threshold = c; }
   if (Array.isArray(t.members)) {
     t.members = t.members.filter(isObj).slice(0, 50).map(m0 => {

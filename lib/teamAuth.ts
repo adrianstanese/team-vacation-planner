@@ -158,7 +158,10 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   const approverIds = storedMembers.filter(m => m.pinHash && (m.isApprover || m.id === stored?.approver)).map(m => m.id);
   let approverOk: boolean | null = null;
   const approver = async () => { if (approverOk === null) { approverOk = false; for (const a of approverIds) if (await self(a)) { approverOk = true; break; } } return approverOk; };
-  const full = async (id: string) => owner || await self(id);
+  // The team creator (teams created from Nov 2026 on; older teams have none): only the creator's own PIN session may
+  // change, remove or re-PIN the creator. The owner key is not enough, so co-owners cannot touch the creator.
+  const creatorId = typeof stored?.creatorId === "string" ? stored.creatorId : null;
+  const full = async (id: string) => (id === creatorId ? await self(id) : owner || await self(id));
   const reverted = new Set<string>();
 
   // Team-level protected fields
@@ -170,6 +173,9 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   if (stored?.ownerHash && !owner) {
     for (const k of ["locked", "lockY"]) { if (k in stored) doc[k] = stored[k]; else delete doc[k]; }
   }
+  // creatorId: set once, by the owner, when the team's first member is added; never changed afterwards
+  if (creatorId) doc.creatorId = creatorId;
+  else if (!((!stored || (owner && storedMembers.length === 0)) && typeof incoming.creatorId === "string" && inById.has(incoming.creatorId))) delete doc.creatorId;
 
   const out: Member[] = [];
   for (const m of Array.isArray(incoming.members) ? incoming.members : []) {
@@ -196,6 +202,7 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
     }
   }
   if (Array.isArray(incoming.members) || stored?.members) doc.members = out;
+  if (doc.creatorId && !out.some(m => m.id === doc.creatorId)) delete doc.creatorId;
 
   // Trips of PIN-protected members follow the member's rights
   if (Array.isArray(incoming.trips) || Array.isArray(stored?.trips)) {

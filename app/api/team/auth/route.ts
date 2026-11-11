@@ -57,7 +57,9 @@ export async function POST(req: NextRequest) {
     if (op === "set") {
       const pin = String(b.pin || "");
       if (!/^\d{6}$/.test(pin)) return j({ error: "The PIN must be exactly 6 digits" }, 400);
-      if (m.pinHash && !validOwner(doc, b.owner) && !(await validMemberToken(sql, id, mid, String(m.pinHash), b.token))) return j({ error: "Enter the current PIN first" }, 403);
+      // The team creator's PIN can only be changed with the creator's own PIN session (not with the owner key)
+      const ownerMay = mid !== doc.creatorId && validOwner(doc, b.owner);
+      if (m.pinHash && !ownerMay && !(await validMemberToken(sql, id, mid, String(m.pinHash), b.token))) return j({ error: "Enter the current PIN first" }, 403);
       const hash = hashPin(pin);
       const next = { ...doc, members: members.map(x => x.id === mid ? { ...x, pinHash: hash } : x), log: log(`PIN set for ${name}`) };
       if (await save(next)) return j({ ok: true, token: await memberToken(sql, id, mid, hash) });
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
 
     if (op === "reset") {
       if (!validOwner(doc, b.owner)) return j({ error: "Only the team owner can reset PINs" }, 403);
+      if (mid === doc.creatorId) return j({ error: "The team creator's PIN can only be changed by the creator (or, if forgotten, by the site admin)" }, 403);
       if (!m.pinHash) return j({ ok: true });
       const next = { ...doc, members: members.map(x => { if (x.id !== mid) return x; const c = { ...x }; delete c.pinHash; return c; }), log: log(`PIN reset by the team owner for ${name}`) };
       if (await save(next)) { await pinCleared(sql, id, mid); return j({ ok: true }); }
