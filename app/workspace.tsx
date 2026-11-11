@@ -17,7 +17,7 @@ import { planImport } from "@/lib/importPlan";
 import { findBridges } from "@/lib/bridges";
 import { X, textLang, dateLocale } from "@/lib/extraText";
 // Loaded only when first opened (keeps the first page load small)
-import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy } from "./app";
+import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
 
 const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr:false});
 
@@ -168,7 +168,7 @@ function generateTeamICS(team) {
       const endDt = new Date(p.y, p.m, p.d + 1);
       const end = `${endDt.getFullYear()}${String(endDt.getMonth()+1).padStart(2,"0")}${String(endDt.getDate()).padStart(2,"0")}`;
       const co = EU_C.find(c => c.c === cc);
-      lines.push("BEGIN:VEVENT",`UID:hol-${cc}-${h}@tvp`,`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:🏛 ${holName(h)} (${(co&&co.n) || cc})`,`DESCRIPTION:Public holiday in ${(co&&co.n) || cc}`,"TRANSP:TRANSPARENT","END:VEVENT");
+      lines.push("BEGIN:VEVENT",`UID:hol-${cc}-${h}@tvp`,`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:🏛 ${holNameFor(cc,h)} (${(co&&co.n) || cc})`,`DESCRIPTION:Public holiday in ${(co&&co.n) || cc}`,"TRANSP:TRANSPARENT","END:VEVENT");
     });
   });
   lines.push("END:VCALENDAR");
@@ -189,7 +189,7 @@ function detectHolidayClashes(member, year) {
   const hols = new Set(computeHolidays(member.country, year));
   return member.days.filter(d => hols.has(d)).map(d => ({
     date: d,
-    name: holName(d),
+    name: holNameFor(member.country, d, member.region),
     country: (EU_C.find(c => c.c === member.country)||{}).n || member.country,
   }));
 }
@@ -257,7 +257,7 @@ function VisitCounter({ th }) {
   return <div style={{ marginTop: 32, padding: "16px 20px", background: th.gbg, borderRadius: G.rSm, border: `1px solid ${th.gbd}`, backdropFilter: G.blur, WebkitBackdropFilter: G.blur, boxShadow: th.sd }}>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 10 }}>
       <Ic n="globe" s={14} c={th.t3} />
-      <span style={{ fontSize: 11, fontWeight: 600, color: th.t3, textTransform: "uppercase", letterSpacing: 1 }}><AnimNum val={visits.total}/> visits</span>
+      <span style={{ fontSize: 11, fontWeight: 600, color: th.t3, textTransform: "uppercase", letterSpacing: 1 }}><AnimNum val={visits.total}/> {V("visitsLbl")}</span>
     </div>
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
       {sorted.map(([cc, count]) => <div key={cc} style={{
@@ -529,7 +529,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
             onMouseLeave={function(e){e.currentTarget.style.transform="";if(isHol&&holInfo){clearTimeout(cardTimer.current);cardTimer.current=setTimeout(function(){setCard(function(c){return c&&c.key===key&&!c.pinned?null:c;});},120);}}}
             onClick={function(e){if(!isHol||!holInfo||activeId)return;var el=e.currentTarget;setCard(function(c){if(c&&c.key===key)return null;var info=holInfo(key);return info.length?{key,info,rect:el.getBoundingClientRect(),pinned:true}:null;});}}
             aria-label={cellLabel}
-            title={isHol&&holInfo?undefined:isHol?holName(key):mh.length>0?mh.map(function(m){return m.name}).join(", "):""}
+            title={isHol&&holInfo?undefined:isHol?holNameAny(key):mh.length>0?mh.map(function(m){return m.name}).join(", "):""}
             style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:(we&&!w7)||!activeId?"default":"pointer",transition:"transform .12s",transform:day===popDay?"scale(1.15)":"",
               background:vacBg, backgroundImage:pendingStripe||"none", border:vacBorder, transition:"background .1s",
               opacity:past&&mh.length===0&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
@@ -588,10 +588,10 @@ function HeatmapView({team,th,t,holSet}) {
               } else if(isHol&&vacCount>0){
                 // Both holiday and vacation
                 bg="#C084FC";color="#fff";fw=700;
-                title=`${holName(key)} + ${vacCount} on vacation`;
+                title=`${holNameAny(key)} + ${vacCount}`;
               } else if(isHol){
                 bg="#93C5FD";color="#1E3A5F";fw=600;
-                title=holName(key);
+                title=holNameAny(key);
               } else if(vacCount>0){
                 bg=`rgba(220,38,38,${.15+intensity*.7})`;
                 color=intensity>.5?"#fff":"#991B1B";fw=700;
@@ -781,7 +781,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
       {m.country&&REGIONS[m.country]&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
         <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>{t.region||"Region"}</span>
         <select value={m.region||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onRegionChange(e.target.value||null);}} style={{flex:1,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:10,fontFamily:F,minWidth:0}}>
-          <option value="">{t.natOnly||"National only"}</option>
+          <option value="">{defaultRegionName(m.country)?V("regDefault",{r:defaultRegionName(m.country)}):(t.natOnly||"National only")}</option>
           {REGIONS[m.country].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
         </select>
       </div>}
@@ -952,11 +952,11 @@ function AnalyticsDashboard({team,yr,th,t}) {
 
   return <div className="tvp-fade" style={{maxWidth:800}}>
     <PTODonut team={team} th={th} t={t}/>
-    <h3 style={{fontSize:16,fontWeight:750,color:th.tx,marginBottom:14,fontFamily:F}}>Team Analytics {yr}</h3>
+    <h3 style={{fontSize:16,fontWeight:750,color:th.tx,marginBottom:14,fontFamily:F}}>{V("anTitle",{y:yr})}</h3>
 
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:20}}>
       {card(t.totalVacDays, totalDays, members.length + " " + (t.mbs||"members"))}
-      {card(t.overlapDays, overlapDays, "2+ " + (t.mbs||"members") + " out", "#EF4444")}
+      {card(t.overlapDays, overlapDays, V("anOut"), "#EF4444")}
       {card(t.peakMonth, (t.M||EN_MO)[topMoIdx], monthly[topMoIdx] + " " + (t.dys||"days"))}
       {card(t.avgDays, totalDays>0?Math.round(totalDays/members.length):0)}
     </div>
@@ -1679,7 +1679,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
             </div>
             <CountrySelect value={nc} onChange={function(v){setNc(v);setNr(null);}} th={th} t={t}/>
             {nc && REGIONS[nc] && <select value={nr||""} onChange={function(e){setNr(e.target.value||null);}} style={{width:"100%",padding:"10px 12px",borderRadius:G.rXs,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:14,fontFamily:F,marginTop:6}}>
-              <option value="">National only (no region)</option>
+              <option value="">{defaultRegionName(nc)?V("regDefault",{r:defaultRegionName(nc)}):(t.natOnly||"National only")}</option>
               {REGIONS[nc].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
             </select>}
             <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={nPin} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setNPin(v);}} placeholder="6-digit PIN (required)" style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${nPin.length===6?"#10B981":th.bd}`,fontSize:13,fontFamily:F,color:th.tx,background:th.bg,outline:"none",letterSpacing:6,textAlign:"center"}}/>
@@ -1805,17 +1805,16 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
             return <div style={{display:"flex",flexDirection:"column",gap:6}}>{dates.map(d=>{const p=pk(d);const dow=new Date(p.y,p.m,p.d).toLocaleDateString(dateLocale(),{weekday:"short"});const affected=team.members.filter(m=>(allH[d]||[]).includes(m.country));
               return <div key={d} style={{background:th.sf,borderRadius:6,border:`1px solid ${th.bd}`,padding:"8px 12px",display:"flex",alignItems:"center",gap:10}}>
                 <div style={{minWidth:36,textAlign:"center"}}><div style={{fontSize:15,fontWeight:700,color:th.ht,fontFamily:F}}>{p.d}</div><div style={{fontSize:9,color:th.t3,fontWeight:600}}>{t.M[p.m].slice(0,3)}</div></div>
-                <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:th.tx}}>{holName(d)}</div><div style={{fontSize:10,color:th.t3}}>{dow} — {affected.map(m=>m.name).join(", ")}</div></div>
+                <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:th.tx}}>{(()=>{const info=holInfo(d);if(!info.length)return holName(d);const nm=g=>(lang==="en"&&g.en)?g.en:g.local;const many=new Set(info.map(g=>g.cc)).size>1||countries.size>1;return info.map(g=>(many?g.cc+" ":"")+nm(g)).join(" · ");})()}</div><div style={{fontSize:10,color:th.t3}}>{dow} — {affected.map(m=>m.name).join(", ")}</div></div>
               </div>;})}</div>;
           })()}
         </Fragment>}
-        <FadeIn delay={200}><VisitCounter th={th}/></FadeIn>
-      
         {view==="trips"&&<TripsView team={team} onUpdate={updateWithHistory} th={th} t={t} yr={yr} holSet={holSet}/>}
         {view==="analytics"&&<AnalyticsDashboard team={team} yr={yr} th={th} t={t}/>}
         {showInbox&&<ApprovalInbox open onClose={()=>setShowInbox(false)} team={team} yr={yr} threshold={threshold} th={th} colorOf={colorOf} onApprove={approveIds} onRequest={requestChanges}/>}
         {showTT&&<TimeTravel open onClose={()=>setShowTT(false)} teamId={team.id} team={team} yr={yr} th={th} toView={raw=>teamForYear(raw,yr)} onRestore={restoreVersion}/>}
         {showWr&&<Wrapped open onClose={()=>setShowWr(false)} team={team} yr={yr} holOf={holOf} sevenDay={!!team.w7} logo={safeLogo(team.logo)}/>}
+        <FadeIn delay={200}><VisitCounter th={th}/></FadeIn>
         <BottomDuo th={th} lang={lang} compact/>
 </main>
     </div>

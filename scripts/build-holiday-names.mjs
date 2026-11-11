@@ -19,7 +19,8 @@ mkdirSync(out, { recursive: true });
 
 let total = 0; const missing = [];
 for (const cc of codes) {
-  const file = join(src, `${cc.toLowerCase()}.json`);
+  let file = join(src, `${cc.toLowerCase()}.json`);
+  if (!existsSync(file)) file = join(here, "data", `${cc.toLowerCase()}.json`); // Kosovo (scripts/build-kosovo.mjs)
   if (!existsSync(file)) { missing.push(cc); continue; }
   const d = JSON.parse(readFileSync(file, "utf8"));
   const h = {};
@@ -39,7 +40,8 @@ for (const cc of codes) {
   if (!existsSync(file)) continue;
   const { h } = JSON.parse(readFileSync(file, "utf8"));
   for (const [date, rows] of Object.entries(h)) {
-    const nat = rows.find(r => String(r[2]).includes("P") && !r[3]) || rows.find(r => !r[3]) || rows[0];
+    // only real public holidays (type P, national): the band says "non-working"
+    const nat = rows.find(r => String(r[2]).includes("P") && !r[3]);
     if (!nat) continue;
     ((byYear[date.slice(0, 4)] ||= {})[date] ||= []).push([cc, nat[0], nat[1]]);
   }

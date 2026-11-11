@@ -5,9 +5,10 @@ import BottomDuo from "@/components/WorkoseniePromo";
 import CoffeeButton from "@/components/CoffeeButton";
 import nextDynamic from "next/dynamic";
 import { withTransition } from "@/lib/motion";
+import { nationalDates, regionalDates, RN, DEF } from "@/lib/holidayDates";
 import "./frontpage.css";
 import { mergeTeam } from "@/lib/merge";
-import { X, setTextLang, dateLocale } from "@/lib/extraText";
+import { X, setTextLang, textLang, dateLocale } from "@/lib/extraText";
 // Loaded only when first opened (keeps the first page load small)
 // The team screen lives in app/workspace.tsx and loads on demand: team links start loading it at once,
 // the front page fetches it when the browser is idle, so opening a team stays instant.
@@ -144,6 +145,8 @@ MC:{type:"W",days:["E+1","E+39","E+50","E+60"]},
 // NonWorkingDays dataset. Added on top of the rules above (never removes a date). Built by scripts/build-holiday-names.mjs data.
 export const LUNAR_EXTRA={"SA":{"2026":"0222,0319,0320,0321,0322,0323,0324,0526,0527,0528,0529,0531,0923","2027":"0222,0309,0310,0311,0312,0314,0515,0516,0517,0518,0519,0923","2028":"0222,0226,0227,0228,0229,0301,0504,0505,0506,0507,0508,0509,0923,0924","2029":"0214,0215,0216,0217,0218,0219,0222,0423,0424,0425,0426,0923","2030":"0203,0204,0205,0206,0221,0222,0412,0413,0414,0415,0416,0417,0923","2031":"0124,0125,0126,0127,0128,0129,0222,0223,0401,0402,0403,0404,0406,0923","2032":"0113,0114,0115,0116,0118,0222,0321,0322,0323,0324,0923","2033":"0102,0103,0104,0105,0222,0310,0311,0312,0313,0314,0315,0922,0923,1222,1223,1224,1225,1226,1227","2034":"0222,0228,0301,0302,0303,0305,0923,0924,1211,1212,1213,1214","2035":"0217,0218,0219,0220,0221,0222,0923,1130,1201,1202,1203,1204,1205"},"AE":{"2026":"0101,0320,0321,0322,0526,0527,0528,0529,0616,0825,1202,1203","2027":"0101,0309,0310,0311,0515,0516,0517,0518,0606,0814,1202,1203","2028":"0101,0226,0227,0228,0504,0505,0506,0507,0525,0803,1202,1203","2029":"0101,0214,0215,0216,0423,0424,0425,0426,0514,0724,1202,1203","2030":"0101,0204,0205,0206,0412,0413,0414,0415,0503,0713,1202,1203","2031":"0101,0124,0125,0126,0401,0402,0403,0404,0423,0702,1202,1203","2032":"0101,0114,0115,0116,0321,0322,0323,0324,0411,0620,1202,1203","2033":"0101,0102,0103,0104,0310,0311,0312,0313,0401,0609,1202,1203,1223,1224,1225","2034":"0101,0228,0301,0302,0303,0321,0530,1202,1203,1212,1213,1214","2035":"0101,0217,0218,0219,0220,0311,0520,1201,1202,1203"},"MA":{"2026":"0101,0111,0114,0320,0321,0501,0527,0528,0616,0730,0814,0820,0821,0825,0826,1031,1106,1118","2027":"0101,0111,0114,0309,0310,0501,0516,0517,0606,0730,0814,0815,0820,0821,1031,1106,1118","2028":"0101,0111,0114,0226,0227,0501,0505,0506,0525,0730,0803,0804,0814,0820,0821,1031,1106,1118","2029":"0101,0111,0114,0214,0215,0424,0425,0501,0514,0724,0725,0730,0814,0820,0821,1031,1106,1118","2030":"0101,0111,0114,0204,0205,0413,0414,0501,0503,0713,0714,0730,0814,0820,0821,1031,1106,1118","2031":"0101,0111,0114,0124,0125,0402,0403,0423,0501,0702,0703,0730,0814,0820,0821,1031,1106,1118","2032":"0101,0111,0114,0115,0322,0323,0411,0501,0620,0621,0730,0814,0820,0821,1031,1106,1118","2033":"0101,0102,0103,0111,0114,0311,0312,0401,0501,0609,0610,0730,0814,0820,0821,1031,1106,1118,1223,1224","2034":"0101,0111,0114,0301,0302,0321,0501,0530,0531,0730,0814,0820,0821,1031,1106,1118,1212,1213","2035":"0101,0111,0114,0218,0219,0311,0501,0520,0521,0730,0814,0820,0821,1031,1106,1118,1201,1202"},"BH":{"2026":"0101,0320,0321,0322,0501,0527,0528,0529,0616,0624,0625,0825,1216,1217","2027":"0101,0309,0310,0311,0501,0516,0517,0518,0606,0614,0615,0814,1216,1217","2028":"0101,0226,0227,0228,0501,0505,0506,0507,0525,0602,0603,0803,1216,1217","2029":"0101,0214,0215,0216,0424,0425,0426,0501,0514,0522,0523,0724,1216,1217","2030":"0101,0204,0205,0206,0413,0414,0415,0501,0503,0511,0512,0713,1216,1217","2031":"0101,0124,0125,0126,0402,0403,0404,0423,0501,0502,0702,1216,1217","2032":"0101,0114,0115,0116,0322,0323,0324,0411,0419,0420,0501,0620,1216,1217","2033":"0101,0102,0103,0104,0311,0312,0313,0401,0409,0410,0501,0609,1216,1217,1223,1224,1225","2034":"0101,0301,0302,0303,0321,0329,0330,0501,0530,1212,1213,1214,1216,1217","2035":"0101,0218,0219,0220,0311,0319,0320,0501,0520,1201,1202,1203,1216,1217"},"TR":{"2026":"0101,0320,0321,0322,0423,0501,0519,0527,0528,0529,0530,0715,0830,1029","2027":"0101,0309,0310,0311,0423,0501,0516,0517,0518,0519,0715,0830,1029","2028":"0101,0226,0227,0228,0423,0501,0505,0506,0507,0508,0519,0715,0830,1029","2029":"0101,0214,0215,0216,0423,0424,0425,0426,0427,0501,0519,0715,0830,1029","2030":"0101,0204,0205,0206,0413,0414,0415,0416,0423,0501,0519,0715,0830,1029","2031":"0101,0124,0125,0126,0402,0403,0404,0405,0423,0501,0519,0715,0830,1029","2032":"0101,0114,0115,0116,0322,0323,0324,0325,0423,0501,0519,0715,0830,1029","2033":"0101,0102,0103,0104,0311,0312,0313,0314,0423,0501,0519,0715,0830,1029,1223,1224,1225","2034":"0101,0301,0302,0303,0304,0423,0501,0519,0715,0830,1029,1212,1213,1214","2035":"0101,0218,0219,0220,0221,0423,0501,0519,0715,0830,1029,1201,1202,1203"}};
 export function computeHolidays(cc, year) {
+  // Dataset first (python-holidays via NonWorkingDays, 2026–2035); the rules below cover Kosovo and Ukraine
+  const nd = nationalDates(cc, year); if (nd) return nd.slice();
   const fixed = (FIXED[cc] || []).map(d => `${year}-${d}`);
   const rules = EASTER_RULES[cc];
   if (!rules) { const lx0=LUNAR_EXTRA[cc]&&LUNAR_EXTRA[cc][year]; if(!lx0) return fixed; return [...new Set(fixed.concat(lx0.split(",").map(function(md){return year+"-"+md.slice(0,2)+"-"+md.slice(2);})))].sort(); }
@@ -370,6 +373,11 @@ CA:[
 {id:"AB",n:"Alberta"}
 ]
 };
+// Regions from the holiday dataset that the original list did not offer (all cantons, states, provinces, UK nations,
+// Bosnian entities, US states). Existing ids keep working; ids with a country suffix (BE_DE) map to plain codes.
+for(const cc of Object.keys(RN)){const have=new Set((REGIONS[cc]||[]).map(r=>String(r.id).replace(/_[A-Z]{2}$/,"")));const add=Object.entries(RN[cc]).filter(([g])=>!have.has(g)).map(([g,n])=>({id:g,n:String(n)}));if(add.length)REGIONS[cc]=[...(REGIONS[cc]||[]),...add].sort((a,b)=>String(a.n).localeCompare(String(b.n)));}
+// Region a member without one gets (GB → England …), or null
+export const defaultRegionName=cc=>{const g=DEF[cc];if(!g)return null;const r=(REGIONS[cc]||[]).find(x=>String(x.id).replace(/_[A-Z]{2}$/,"")===g);return r?r.n:g;};
 
 // ─── Country Data ────────────────────────────────────────────────
 export const EU_C=[{c:"AL",n:"Albania",f:"🇦🇱"},{c:"AD",n:"Andorra",f:"🇦🇩"},{c:"AT",n:"Austria",f:"🇦🇹"},{c:"BY",n:"Belarus",f:"🇧🇾"},{c:"BE",n:"Belgium",f:"🇧🇪"},{c:"BA",n:"Bosnia & Herz.",f:"🇧🇦"},{c:"BG",n:"Bulgaria",f:"🇧🇬"},{c:"HR",n:"Croatia",f:"🇭🇷"},{c:"CY",n:"Cyprus",f:"🇨🇾"},{c:"CZ",n:"Czechia",f:"🇨🇿"},{c:"DK",n:"Denmark",f:"🇩🇰"},{c:"EE",n:"Estonia",f:"🇪🇪"},{c:"FI",n:"Finland",f:"🇫🇮"},{c:"FR",n:"France",f:"🇫🇷"},{c:"DE",n:"Germany",f:"🇩🇪"},{c:"GR",n:"Greece",f:"🇬🇷"},{c:"HU",n:"Hungary",f:"🇭🇺"},{c:"IS",n:"Iceland",f:"🇮🇸"},{c:"IE",n:"Ireland",f:"🇮🇪"},{c:"IT",n:"Italy",f:"🇮🇹"},{c:"XK",n:"Kosovo",f:"🇽🇰"},{c:"LV",n:"Latvia",f:"🇱🇻"},{c:"LI",n:"Liechtenstein",f:"🇱🇮"},{c:"LT",n:"Lithuania",f:"🇱🇹"},{c:"LU",n:"Luxembourg",f:"🇱🇺"},{c:"MK",n:"N. Macedonia",f:"🇲🇰"},{c:"MT",n:"Malta",f:"🇲🇹"},{c:"MD",n:"Moldova",f:"🇲🇩"},{c:"MC",n:"Monaco",f:"🇲🇨"},{c:"ME",n:"Montenegro",f:"🇲🇪"},{c:"NL",n:"Netherlands",f:"🇳🇱"},{c:"NO",n:"Norway",f:"🇳🇴"},{c:"PL",n:"Poland",f:"🇵🇱"},{c:"PT",n:"Portugal",f:"🇵🇹"},{c:"RO",n:"Romania",f:"🇷🇴"},{c:"RS",n:"Serbia",f:"🇷🇸"},{c:"SK",n:"Slovakia",f:"🇸🇰"},{c:"SI",n:"Slovenia",f:"🇸🇮"},{c:"SM",n:"San Marino",f:"🇸🇲"},{c:"ES",n:"Spain",f:"🇪🇸"},{c:"SE",n:"Sweden",f:"🇸🇪"},{c:"CH",n:"Switzerland",f:"🇨🇭"},{c:"TR",n:"Turkey",f:"🇹🇷"},{c:"UA",n:"Ukraine",f:"🇺🇦"},{c:"GB",n:"United Kingdom",f:"🇬🇧"},{c:"SA",n:"Saudi Arabia",f:"🇸🇦"},{c:"AE",n:"UAE",f:"🇦🇪"},{c:"CL",n:"Chile",f:"🇨🇱"},{c:"BR",n:"Brazil",f:"🇧🇷"},{c:"MA",n:"Morocco",f:"🇲🇦"},{c:"KZ",n:"Kazakhstan",f:"🇰🇿"},{c:"BH",n:"Bahrain",f:"🇧🇭"},{c:"US",n:"United States",f:"🇺🇸"},{c:"CA",n:"Canada",f:"🇨🇦"},{c:"AU",n:"Australia",f:"🇦🇺"}].sort((a,b)=>a.n.localeCompare(b.n));
@@ -512,6 +520,12 @@ function computeRegionalHolidays(cc, regionId, year) {
 }
 
 export function getAllHolidays(member, year) {
+  if (member && member.country) {
+    const rid = member.region ? String(member.region).replace(/_[A-Z]{2}$/, "") : null;
+    const rd = rid ? regionalDates(member.country, rid, year) : null;
+    if (rd) return rd;
+    if (!rid) { const nd = nationalDates(member.country, year); if (nd) return nd.slice(); }
+  }
   var base = computeHolidays(member.country, year);
   var regional = computeRegionalHolidays(member.country, member.region, year);
   var combined = {};
@@ -1165,6 +1179,12 @@ export const ThPk=({theme:t,set,th})=>{var ts=[{k:"light",bg:"#F2F1EE",ac:"#6366
 // Names come from public/hn/<cc>.json (python-holidays via NonWorkingDays, local + English). They only label
 // days; which days are holidays is still decided by computeHolidays, so day counts never change.
 const HN_CACHE={};const HN_PENDING={};
+// Real name of a public holiday from the loaded name data (same dataset as the dates): the country's own name, or the
+// English one when the page is in English. Falls back to the generic table until the names have loaded.
+const hnRow=(cc,key,region)=>{const rows=(HN_CACHE[cc]&&HN_CACHE[cc].h&&HN_CACHE[cc].h[key])||[];return rows.find(r=>!r[3]||!r[3].length)||(region&&rows.find(r=>r[3]&&r[3].includes(region)))||rows[0]||null;};
+export function holNameFor(cc,key,region=null){const r=cc?hnRow(cc,key,region):null;if(!r)return holName(key);return textLang()==="en"?(r[1]||r[0]):(r[0]||r[1]);}
+// Same, for places that only know the date: the first loaded country that has it
+export function holNameAny(key){for(const cc of Object.keys(HN_CACHE)){const r=hnRow(cc,key,null);if(r)return textLang()==="en"?(r[1]||r[0]):(r[0]||r[1]);}return holName(key);}
 export function useHolidayNames(ccs){
   const key=[...new Set(ccs.filter(Boolean))].sort().join(",");
   const[,setTick]=useState(0);
@@ -1187,7 +1207,8 @@ export function HolBrowser({onClose,th,t,year}){
   const[q,setQ]=useState("");
   const[sort,setSort]=useState("az");
   const co=sel?EU_C.find(c=>c.c===sel):null;
-  const hols=sel?computeHolidays(sel,year).map(h=>({date:h,name:holName(h)})).sort((a,b)=>a.date.localeCompare(b.date)):[];
+  useHolidayNames(sel?[sel]:[]);
+  const hols=sel?computeHolidays(sel,year).map(h=>({date:h,name:holNameFor(sel,h)})).sort((a,b)=>a.date.localeCompare(b.date)):[];
   const maxHol=17;
 
   var filtered=EU_C.filter(function(c2){return !q||c2.n.toLowerCase().indexOf(q.toLowerCase())>=0;});

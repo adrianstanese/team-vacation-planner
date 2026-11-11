@@ -5,6 +5,9 @@ import { textLang } from "./extraText";
 
 type T = Record<string, string>;
 const en: T = {
+  visitsLbl: "visits",
+  regDefault: "{r} (default)",
+  anTitle: "Team analytics {y}", anOut: "2 or more people away",
   ttApproved: "approved", ttUnapproved: "approval removed",
   inbox: "Approvals", inboxTitle: "Approval inbox", inboxWaiting: "Waiting: {n}", inboxBadge: "Plans waiting for approval: {n}",
   approve: "Approve", changes: "Ask for changes", approveAll: "Approve all", swipeHint: "Swipe right to approve, left to ask for changes",
@@ -31,6 +34,9 @@ const en: T = {
   celebrate: "{n} days off in a row. Enjoy!",
 };
 const ro: T = {
+  visitsLbl: "vizite",
+  regDefault: "{r} (implicit)",
+  anTitle: "Analiza echipei {y}", anOut: "2 sau mai mulți absenți",
   ttApproved: "aprobat", ttUnapproved: "aprobare retrasă",
   inbox: "Aprobări", inboxTitle: "Aprobări în așteptare", inboxWaiting: "În așteptare: {n}", inboxBadge: "Planuri care așteaptă aprobarea: {n}",
   approve: "Aprobă", changes: "Cere modificări", approveAll: "Aprobă tot", swipeHint: "Glisează la dreapta ca să aprobi, la stânga ca să ceri modificări",
@@ -57,6 +63,9 @@ const ro: T = {
   celebrate: "{n} zile libere la rând. Distracție plăcută!",
 };
 const fr: T = {
+  visitsLbl: "visites",
+  regDefault: "{r} (par défaut)",
+  anTitle: "Analyse de l'équipe {y}", anOut: "2 absents ou plus",
   ttApproved: "validé", ttUnapproved: "validation retirée",
   inbox: "Validations", inboxTitle: "Demandes à valider", inboxWaiting: "En attente : {n}", inboxBadge: "Plannings en attente de validation : {n}",
   approve: "Valider", changes: "Demander des changements", approveAll: "Tout valider", swipeHint: "Glissez à droite pour valider, à gauche pour demander des changements",
@@ -83,6 +92,9 @@ const fr: T = {
   celebrate: "{n} jours de repos d'affilée. Profitez-en !",
 };
 const de: T = {
+  visitsLbl: "Besuche",
+  regDefault: "{r} (Standard)",
+  anTitle: "Teamanalyse {y}", anOut: "2 oder mehr abwesend",
   ttApproved: "genehmigt", ttUnapproved: "Genehmigung entfernt",
   inbox: "Genehmigungen", inboxTitle: "Offene Genehmigungen", inboxWaiting: "Offen: {n}", inboxBadge: "Pläne warten auf Genehmigung: {n}",
   approve: "Genehmigen", changes: "Änderung anfragen", approveAll: "Alle genehmigen", swipeHint: "Nach rechts wischen zum Genehmigen, nach links für eine Änderungsanfrage",
@@ -109,6 +121,9 @@ const de: T = {
   celebrate: "{n} freie Tage am Stück. Viel Spaß!",
 };
 const es: T = {
+  visitsLbl: "visitas",
+  regDefault: "{r} (predeterminado)",
+  anTitle: "Análisis del equipo {y}", anOut: "2 o más ausentes",
   ttApproved: "aprobado", ttUnapproved: "aprobación retirada",
   inbox: "Aprobaciones", inboxTitle: "Aprobaciones pendientes", inboxWaiting: "Pendientes: {n}", inboxBadge: "Planes pendientes de aprobación: {n}",
   approve: "Aprobar", changes: "Pedir cambios", approveAll: "Aprobar todo", swipeHint: "Desliza a la derecha para aprobar y a la izquierda para pedir cambios",
@@ -135,6 +150,9 @@ const es: T = {
   celebrate: "{n} días libres seguidos. ¡Disfruta!",
 };
 const pt: T = {
+  visitsLbl: "visitas",
+  regDefault: "{r} (predefinido)",
+  anTitle: "Análise da equipa {y}", anOut: "2 ou mais ausentes",
   ttApproved: "aprovado", ttUnapproved: "aprovação retirada",
   inbox: "Aprovações", inboxTitle: "Aprovações pendentes", inboxWaiting: "Pendentes: {n}", inboxBadge: "Planos à espera de aprovação: {n}",
   approve: "Aprovar", changes: "Pedir alterações", approveAll: "Aprovar tudo", swipeHint: "Deslize para a direita para aprovar e para a esquerda para pedir alterações",
@@ -161,6 +179,9 @@ const pt: T = {
   celebrate: "{n} dias de folga seguidos. Aproveite!",
 };
 const hu: T = {
+  visitsLbl: "látogatás",
+  regDefault: "{r} (alapértelmezett)",
+  anTitle: "Csapatelemzés ({y})", anOut: "legalább 2 fő távol",
   ttApproved: "jóváhagyva", ttUnapproved: "jóváhagyás visszavonva",
   inbox: "Jóváhagyások", inboxTitle: "Jóváhagyásra vár", inboxWaiting: "Várakozik: {n}", inboxBadge: "Jóváhagyásra váró tervek: {n}",
   approve: "Jóváhagyás", changes: "Módosítást kérek", approveAll: "Mindet jóváhagy", swipeHint: "Húzd jobbra a jóváhagyáshoz, balra a módosítás kéréséhez",
@@ -187,6 +208,9 @@ const hu: T = {
   celebrate: "{n} szabadnap egyhuzamban. Jó pihenést!",
 };
 const sv: T = {
+  visitsLbl: "besök",
+  regDefault: "{r} (standard)",
+  anTitle: "Teamanalys {y}", anOut: "2 eller fler borta",
   ttApproved: "godkänd", ttUnapproved: "godkännande borttaget",
   inbox: "Godkännanden", inboxTitle: "Väntar på godkännande", inboxWaiting: "Väntar: {n}", inboxBadge: "Planer som väntar på godkännande: {n}",
   approve: "Godkänn", changes: "Be om ändringar", approveAll: "Godkänn alla", swipeHint: "Svep åt höger för att godkänna, åt vänster för att be om ändringar",
@@ -213,6 +237,9 @@ const sv: T = {
   celebrate: "{n} lediga dagar i rad. Njut!",
 };
 const it: T = {
+  visitsLbl: "visite",
+  regDefault: "{r} (predefinito)",
+  anTitle: "Analisi del team {y}", anOut: "2 o più assenti",
   ttApproved: "approvato", ttUnapproved: "approvazione rimossa",
   inbox: "Approvazioni", inboxTitle: "Approvazioni in attesa", inboxWaiting: "In attesa: {n}", inboxBadge: "Piani in attesa di approvazione: {n}",
   approve: "Approva", changes: "Chiedi modifiche", approveAll: "Approva tutti", swipeHint: "Scorri a destra per approvare, a sinistra per chiedere modifiche",
@@ -239,6 +266,9 @@ const it: T = {
   celebrate: "{n} giorni liberi di fila. Goditeli!",
 };
 const bg: T = {
+  visitsLbl: "посещения",
+  regDefault: "{r} (по подразбиране)",
+  anTitle: "Анализ на екипа {y}", anOut: "2 или повече отсъстващи",
   ttApproved: "одобрен", ttUnapproved: "одобрението е оттеглено",
   inbox: "Одобрения", inboxTitle: "Чакащи одобрение", inboxWaiting: "Чакащи: {n}", inboxBadge: "Планове, които чакат одобрение: {n}",
   approve: "Одобрете", changes: "Поискайте промени", approveAll: "Одобрете всички", swipeHint: "Плъзнете надясно, за да одобрите, или наляво, за да поискате промени",
@@ -265,6 +295,9 @@ const bg: T = {
   celebrate: "{n} поредни почивни дни. Приятна почивка!",
 };
 const ar: T = {
+  visitsLbl: "زيارات",
+  regDefault: "{r} (افتراضي)",
+  anTitle: "تحليلات الفريق {y}", anOut: "غياب شخصين أو أكثر",
   ttApproved: "تمت الموافقة", ttUnapproved: "أُلغيت الموافقة",
   inbox: "الموافقات", inboxTitle: "طلبات بانتظار الموافقة", inboxWaiting: "بالانتظار: {n}", inboxBadge: "خطط بانتظار الموافقة: {n}",
   approve: "موافقة", changes: "طلب تعديلات", approveAll: "الموافقة على الكل", swipeHint: "اسحب يميناً للموافقة ويساراً لطلب تعديلات",
