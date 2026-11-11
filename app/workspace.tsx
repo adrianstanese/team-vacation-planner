@@ -750,7 +750,7 @@ function ConflictAlerts({team,threshold,th,t}) {
   </div>;
 }
 
-function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false}){
+function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const dc=usedOf(m);const allow=m.pto?m.pto+(m.carry||0):0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
@@ -780,6 +780,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     </div>
     {m.pto&&!isActive?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
     {isActive&&!isEditing&&limited&&<div className="tvp-drawer" onClick={function(e){e.stopPropagation();}}>
+      {onSwitchTo&&<button type="button" className="tvp-mini tvp-mini-sw" onClick={onSwitchTo}>⇄ {V("swTo",{n:m.name||""})}</button>}
       <label className="tvp-fld"><span style={{color:th.t3}}>{V("jobRole")}</span>
         <input key={m.id+(m.role||"")} defaultValue={m.role||""} maxLength={40} placeholder={V("jobRolePh")} onBlur={function(e){const v=e.target.value.trim();if(v!==(m.role||""))onRoleChange(v);}} onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/></label>
     </div>}
@@ -1652,6 +1653,11 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   ) : null;
 
   // ─── Who are you? gate ───
+  // Act as another person: their PIN (or set one if they have none). If this tab already unlocked them, switch at once.
+  const switchTo=m=>{if(!m||m.id===unlockedId)return;if(!window.confirm(hasPinOf(m)?V("swQ",{n:m.name||""}):V("swQNew",{n:m.name||""})))return;
+    if(hasPinOf(m)&&getTokens(team.id)[m.id]){setUnlockedId(m.id);setAId(m.id);flash(V("gtYou",{n:m.name||""}));return;}
+    try{localStorage.removeItem(meKey);}catch(e){}setUnlockedId(null);setAId(null);setGMid(m.id);setGStep(hasPinOf(m)?"pin":"setpin");setGPin("");setGPin2("");setGErr("");};
+  const noPin=team.members.filter(x=>!hasPinOf(x)&&!x.resetPending);
   const signOutMe=()=>{try{localStorage.removeItem(meKey);}catch(e){}setOwnerMode(false);setUnlockedId(null);setAId(null);setGStep("choose");setGMid(null);setGPin("");setGPin2("");setGErr("");};
   const gReset=()=>{setGPin("");setGPin2("");setGErr("");setGBusy(false);};
   const gUnlock=async()=>{const m=team.members.find(x=>x.id===gMid);if(!m||gPin.length!==6||gBusy)return;setGBusy(true);
@@ -1806,14 +1812,14 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           </div>}
           {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{
               const dimmed=!ownerMode&&!!unlockedId&&m.id!==unlockedId;
-              if(dimmed){if(canEditRoles){setAId(m.id===aId?unlockedId:m.id);}return;}
+              if(dimmed){if(canEditRoles){setAId(m.id===aId?unlockedId:m.id);}else switchTo(m);return;}
               if(m.id===aId){setAId(null);return;}
               const meUnlocked=team.members.find(x=>x.id===unlockedId);
               const meIsAppr=meUnlocked&&(meUnlocked.isApprover||team.approver===meUnlocked.id);
               if(hasPinOf(m)&&unlockedId!==m.id&&!meIsAppr){setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
               setAId(m.id);
               if(mob)setSb(false);
-            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>setView("approvals"):null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
+            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>setView("approvals"):null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} onSwitchTo={()=>switchTo(m)} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}
@@ -1836,6 +1842,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         </div>}
         {/* Conflict alerts */}
         {view==="cal"&&<TodayTiles team={team} yr={yr} th={th} colorOf={colorOf} holOf={holOf} holInfo={holInfoCb} active={am||null} threshold={threshold} showWrapped={wrOk} onWrapped={()=>setShowWr(true)} onPick={id=>setAId(id)}/>}
+        {view==="cal"&&noPin.length>0&&!gOpen&&<div className="tvp-nopin" role="note"><span aria-hidden="true">🔒</span><div><b>{V("npTitle",{n:noPin.length})}</b><p>{V("npText")}</p>
+          <div className="tvp-nopin-names">{noPin.slice(0,12).map(x=><button type="button" key={x.id} onClick={()=>switchTo(x)}>{x.name}</button>)}{noPin.length>12&&<span>+{noPin.length-12}</span>}</div></div></div>}
         {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
         <datalist id="tvp-groups">{([...new Set(team.members.map(m=>m.group).filter(Boolean))] as string[]).map(g=><option key={g} value={g}/>)}</datalist>
 

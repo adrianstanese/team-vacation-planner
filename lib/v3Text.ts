@@ -5,6 +5,7 @@ import { textLang } from "./extraText";
 
 type T = Record<string, string>;
 const en: T = {
+  swQ: "Switch to {n}? You'll need {n}'s PIN.", swQNew: "{n} has no PIN yet. Switch to {n} and set one now?", swTo: "Switch to {n}", npTitle: "{n} without a PIN", npText: "Nobody can add or change their days until they have a PIN. Click a name to switch to that person and set one (the same PIN for several people is fine).",
   gtCode: "8-digit setup code", gtCodeHelp: "Your PIN was reset. Enter the one-time setup code your approver gave you, then choose a new PIN.", prCodeT: "One-time code for {n}", prCodeD: "Give this code to {n} in person or by private message. With it they choose a new PIN. It works once, within 24 hours.", prCodeOk: "Done", dupName: "That name is already in the team. Add your surname or an initial.",
   apSumPeople: "people waiting", apSumDays: "days to review", apSumClash: "with clashes", apStatReq: "Requested", apStatPeriods: "in {n} period(s)", apAllowance: "Allowance", apCarry: "incl. {n} carried over", apPtoSet: "days this year", apNoAllow: "not set", apStatLeft: "Left after", apAfter: "if you approve", apOverBy: "{n} over allowance", apStatHol: "Holidays inside", apHolSub: "public holidays, not counted", apPeriods: "Periods and who else is away", apWd: "{n} working days", apNobody: "Nobody else away", apClashN: "{n} clash day(s)", apLast: "Last change {d}",
   renameBtn: "Rename",
@@ -44,6 +45,7 @@ const en: T = {
   celebrate: "{n} days off in a row. Enjoy!",
 };
 const ro: T = {
+  swQ: "Treci la {n}? Ai nevoie de PIN-ul lui {n}.", swQNew: "{n} nu are încă PIN. Treci la {n} și setezi unul acum?", swTo: "Treci la {n}", npTitle: "Fără PIN: {n}", npText: "Nimeni nu poate adăuga sau modifica zilele acestor persoane până nu au un PIN. Apasă pe un nume ca să treci la persoana respectivă și să setezi unul (poate fi același PIN pentru mai multe persoane).",
   gtCode: "Cod de configurare din 8 cifre", gtCodeHelp: "PIN-ul tău a fost resetat. Introdu codul unic primit de la aprobator, apoi alege un PIN nou.", prCodeT: "Cod unic pentru {n}", prCodeD: "Dă-i acest cod lui {n} personal sau în mesaj privat. Cu el își alege un PIN nou. Funcționează o singură dată, în 24 de ore.", prCodeOk: "Gata", dupName: "Numele există deja în echipă. Adaugă numele de familie sau o inițială.",
   apSumPeople: "persoane în așteptare", apSumDays: "zile de verificat", apSumClash: "cu suprapuneri", apStatReq: "Solicitate", apStatPeriods: "perioade: {n}", apAllowance: "Drept anual", apCarry: "incl. {n} reportate", apPtoSet: "zile anul acesta", apNoAllow: "nesetat", apStatLeft: "Rămân după", apAfter: "dacă aprobi", apOverBy: "cu {n} peste drept", apStatHol: "Sărbători incluse", apHolSub: "sărbători legale, nu se scad", apPeriods: "Perioade și cine mai lipsește", apWd: "{n} zile lucrătoare", apNobody: "Nu mai lipsește nimeni", apClashN: "{n} zi(le) cu suprapunere", apLast: "Ultima modificare {d}",
   renameBtn: "Redenumește",
@@ -83,6 +85,7 @@ const ro: T = {
   celebrate: "{n} zile libere la rând. Distracție plăcută!",
 };
 const fr: T = {
+  swQ: "Passer à {n} ? Le PIN de {n} sera demandé.", swQNew: "{n} n'a pas encore de PIN. Passer à {n} et en définir un maintenant ?", swTo: "Passer à {n}", npTitle: "Sans PIN : {n}", npText: "Personne ne peut ajouter ou modifier leurs jours tant qu'ils n'ont pas de PIN. Cliquez sur un nom pour passer à cette personne et en définir un (le même PIN pour plusieurs personnes convient).",
   gtCode: "Code de configuration à 8 chiffres", gtCodeHelp: "Votre PIN a été réinitialisé. Saisissez le code à usage unique remis par votre valideur, puis choisissez un nouveau PIN.", prCodeT: "Code à usage unique pour {n}", prCodeD: "Remettez ce code à {n} en personne ou par message privé. Il permet de choisir un nouveau PIN. Valable une fois, pendant 24 heures.", prCodeOk: "Terminé", dupName: "Ce nom existe déjà dans l'équipe. Ajoutez votre nom de famille ou une initiale.",
   apSumPeople: "personnes en attente", apSumDays: "jours à examiner", apSumClash: "avec conflits", apStatReq: "Demandés", apStatPeriods: "en {n} période(s)", apAllowance: "Droit annuel", apCarry: "dont {n} reportés", apPtoSet: "jours cette année", apNoAllow: "non défini", apStatLeft: "Restant après", apAfter: "si vous validez", apOverBy: "{n} au-delà du droit", apStatHol: "Fériés inclus", apHolSub: "jours fériés, non décomptés", apPeriods: "Périodes et autres absents", apWd: "{n} jours ouvrés", apNobody: "Personne d'autre absent", apClashN: "{n} jour(s) en conflit", apLast: "Dernière modification {d}",
   renameBtn: "Renommer",
@@ -122,6 +125,7 @@ const fr: T = {
   celebrate: "{n} jours de repos d'affilée. Profitez-en !",
 };
 const de: T = {
+  swQ: "Zu {n} wechseln? Sie brauchen die PIN von {n}.", swQNew: "{n} hat noch keine PIN. Zu {n} wechseln und jetzt eine festlegen?", swTo: "Zu {n} wechseln", npTitle: "Ohne PIN: {n}", npText: "Niemand kann ihre Tage eintragen oder ändern, bis sie eine PIN haben. Klicken Sie auf einen Namen, um zu dieser Person zu wechseln und eine festzulegen (dieselbe PIN für mehrere Personen ist in Ordnung).",
   gtCode: "8-stelliger Einrichtungscode", gtCodeHelp: "Deine PIN wurde zurückgesetzt. Gib den einmaligen Code von deinem Genehmiger ein und wähle dann eine neue PIN.", prCodeT: "Einmalcode für {n}", prCodeD: "Gib diesen Code {n} persönlich oder per Privatnachricht. Damit wird eine neue PIN gewählt. Er gilt einmal, 24 Stunden lang.", prCodeOk: "Fertig", dupName: "Dieser Name ist schon im Team. Füge deinen Nachnamen oder eine Initiale hinzu.",
   apSumPeople: "Personen warten", apSumDays: "Tage zu prüfen", apSumClash: "mit Überschneidungen", apStatReq: "Beantragt", apStatPeriods: "in {n} Zeitraum/-räumen", apAllowance: "Anspruch", apCarry: "davon {n} übertragen", apPtoSet: "Tage dieses Jahr", apNoAllow: "nicht festgelegt", apStatLeft: "Rest danach", apAfter: "wenn Sie genehmigen", apOverBy: "{n} über dem Anspruch", apStatHol: "Enthaltene Feiertage", apHolSub: "Feiertage, nicht angerechnet", apPeriods: "Zeiträume und wer sonst fehlt", apWd: "{n} Arbeitstage", apNobody: "Sonst fehlt niemand", apClashN: "{n} Tag(e) mit Überschneidung", apLast: "Zuletzt geändert {d}",
   renameBtn: "Umbenennen",
@@ -161,6 +165,7 @@ const de: T = {
   celebrate: "{n} freie Tage am Stück. Viel Spaß!",
 };
 const es: T = {
+  swQ: "¿Cambiar a {n}? Necesitarás el PIN de {n}.", swQNew: "{n} aún no tiene PIN. ¿Cambiar a {n} y crear uno ahora?", swTo: "Cambiar a {n}", npTitle: "Sin PIN: {n}", npText: "Nadie puede añadir o cambiar sus días hasta que tengan un PIN. Haz clic en un nombre para cambiar a esa persona y crear uno (puede ser el mismo PIN para varias personas).",
   gtCode: "Código de configuración de 8 dígitos", gtCodeHelp: "Tu PIN se ha restablecido. Introduce el código de un solo uso que te dio tu aprobador y elige un PIN nuevo.", prCodeT: "Código de un solo uso para {n}", prCodeD: "Entrega este código a {n} en persona o por mensaje privado. Con él elige un PIN nuevo. Sirve una vez, durante 24 horas.", prCodeOk: "Hecho", dupName: "Ese nombre ya está en el equipo. Añade tu apellido o una inicial.",
   apSumPeople: "personas en espera", apSumDays: "días por revisar", apSumClash: "con solapamientos", apStatReq: "Solicitados", apStatPeriods: "en {n} periodo(s)", apAllowance: "Derecho anual", apCarry: "incl. {n} del año anterior", apPtoSet: "días este año", apNoAllow: "sin definir", apStatLeft: "Quedan después", apAfter: "si apruebas", apOverBy: "{n} por encima del derecho", apStatHol: "Festivos incluidos", apHolSub: "festivos, no se descuentan", apPeriods: "Periodos y quién más falta", apWd: "{n} días laborables", apNobody: "Nadie más ausente", apClashN: "{n} día(s) con solapamiento", apLast: "Último cambio {d}",
   renameBtn: "Renombrar",
@@ -200,6 +205,7 @@ const es: T = {
   celebrate: "{n} días libres seguidos. ¡Disfruta!",
 };
 const pt: T = {
+  swQ: "Mudar para {n}? Vai precisar do PIN de {n}.", swQNew: "{n} ainda não tem PIN. Mudar para {n} e definir um agora?", swTo: "Mudar para {n}", npTitle: "Sem PIN: {n}", npText: "Ninguém pode adicionar ou alterar os dias destas pessoas até terem um PIN. Clique num nome para mudar para essa pessoa e definir um (o mesmo PIN para várias pessoas serve).",
   gtCode: "Código de configuração de 8 dígitos", gtCodeHelp: "O seu PIN foi reposto. Introduza o código único que o aprovador lhe deu e escolha um novo PIN.", prCodeT: "Código único para {n}", prCodeD: "Entregue este código a {n} pessoalmente ou por mensagem privada. Com ele escolhe-se um novo PIN. Funciona uma vez, durante 24 horas.", prCodeOk: "Concluído", dupName: "Esse nome já existe na equipa. Acrescente o apelido ou uma inicial.",
   apSumPeople: "pessoas à espera", apSumDays: "dias por rever", apSumClash: "com sobreposições", apStatReq: "Pedidos", apStatPeriods: "em {n} período(s)", apAllowance: "Direito anual", apCarry: "incl. {n} transitados", apPtoSet: "dias este ano", apNoAllow: "não definido", apStatLeft: "Restam depois", apAfter: "se aprovar", apOverBy: "{n} acima do direito", apStatHol: "Feriados incluídos", apHolSub: "feriados, não descontados", apPeriods: "Períodos e quem mais está ausente", apWd: "{n} dias úteis", apNobody: "Mais ninguém ausente", apClashN: "{n} dia(s) com sobreposição", apLast: "Última alteração {d}",
   renameBtn: "Mudar o nome",
@@ -239,6 +245,7 @@ const pt: T = {
   celebrate: "{n} dias de folga seguidos. Aproveite!",
 };
 const hu: T = {
+  swQ: "Váltás erre: {n}? Szükséged lesz {n} PIN-jére.", swQNew: "{n} még nem rendelkezik PIN-nel. Váltasz rá, és beállítasz egyet most?", swTo: "Váltás: {n}", npTitle: "PIN nélkül: {n}", npText: "Senki sem adhat hozzá vagy módosíthatja a napjaikat, amíg nincs PIN-jük. Kattints egy névre, hogy átválts az adott személyre és beállíts egyet (több embernek lehet ugyanaz a PIN).",
   gtCode: "8 jegyű beállítókód", gtCodeHelp: "A PIN-kódodat visszaállították. Add meg a jóváhagyótól kapott egyszeri kódot, majd válassz új PIN-kódot.", prCodeT: "Egyszeri kód: {n}", prCodeD: "Add át ezt a kódot személyesen vagy privát üzenetben neki: {n}. Ezzel választhat új PIN-kódot. Egyszer használható, 24 órán belül.", prCodeOk: "Kész", dupName: "Ez a név már szerepel a csapatban. Add hozzá a vezetékneved vagy egy kezdőbetűt.",
   apSumPeople: "fő vár", apSumDays: "nap ellenőrzendő", apSumClash: "ütközéssel", apStatReq: "Kért", apStatPeriods: "{n} időszakban", apAllowance: "Éves keret", apCarry: "ebből {n} áthozott", apPtoSet: "nap idén", apNoAllow: "nincs megadva", apStatLeft: "Utána marad", apAfter: "ha jóváhagyod", apOverBy: "{n} nappal kereten felül", apStatHol: "Ebbe eső ünnepnapok", apHolSub: "ünnepnapok, nem számítanak", apPeriods: "Időszakok és ki van még távol", apWd: "{n} munkanap", apNobody: "Más nincs távol", apClashN: "{n} ütköző nap", apLast: "Utolsó módosítás {d}",
   renameBtn: "Átnevezés",
@@ -278,6 +285,7 @@ const hu: T = {
   celebrate: "{n} szabadnap egyhuzamban. Jó pihenést!",
 };
 const sv: T = {
+  swQ: "Byta till {n}? Du behöver {n}s PIN.", swQNew: "{n} har ingen PIN än. Byta till {n} och välja en nu?", swTo: "Byt till {n}", npTitle: "Utan PIN: {n}", npText: "Ingen kan lägga till eller ändra deras dagar förrän de har en PIN. Klicka på ett namn för att byta till personen och välja en (samma PIN för flera personer går bra).",
   gtCode: "8-siffrig inställningskod", gtCodeHelp: "Din PIN har återställts. Ange engångskoden från din godkännare och välj sedan en ny PIN.", prCodeT: "Engångskod för {n}", prCodeD: "Ge koden till {n} personligen eller i ett privat meddelande. Med den väljs en ny PIN. Den fungerar en gång, inom 24 timmar.", prCodeOk: "Klar", dupName: "Det namnet finns redan i teamet. Lägg till efternamn eller en initial.",
   apSumPeople: "personer väntar", apSumDays: "dagar att granska", apSumClash: "med krockar", apStatReq: "Begärda", apStatPeriods: "i {n} period(er)", apAllowance: "Semesterrätt", apCarry: "inkl. {n} sparade", apPtoSet: "dagar i år", apNoAllow: "ej angiven", apStatLeft: "Kvar efter", apAfter: "om du godkänner", apOverBy: "{n} över semesterrätten", apStatHol: "Helgdagar i perioden", apHolSub: "helgdagar, räknas inte", apPeriods: "Perioder och vilka mer som är borta", apWd: "{n} arbetsdagar", apNobody: "Ingen annan borta", apClashN: "{n} krockdag(ar)", apLast: "Senast ändrad {d}",
   renameBtn: "Byt namn",
@@ -317,6 +325,7 @@ const sv: T = {
   celebrate: "{n} lediga dagar i rad. Njut!",
 };
 const it: T = {
+  swQ: "Passare a {n}? Servirà il PIN di {n}.", swQNew: "{n} non ha ancora un PIN. Passare a {n} e impostarne uno ora?", swTo: "Passa a {n}", npTitle: "Senza PIN: {n}", npText: "Nessuno può aggiungere o modificare i loro giorni finché non hanno un PIN. Fai clic su un nome per passare a quella persona e impostarne uno (lo stesso PIN per più persone va bene).",
   gtCode: "Codice di configurazione a 8 cifre", gtCodeHelp: "Il tuo PIN è stato reimpostato. Inserisci il codice monouso ricevuto dall'approvatore, poi scegli un nuovo PIN.", prCodeT: "Codice monouso per {n}", prCodeD: "Consegna questo codice a {n} di persona o in un messaggio privato. Serve a scegliere un nuovo PIN. Vale una volta, entro 24 ore.", prCodeOk: "Fatto", dupName: "Questo nome è già nel team. Aggiungi il cognome o un'iniziale.",
   apSumPeople: "persone in attesa", apSumDays: "giorni da valutare", apSumClash: "con sovrapposizioni", apStatReq: "Richiesti", apStatPeriods: "in {n} periodo/i", apAllowance: "Spettanza", apCarry: "incl. {n} riportati", apPtoSet: "giorni quest'anno", apNoAllow: "non impostata", apStatLeft: "Restano dopo", apAfter: "se approvi", apOverBy: "{n} oltre la spettanza", apStatHol: "Festività incluse", apHolSub: "festività, non conteggiate", apPeriods: "Periodi e chi altro è assente", apWd: "{n} giorni lavorativi", apNobody: "Nessun altro assente", apClashN: "{n} giorno/i con sovrapposizione", apLast: "Ultima modifica {d}",
   renameBtn: "Rinomina",
@@ -356,6 +365,7 @@ const it: T = {
   celebrate: "{n} giorni liberi di fila. Goditeli!",
 };
 const bg: T = {
+  swQ: "Да превключите към {n}? Ще Ви трябва ПИН-ът на {n}.", swQNew: "{n} все още няма ПИН. Да превключите към {n} и да зададете сега?", swTo: "Превключете към {n}", npTitle: "Без ПИН: {n}", npText: "Никой не може да добавя или променя дните им, докато нямат ПИН. Щракнете върху име, за да превключите към този човек и да зададете ПИН (може един и същ ПИН за няколко души).",
   gtCode: "8-цифрен код за настройка", gtCodeHelp: "ПИН-ът Ви е нулиран. Въведете еднократния код от одобряващия, след това изберете нов ПИН.", prCodeT: "Еднократен код за {n}", prCodeD: "Предайте този код на {n} лично или в лично съобщение. С него се избира нов ПИН. Валиден е еднократно, в рамките на 24 часа.", prCodeOk: "Готово", dupName: "Това име вече е в екипа. Добавете фамилия или инициал.",
   apSumPeople: "чакащи", apSumDays: "дни за преглед", apSumClash: "със застъпване", apStatReq: "Поискани", apStatPeriods: "в {n} период(а)", apAllowance: "Годишен отпуск", apCarry: "вкл. {n} прехвърлени", apPtoSet: "дни тази година", apNoAllow: "не е зададен", apStatLeft: "Остават след", apAfter: "ако одобрите", apOverBy: "{n} над полагаемия", apStatHol: "Празници в периода", apHolSub: "официални празници, не се броят", apPeriods: "Периоди и кой още отсъства", apWd: "{n} работни дни", apNobody: "Никой друг не отсъства", apClashN: "{n} ден(а) със застъпване", apLast: "Последна промяна {d}",
   renameBtn: "Преименувайте",
@@ -395,6 +405,7 @@ const bg: T = {
   celebrate: "{n} поредни почивни дни. Приятна почивка!",
 };
 const ar: T = {
+  swQ: "التبديل إلى {n}؟ ستحتاج إلى رمز PIN الخاص بـ {n}.", swQNew: "ليس لدى {n} رمز PIN بعد. هل تريد التبديل إلى {n} وتعيين رمز الآن؟", swTo: "التبديل إلى {n}", npTitle: "بدون رمز PIN: {n}", npText: "لا يمكن لأحد إضافة أيامهم أو تغييرها حتى يكون لديهم رمز PIN. انقر على اسم للتبديل إلى ذلك الشخص وتعيين رمز (يمكن استخدام الرمز نفسه لعدة أشخاص).",
   gtCode: "رمز إعداد من 8 أرقام", gtCodeHelp: "أُعيد تعيين رمز PIN الخاص بك. أدخل الرمز لمرة واحدة الذي أعطاك إياه المُعتمِد، ثم اختر رمز PIN جديدًا.", prCodeT: "رمز لمرة واحدة لـ {n}", prCodeD: "سلّم هذا الرمز إلى {n} شخصيًا أو برسالة خاصة. به يُختار رمز PIN جديد. يعمل مرة واحدة خلال 24 ساعة.", prCodeOk: "تم", dupName: "هذا الاسم موجود بالفعل في الفريق. أضف اسم العائلة أو حرفًا أوليًا.",
   apSumPeople: "أشخاص بانتظار", apSumDays: "أيام للمراجعة", apSumClash: "مع تداخل", apStatReq: "المطلوب", apStatPeriods: "عدد الفترات: {n}", apAllowance: "الرصيد السنوي", apCarry: "منها {n} مرحّلة", apPtoSet: "يوم هذا العام", apNoAllow: "غير محدد", apStatLeft: "المتبقي بعد", apAfter: "إذا وافقت", apOverBy: "تجاوز الرصيد بـ {n}", apStatHol: "عطل ضمنها", apHolSub: "عطل رسمية لا تُحتسب", apPeriods: "الفترات ومن يغيب أيضًا", apWd: "أيام العمل: {n}", apNobody: "لا أحد غيره غائب", apClashN: "أيام التداخل: {n}", apLast: "آخر تغيير {d}",
   renameBtn: "إعادة تسمية",

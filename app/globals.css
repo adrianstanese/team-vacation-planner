@@ -276,3 +276,12 @@ html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-
 .tvp-aprole .tvp-mini { border: 1.5px solid #D6D3D1; background: transparent; color: inherit; box-shadow: none; }
 
 .tvp-code { margin: 14px 0 8px; padding: 14px; border-radius: 14px; background: #FFF7ED; color: #9A3412; font: 900 32px/1 ui-monospace, Menlo, monospace; letter-spacing: 6px; text-align: center; user-select: all; }
+
+/* People without a PIN yet: notice above the calendar; names switch to that person */
+.tvp-nopin { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; margin-bottom: 12px; border-radius: 14px; background: #FFF7ED; border: 1px solid #FDBA74; color: #7C2D12; }
+.tvp-nopin > span { font-size: 20px; line-height: 1; }
+.tvp-nopin b { font-size: 13px; } .tvp-nopin p { margin: 2px 0 8px; font-size: 12px; line-height: 1.4; }
+.tvp-nopin-names { display: flex; flex-wrap: wrap; gap: 6px; }
+.tvp-nopin-names button { padding: 4px 10px; border-radius: 999px; border: 1px solid #FB923C; background: #fff; color: #9A3412; font: 700 12px var(--font-body, system-ui), sans-serif; cursor: pointer; }
+.tvp-nopin-names button:hover { background: #FFEDD5; }
+.tvp-mini-sw { border-color: #A78BFA; background: #F5F3FF; color: #5B21B6; }
