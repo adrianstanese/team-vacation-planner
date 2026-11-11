@@ -2412,7 +2412,7 @@ function TimelineView({team,th,t}) {
 // ─── Coverage Dashboard ──────────────────────────────────────────
 function CoverageView({team,th,t}) {
   const yr=team.year||CY;
-  const groups=[...new Set(team.members.map(m=>m.group).filter(Boolean))].sort();
+  const groups=([...new Set(team.members.map(m=>m.group).filter(Boolean))] as string[]).sort();
   const[grp,setGrp]=useState("");
   const mem=grp?team.members.filter(m=>m.group===grp):team.members;
   const total=mem.length;
@@ -2471,9 +2471,9 @@ function ConflictAlerts({team,threshold,th,t}) {
   team.members.forEach(m=>(m.days||[]).forEach(d=>{if(!allDays[d])allDays[d]=[];allDays[d].push(m.name);}));
   const conflicts=Object.entries(allDays).filter(([,v])=>v.length>=threshold).sort(([a],[b])=>a.localeCompare(b));
   // Groups: a day where half or more of a group (and at least 2 people) is away
-  const gm={};team.members.forEach(m=>{if(m.group)(gm[m.group]=gm[m.group]||[]).push(m);});
+  const gm:Record<string,any[]>={};team.members.forEach(m=>{if(m.group)(gm[m.group]=gm[m.group]||[]).push(m);});
   const gAlerts=[];
-  Object.entries(gm).forEach(([g,ms])=>{if(ms.length<2)return;const cnt={};ms.forEach(m=>(m.days||[]).forEach(d=>{(cnt[d]=cnt[d]||[]).push(m.name);}));Object.entries(cnt).forEach(([d,names])=>{if(names.length>=2&&names.length*2>=ms.length)gAlerts.push({g,d,names,of:ms.length});});});
+  Object.entries(gm).forEach(([g,ms])=>{if(ms.length<2)return;const cnt:Record<string,string[]>={};ms.forEach(m=>(m.days||[]).forEach(d=>{(cnt[d]=cnt[d]||[]).push(m.name);}));Object.entries(cnt).forEach(([d,names])=>{if(names.length>=2&&names.length*2>=ms.length)gAlerts.push({g,d,names,of:ms.length});});});
   gAlerts.sort((x,y)=>x.d.localeCompare(y.d));
   if(!conflicts.length&&!gAlerts.length) return null;
   if(!conflicts.length) return <div style={{background:"rgba(245,158,11,.08)",border:"1px solid rgba(245,158,11,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
@@ -3171,7 +3171,7 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
 }
 
 function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,lang,setLang,theme,setTheme}){
-  const[name,setName]=useState("");const[scrY,setScrY]=useState(0);useEffect(function(){var h=function(){setScrY(window.scrollY);};window.addEventListener("scroll",h,{passive:true});return function(){window.removeEventListener("scroll",h);};},[]);const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
+  const[name,setName]=useState("");const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
   const YRS=Array.from({length:10},(_,i)=>2026+i);
 
   if(about) return <AboutPage th={th} t={t} onBack={()=>setAbout(false)} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>;
@@ -3731,6 +3731,13 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   const ren=(id,n)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
   const setCo=(id,cc)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
   const setPto=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
+  // Day comments (right-click a day): this function was missing, so posting a comment did nothing
+  const addComment=(day,text)=>{
+    if(locked){flash(t.locked);return;}
+    const by=(team.members.find(x=>x.id===(unlockedId||aId))||{}).name||"Guest";
+    const c={...(team.comments||{})};c[day]=[...(c[day]||[]),{by,at:new Date().toISOString(),t:String(text).slice(0,280)}];
+    updateWithHistory({...team,comments:c,log:addLogEntry(team,`${by} commented on ${day}`)});setCommentText("");
+  };
   const setGroup=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.group=val.slice(0,24);else delete nx.group;return nx;})});};
   const setRegion=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
   const tog=(y,m,d)=>{
@@ -3966,7 +3973,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         </div>}
         {/* Conflict alerts */}
         {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
-        <datalist id="tvp-groups">{[...new Set(team.members.map(m=>m.group).filter(Boolean))].map(g=><option key={g} value={g}/>)}</datalist>
+        <datalist id="tvp-groups">{([...new Set(team.members.map(m=>m.group).filter(Boolean))] as string[]).map(g=><option key={g} value={g}/>)}</datalist>
 
         {/* Legend at top */}
         {team.members.length>0&&view==="cal"&&<div style={{marginBottom:10,padding:"8px 12px",background:th.gbg,borderRadius:G.rXs,border:`1px solid ${th.gbd}`,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
