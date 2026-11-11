@@ -55,6 +55,7 @@ export async function PUT(request: NextRequest) {
       const rows = await sql`UPDATE teams SET data = ${JSON.stringify(doc)}::jsonb, updated_at = NOW()
         WHERE id = ${id} AND updated_at::text = ${cur[0].v} RETURNING updated_at::text AS v`;
       if (!rows.length) continue; // someone saved in between: re-read and re-check
+      if (stored) await snapshot(sql, id, stored, doc);
       return NextResponse.json({ ok: true, v: rows[0].v, reverted }, { headers: NO_STORE });
     }
     // New team. A deleted team's id cannot be reused (its copy waits in the trash for 30 days).
@@ -73,6 +74,18 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ ok: true, v: rows[0].v, reverted, owner: key }, { headers: NO_STORE });
   }
   return NextResponse.json({ error: "Busy, try again" }, { status: 503, headers: NO_STORE });
+}
+
+// Keeps the version a save replaced (time travel and recovery, 30 days): at most one copy per hour, plus always
+// one before a save that drops members or many days. A failed snapshot never fails the save.
+type Sql = Awaited<ReturnType<typeof authDb>>;
+const dayCount = (d: TeamDoc | null) => (d?.members || []).reduce((n, m) => n + (Array.isArray(m?.days) ? m.days.length : 0), 0);
+async function snapshot(sql: Sql, id: string, before: TeamDoc, after: TeamDoc) {
+  try {
+    const big = (after.members || []).length < (before.members || []).length || dayCount(after) < dayCount(before) - 10;
+    await sql`INSERT INTO team_versions (id, data) SELECT ${id}, ${JSON.stringify(before)}::jsonb
+      WHERE ${big} OR NOT EXISTS (SELECT 1 FROM team_versions WHERE id = ${id} AND at > now() - interval '1 hour')`;
+  } catch (e) { console.error("snapshot failed", e); }
 }
 
 // DELETE ?id= → the team leaves the public site and a copy is kept in team_trash (restorable by the site admin

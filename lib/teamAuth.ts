@@ -21,6 +21,9 @@ export async function authDb(): Promise<Sql> {
     await sql`CREATE TABLE IF NOT EXISTS team_trash (tid bigserial PRIMARY KEY, id text NOT NULL, data jsonb NOT NULL, updated_at timestamptz, expires_at timestamptz, deleted_at timestamptz NOT NULL DEFAULT now())`;
     await sql`CREATE INDEX IF NOT EXISTS team_trash_id ON team_trash (id)`;
     await sql`CREATE TABLE IF NOT EXISTS team_creates (ip text NOT NULL, at timestamptz NOT NULL DEFAULT now())`;
+    // Earlier versions of each team (time travel / recovery), at most one per hour plus one before any big loss
+    await sql`CREATE TABLE IF NOT EXISTS team_versions (vid bigserial PRIMARY KEY, id text NOT NULL, data jsonb NOT NULL, at timestamptz NOT NULL DEFAULT now())`;
+    await sql`CREATE INDEX IF NOT EXISTS team_versions_id_at ON team_versions (id, at DESC)`;
     return sql;
   })().catch(e => { ready = null; throw e; });
   return ready;

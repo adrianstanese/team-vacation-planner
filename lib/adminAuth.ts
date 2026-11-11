@@ -112,6 +112,8 @@ export async function purgeOld(sql: Sql) {
     await sql`WITH gone AS (DELETE FROM teams WHERE expires_at < now() RETURNING id, data, updated_at, expires_at)
       INSERT INTO team_trash (id, data, updated_at, expires_at) SELECT id, data, updated_at, expires_at FROM gone`;
     await sql`DELETE FROM team_trash WHERE deleted_at < now() - interval '30 days'`;
+    await sql`CREATE TABLE IF NOT EXISTS team_versions (vid bigserial PRIMARY KEY, id text NOT NULL, data jsonb NOT NULL, at timestamptz NOT NULL DEFAULT now())`;
+    await sql`DELETE FROM team_versions WHERE at < now() - interval '30 days'`;
     await sql`DELETE FROM team_creates WHERE at < now() - interval '1 day'`;
     await sql`CREATE TABLE IF NOT EXISTS admin_log (id bigserial PRIMARY KEY, at timestamptz NOT NULL DEFAULT now(), action text NOT NULL, team_id text, detail text)`;
     await sql`DELETE FROM admin_log WHERE at < now() - interval '12 months'`;

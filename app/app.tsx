@@ -4,6 +4,17 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import BottomDuo from "@/components/WorkoseniePromo";
 import CoffeeButton from "@/components/CoffeeButton";
+import nextDynamic from "next/dynamic";
+import TodayTiles from "@/components/v3/TodayTiles";
+import { V } from "@/lib/v3Text";
+import { pendingApprovals } from "@/lib/v3Util";
+// Loaded only when first opened (keeps the first page load small)
+const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr:false});
+const TimeTravel=nextDynamic(()=>import("@/components/v3/TimeTravel"),{ssr:false});
+const Wrapped=nextDynamic(()=>import("@/components/v3/Wrapped"),{ssr:false});
+// Public holidays of a member for a year, cached by country + region
+const HOL_CACHE=new Map();
+function holSetOf(m,yr){const k=yr+"|"+((m&&m.country)||"")+"|"+((m&&m.region)||"");let v=HOL_CACHE.get(k);if(!v){v=new Set(m&&m.country?getAllHolidays(m,yr):[]);if(HOL_CACHE.size>400)HOL_CACHE.clear();HOL_CACHE.set(k,v);}return v;}
 import "./frontpage.css";
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { buildSheets } from "@/lib/xlsxSheets";
@@ -3797,6 +3808,20 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   const holSet=new Set();team.members.forEach(m=>{if(m.country)computeHolidays(m.country,yr).forEach(h=>holSet.add(h));});
   const hNames=useHolidayNames(team.members.map(m=>m.country));
   const holInfo=key=>holidayInfo(key,team.members,yr,hNames);
+  // ─── v3: approval inbox, time travel, Wrapped, Today tiles ───
+  const[showInbox,setShowInbox]=useState(false);const[showTT,setShowTT]=useState(false);const[showWr,setShowWr]=useState(false);
+  const colorOf=id=>{const i=team.members.findIndex(m=>m.id===id);return MC[(i<0?0:i)%MC.length];};
+  const holOf=useCallback(m=>holSetOf(m,yr),[yr]);
+  const pendN=team.approver?pendingApprovals(team,yr,threshold).length:0;
+  const wrOk=team.members.reduce((n,m)=>n+(m.days||[]).filter(k=>typeof k==="string"&&k.startsWith(yr+"-")).length,0)>=5;
+  const approveIds=ids=>{if(!ids.length)return;const cur=teamRef.current;const set=new Set(ids);const names=cur.members.filter(m=>set.has(m.id)).map(m=>m.name||"Member");
+    updateWithHistory({...cur,members:cur.members.map(mm=>set.has(mm.id)?{...mm,approved:true}:mm),log:addLogEntry(cur,names.join(", ")+" approved")});flash(V("approvedToast",{n:ids.length}));};
+  const requestChanges=(m,note,day)=>{const cur=teamRef.current;if(cur.locked){flash(t.locked);return;}const by=(cur.members.find(x=>x.id===cur.approver)||{}).name||"Approver";
+    const text=note?V("changesComment",{note}):V("changesNoNote");const c={...(cur.comments||{})};c[day]=[...(c[day]||[]),{by,at:new Date().toISOString(),t:("@"+(m.name||"")+" "+text).slice(0,280)}];
+    updateWithHistory({...cur,comments:c,log:addLogEntry(cur,by+" asked "+(m.name||"a member")+" for changes")});flash(V("requestedToast",{n:m.name||""}));};
+  const restoreVersion=(raw,at)=>{const cur=teamRef.current;if(cur.locked){flash(t.locked);return;}const v=teamForYear(raw,yr);if(!v||!Array.isArray(v.members)){flash("Not saved");return;}
+    let when=at;try{when=new Date(at).toLocaleString(dateLocale(),{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});}catch(e){}
+    updateWithHistory({...v,id:cur.id,comments:cur.comments,log:addLogEntry(cur,"Restored "+yr+" to the version from "+when)});flash(V("ttRestored",{d:when}));};
 
   const startAdd=()=>{if(locked){flash(t.locked);return;}if(team.members.length>=50){flash(t.mx);return;}setAdding(true);setNn("");setNc(null);setNr(null);};
   const confirmAdd=async()=>{
@@ -3986,6 +4011,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         <LangDrop lang={lang} set={setLang} th={th}/>
         <button onClick={()=>setSettings(!settings)} aria-label="Settings" aria-expanded={settings} title="Settings" style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
         {!mob&&<div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 8px",background:"rgba(139,92,246,.1)",borderRadius:10}}><span style={{width:6,height:6,borderRadius:"50%",background:"#22C55E",animation:"pulse 2s 3"}}></span><span style={{fontSize:9,fontWeight:600,color:"#6D28D9",fontFamily:FM}}>{t.live||"Live"}</span></div>}
+        {!!team.approver&&<button type="button" className="v3-inbox-btn" onClick={()=>setShowInbox(true)} aria-label={V("inboxBadge",{n:pendN})} title={V("inbox")} style={{color:th.ac,background:th.al,borderColor:th.gbd||th.bd}}>✓{!mob&&<span>{V("inbox")}</span>}{pendN>0&&<b>{pendN}</b>}</button>}
         <Btn th={th} v="secondary" sz="sm" icon="share" onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
         <CoffeeButton lang={lang} iconOnly={mob}/>
 
@@ -4000,6 +4026,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       <div style={{width:1,height:20,background:th.bd}}/>
       <Btn th={th} v="ghost" sz="sm" onClick={undo} disabled={!historyRef.current.length} style={{fontSize:11}}>↩ {X("undo")}</Btn>
       <Btn th={th} v="ghost" sz="sm" onClick={redo} disabled={!redoRef.current.length} style={{fontSize:11}}>↪ {X("redo")}</Btn>
+      <Btn th={th} v="ghost" sz="sm" icon={null} disabled={false} onClick={()=>setShowTT(true)} style={{fontSize:11}}>⏳ {V("tt")}</Btn>
       <div style={{width:1,height:20,background:th.bd}}/>
       {isAdmin&&<Btn th={th} v="ghost" sz="sm" icon={locked?"unlock":"lock"} onClick={toggleLock}>{locked?t.unlock:t.lock}</Btn>}
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>generatePDFReport(team,t)}>{t.pdf}</Btn>
@@ -4081,6 +4108,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
           </div>}
         </div>}
         {/* Conflict alerts */}
+        {view==="cal"&&<TodayTiles team={team} yr={yr} th={th} colorOf={colorOf} holOf={holOf} holInfo={holInfo} active={am||null} threshold={threshold} showWrapped={wrOk} onWrapped={()=>setShowWr(true)} onPick={id=>setAId(id)}/>}
         {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
         <datalist id="tvp-groups">{([...new Set(team.members.map(m=>m.group).filter(Boolean))] as string[]).map(g=><option key={g} value={g}/>)}</datalist>
 
@@ -4156,8 +4184,12 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         {view==="heatmap"&&<HeatmapView team={team} th={th} t={t} holSet={holSet}/>}
         {view==="timeline"&&<TimelineView team={team} th={th} t={t}/>}
         {view==="coverage"&&<CoverageView team={team} th={th} t={t}/>}
-        {view==="log"&&<ChangeLogView team={team} th={th} t={t}/>}
+        {view==="log"&&<Fragment>
+          <button type="button" className="v3-tt-cta" onClick={()=>setShowTT(true)} style={{color:th.tx,background:th.gbg,borderColor:th.gbd}}><span aria-hidden="true">⏳</span><span><b>{V("tt")}</b><small style={{color:th.t2}}>{V("ttSub")}</small></span></button>
+          <ChangeLogView team={team} th={th} t={t}/>
+        </Fragment>}
         {view==="summary"&&<Fragment>
+          {wrOk&&<button type="button" className="v3-tile v3-t-wrap v3-wrap-banner" onClick={()=>setShowWr(true)}><span className="v3-t-wrap-k">✨ {V("wrCta",{y:yr})}</span><span className="v3-t-wrap-s">{V("wrCtaSub")}</span></button>}
           <h3 style={{margin:"0 0 14px",fontSize:16,fontWeight:700,color:th.tx}}>{t.tv} — {yr}</h3>
           {(()=>{const countries=new Set();team.members.forEach(m=>{if(m.country)countries.add(m.country);});
             if(!countries.size) return <div style={{color:th.t3,fontSize:13,textAlign:"center",padding:30}}>{X("noCountries")}</div>;
@@ -4174,6 +4206,9 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       
         {view==="trips"&&<TripsView team={team} onUpdate={updateWithHistory} th={th} t={t} yr={yr} holSet={holSet}/>}
         {view==="analytics"&&<AnalyticsDashboard team={team} yr={yr} th={th} t={t}/>}
+        {showInbox&&<ApprovalInbox open onClose={()=>setShowInbox(false)} team={team} yr={yr} threshold={threshold} th={th} colorOf={colorOf} onApprove={approveIds} onRequest={requestChanges}/>}
+        {showTT&&<TimeTravel open onClose={()=>setShowTT(false)} teamId={team.id} team={team} yr={yr} th={th} toView={raw=>teamForYear(raw,yr)} onRestore={restoreVersion}/>}
+        {showWr&&<Wrapped open onClose={()=>setShowWr(false)} team={team} yr={yr} holOf={holOf} sevenDay={!!team.w7} logo={safeLogo(team.logo)}/>}
         <BottomDuo th={th} lang={lang} compact/>
 </main>
     </div>

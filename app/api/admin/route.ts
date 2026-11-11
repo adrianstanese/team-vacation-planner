@@ -264,6 +264,7 @@ export async function POST(req: NextRequest) {
     if (body.confirm !== id) return json({ error: "Type the team id to confirm" }, 400);
     const gone = await sql`DELETE FROM team_trash WHERE id = ${id} RETURNING id`;
     if (!gone.length) return json({ ok: false, error: "Not in trash" }, 404);
+    try { await sql`DELETE FROM team_versions WHERE id = ${id}`; } catch { /* table may not exist yet */ }
     await logAction(sql, "purge", id);
     return json({ ok: true });
   }
