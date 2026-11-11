@@ -8,6 +8,8 @@ import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { buildSheets } from "@/lib/xlsxSheets";
 import { mergeTeam } from "@/lib/merge";
 import { planImport } from "@/lib/importPlan";
+import { findBridges } from "@/lib/bridges";
+import { X, setTextLang, dateLocale } from "@/lib/extraText";
 
 // ─── PIN hashing (SHA-256) ──────────────────────────────────────────
 const hashPin = async (pin) => {
@@ -1654,22 +1656,22 @@ function BadgeView({ team, th, t }) {
     <div style={{ background: th.sf, borderRadius: 16, border: `1px solid ${th.bd}`, overflow: "hidden", boxShadow: th.sm }}>
       <div style={{ padding: "16px 20px", background: th.al, borderBottom: `1px solid ${th.bd}` }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: th.ac }}>{team.name}</div>
-        <div style={{ fontSize: 12, color: th.t2, marginTop: 2 }}>Today · {new Date().toLocaleDateString("en", { weekday: "long", month: "short", day: "numeric" })}</div>
+        <div style={{ fontSize: 12, color: th.t2, marginTop: 2 }}>{X("today")} · {new Date().toLocaleDateString(dateLocale(), { weekday: "long", month: "short", day: "numeric" })}</div>
       </div>
       <div style={{ padding: "16px 20px" }}>
         <div style={{ display: "flex", gap: 20, marginBottom: 16 }}>
           <div style={{ textAlign: "center", flex: 1 }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#10B981" }}>{inToday.length}</div>
-            <div style={{ fontSize: 11, color: th.t3, fontWeight: 600 }}>In office</div>
+            <div style={{ fontSize: 11, color: th.t3, fontWeight: 600 }}>{X("inOffice")}</div>
           </div>
           <div style={{ width: 1, background: th.bd }} />
           <div style={{ textAlign: "center", flex: 1 }}>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#DC2626" }}>{outToday.length}</div>
-            <div style={{ fontSize: 11, color: th.t3, fontWeight: 600 }}>On vacation</div>
+            <div style={{ fontSize: 11, color: th.t3, fontWeight: 600 }}>{X("onVac")}</div>
           </div>
         </div>
         {outToday.length > 0 && <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: th.t3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Out today</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: th.t3, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{X("outToday")}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {outToday.map(m => {
               const i = team.members.indexOf(m);
@@ -1679,7 +1681,7 @@ function BadgeView({ team, th, t }) {
           </div>
         </div>}
         {nextVac && <div style={{ padding: "10px 12px", background: th.bg, borderRadius: 8, fontSize: 12, color: th.t2 }}>
-          Next: <strong style={{ color: th.tx }}>{nextVac.name}</strong> starts {nextVac.date}
+          {X("next")}: <strong style={{ color: th.tx }}>{nextVac.name}</strong> {X("starts")} {(()=>{const p2=pk(nextVac.date);try{return new Date(p2.y,p2.m,p2.d,12).toLocaleDateString(dateLocale(),{weekday:"short",day:"numeric",month:"short"});}catch(e){return nextVac.date;}})()}
         </div>}
       </div>
     </div>
@@ -2085,7 +2087,7 @@ function CountrySelect({value,onChange,th,t}) {
       {co?<Fragment><span>{co.f}</span>{co.n}</Fragment>:<span style={{color:th.t3}}>{t.selC}</span>}
     </button>
     {open&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rXs,boxShadow:th.sm,zIndex:50,maxHeight:200,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,display:"flex",flexDirection:"column"}}>
-      <div style={{padding:6}}><input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{width:"100%",padding:"6px 10px",border:`1px solid ${th.bd}`,borderRadius:6,fontSize:13,fontFamily:F,outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/></div>
+      <div style={{padding:6}}><input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder={X("search")} style={{width:"100%",padding:"6px 10px",border:`1px solid ${th.bd}`,borderRadius:6,fontSize:13,fontFamily:F,outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/></div>
       <div style={{overflowY:"auto",maxHeight:160}}>
         {filtered.map(c=> <button key={c.c} onClick={()=>{onChange(c.c);setOpen(false);setSearch("");}} style={{width:"100%",padding:"8px 12px",border:"none",background:c.c===value?th.al:"transparent",color:th.tx,fontFamily:F,fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:6}} onMouseEnter={e=>e.currentTarget.style.background=th.sh} onMouseLeave={e=>e.currentTarget.style.background=c.c===value?th.al:"transparent"}><span>{c.f}</span>{c.n}</button>)}
       </div>
@@ -2429,9 +2431,9 @@ function CoverageView({team,th,t}) {
   }
   return <div>
     <div style={{textAlign:"center",marginBottom:10}}><span style={{fontSize:18,fontWeight:700,color:th.tx}}>{t.coverage} — {yr}</span></div>
-    <div style={{textAlign:"center",fontSize:12,color:th.t3,marginBottom:12}}>Share of people at work on working days{team.w7?" (7-day week)":" (Mon–Fri)"}; each person's own public holidays count as away.</div>
-    {groups.length>0&&<div role="group" aria-label="Group" style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap",marginBottom:12}}>
-      {["",...groups].map(g=><button key={g||"all"} onClick={()=>setGrp(g)} aria-pressed={grp===g} style={{padding:"4px 12px",borderRadius:999,border:"1px solid "+(grp===g?th.ac:th.gbd),background:grp===g?th.al:th.gbg,color:grp===g?th.ac:th.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:F}}>{g||"Everyone"}</button>)}
+    <div style={{textAlign:"center",fontSize:12,color:th.t3,marginBottom:12}}>{X("covHint")}</div>
+    {groups.length>0&&<div role="group" aria-label={X("group")} style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap",marginBottom:12}}>
+      {["",...groups].map(g=><button key={g||"all"} onClick={()=>setGrp(g)} aria-pressed={grp===g} style={{padding:"4px 12px",borderRadius:999,border:"1px solid "+(grp===g?th.ac:th.gbd),background:grp===g?th.al:th.gbg,color:grp===g?th.ac:th.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:F}}>{g||X("everyone")}</button>)}
     </div>}
     <div style={{display:"flex",gap:2,alignItems:"end",height:160,padding:"0 4px",marginBottom:12}}>
       {weeks.map((w,i)=>{
@@ -2501,7 +2503,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
       <input autoFocus value={en} onChange={e=>setEn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&en.trim())onFinishRename(en.trim());if(e.key==="Escape")onFinishRename(m.name);}} onBlur={()=>en.trim()?onFinishRename(en.trim()):onFinishRename(m.name)} maxLength={30} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:600,fontFamily:F,color:c.t,outline:"none",padding:"3px 0"}}/>
     </div>
     <CountrySelect value={m.country} onChange={onCountryChange} th={th} t={t}/>
-    {onGroupChange&&<input defaultValue={m.group||""} list="tvp-groups" maxLength={24} placeholder="Group (optional), e.g. Design" aria-label="Group" onBlur={e=>{const v=e.target.value.trim();if(v!==(m.group||""))onGroupChange(v);}} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur();}} style={{padding:"6px 8px",borderRadius:6,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>}
+    {onGroupChange&&<input defaultValue={m.group||""} list="tvp-groups" maxLength={24} placeholder={X("groupPh")} aria-label={X("group")} onBlur={e=>{const v=e.target.value.trim();if(v!==(m.group||""))onGroupChange(v);}} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur();}} style={{padding:"6px 8px",borderRadius:6,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>}
   </div>;
 
   return <div draggable={!locked} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{padding:"6px 10px",opacity:isDragging?0.4:1,borderTop:isDragOver?"2px solid "+th.ac:"none",background:isActive?c.b:h?th.sh:"transparent",borderRadius:8,cursor:"pointer",border:isActive?`1.5px solid ${c.d}40`:"1.5px solid transparent",boxShadow:isActive?th.gwAc:"none",transition:"all .15s"}}>
@@ -2509,7 +2511,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:4}}>{m.name}{isApprover&&<span title={t.approverLabel||"Approver"} style={{fontSize:11}}>👑</span>}</div>
-      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{m.group?<span style={{fontWeight:600}}>{m.group} · </span>:null}{dc===0?t.nd:`${fmtDays(dc)} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}{m.carry?<span title="Carried over from last year" style={{color:"#047857"}}>{" +"+m.carry}</span>:null}</span>:""}{approvalMode&&!isApprover?(m.approved?<span style={{color:"#10B981",fontWeight:700,fontSize:9}}>{" ✓"}</span>:<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" ⏳"}</span>):""}</div>
+      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{m.group?<span style={{fontWeight:600}}>{m.group} · </span>:null}{dc===0?t.nd:`${fmtDays(dc)} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}{m.carry?<span title={X("carried")} style={{color:"#047857"}}>{" +"+m.carry}</span>:null}</span>:""}{approvalMode&&!isApprover?(m.approved?<span style={{color:"#10B981",fontWeight:700,fontSize:9}}>{" ✓"}</span>:<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" ⏳"}</span>):""}</div>
       {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>allow?"#EF4444":dc>allow*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/allow*100))+"%",transition:"width .3s"}}/></div>}
     {(function(){var yr2=typeof yr!=="undefined"?yr:CY;var mos=Array.from({length:12},function(_,mo){return(m.days||[]).filter(function(d){return d.startsWith(yr2+"-"+String(mo+1).padStart(2,"0"));}).length;});var mx=Math.max.apply(null,mos)||1;if(!(m.days||[]).length)return null;return <svg width="60" height="14" viewBox="0 0 60 14" style={{marginTop:3,opacity:.6}}>{mos.map(function(v,i){var h=Math.max(1,v/mx*12);return <rect key={i} x={i*5} y={14-h} width="4" height={h} rx="1" fill={c.d} opacity={v>0?.8:.15}/>;})}</svg>;})()}{(function(){var ds=(m.days||[]).filter(function(d){return d>dk(CY,CM,CD);}).sort();if(!ds.length)return null;var nd=ds[0].split("-");var diff=Math.ceil((new Date(+nd[0],+nd[1]-1,+nd[2])-new Date(CY,CM,CD))/864e5);if(diff<=0||diff>365)return null;return <div style={{fontSize:9,color:"#8B5CF6",fontWeight:600,marginTop:2,display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:11}}>🏖️</span>{diff===1?(t.tomorrow||"Tomorrow!"):diff+" "+(t.daysUntil||"days until vacation")}</div>;})()}
     </div>
@@ -2611,7 +2613,7 @@ function HolBrowser({onClose,th,t,year}){
             <span style={{fontSize:12,color:"#065F46",fontWeight:600,background:"#D1FAE5",padding:"2px 6px",borderRadius:8}}>{wk} {t.wk}</span>
             <span style={{fontSize:12,color:"#92400E",fontWeight:600,background:"#FEF3C7",padding:"2px 6px",borderRadius:8}}>{hols.length-wk} {t.we}</span>
           </div>;})()}
-          {hols.map(h=>{const p=pk(h.date);const dt=new Date(p.y,p.m,p.d);const dow=dt.toLocaleDateString("en",{weekday:"long"});const isWknd=dt.getDay()===0||dt.getDay()===6;
+          {hols.map(h=>{const p=pk(h.date);const dt=new Date(p.y,p.m,p.d);const dow=dt.toLocaleDateString(dateLocale(),{weekday:"long"});const isWknd=dt.getDay()===0||dt.getDay()===6;
           return <div key={h.date} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:th.bg,borderRadius:6}}>
             <div style={{minWidth:40,textAlign:"center"}}><div style={{fontSize:17,fontWeight:700,color:isWknd?th.t3:th.ac,fontFamily:F}}>{p.d}</div><div style={{fontSize:10,color:th.t3,fontWeight:600}}>{t.M[p.m].slice(0,3)}</div></div>
             <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:th.tx}}>{h.name}</div><div style={{fontSize:10,color:th.t3}}>{dow}</div></div>
@@ -2648,35 +2650,35 @@ function ShareModal({teamId,teamName,onClose,th,t}){
         <Btn th={th} onClick={()=>copy(link)} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center"}}>{cp?t.cp:t.cl}</Btn>
       </Fragment>}
       {tab==="qr"&&<Fragment>
-        <p style={{margin:"0 0 12px",fontSize:13,color:th.t2}}>Scan to join {teamName}</p>
+        <p style={{margin:"0 0 12px",fontSize:13,color:th.t2}}>{X("scanJoin",{n:teamName})}</p>
         <div style={{display:"flex",justifyContent:"center",marginBottom:12}}><QRCode data={link} size={180} th={th}/></div>
         <div style={{background:th.bg,borderRadius:8,padding:"8px 12px",border:`1px solid ${th.bd}`,textAlign:"center",fontSize:11,color:th.t3,fontFamily:FM}}>{teamId}</div>
       </Fragment>}
       {tab==="ical"&&<Fragment>
-        <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>iCal Subscribe URL</p>
-        <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>Add this URL to Google Calendar, Outlook, or Apple Calendar. It updates automatically when vacations change.</p>
+        <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>{X("icalT")}</p>
+        <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>{X("icalD")}</p>
         <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{feedUrl}</div>
         <Btn th={th} onClick={()=>copy(feedUrl)} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center",marginBottom:8}}>{cp?t.cp:t.copySubURL}</Btn>
-        <a href={webcalUrl} style={{display:"block",textAlign:"center",fontSize:12,fontWeight:600,color:th.ac,marginBottom:10,textDecoration:"none"}}>Open in my calendar app →</a>
+        <a href={webcalUrl} style={{display:"block",textAlign:"center",fontSize:12,fontWeight:600,color:th.ac,marginBottom:10,textDecoration:"none"}}>{X("calApp")} →</a>
         <div style={{fontSize:11,color:th.t3,lineHeight:1.6}}>
           <div style={{marginBottom:4}}><strong style={{color:th.tx}}>Google Calendar:</strong> Settings → Add calendar → From URL → paste</div>
           <div style={{marginBottom:4}}><strong style={{color:th.tx}}>Outlook:</strong> Add calendar → Subscribe from web → paste</div>
           <div><strong style={{color:th.tx}}>Apple Calendar:</strong> File → New Calendar Subscription → paste</div>
-          <div style={{marginTop:6}}>Calendar apps refresh subscriptions on their own schedule (Google: every few hours).</div>
+          <div style={{marginTop:6}}>{X("refreshNote")}</div>
         </div>
       </Fragment>}
       {tab==="widget"&&<Fragment>
-        <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>Mini Dashboard Widget</p>
-        <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>A compact 300x200px widget showing who is out this week. Perfect for Notion, company wikis, or office TV screens.</p>
+        <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>{X("widgetT")}</p>
+        <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>{X("widgetD")}</p>
         <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{"<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"220\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>"}</div>
         <Btn th={th} onClick={()=>copy("<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"220\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center"}}>{cp?t.cp:t.copyWidget}</Btn>
       </Fragment>}
       {tab==="embed"&&<Fragment>
-        <p style={{margin:"0 0 10px",fontSize:13,color:th.t2}}>Paste this code into any website to embed the team calendar:</p>
+        <p style={{margin:"0 0 10px",fontSize:13,color:th.t2}}>{X("embedD")}</p>
         <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{embedCode}</div>
         <Btn th={th} onClick={()=>copy(embedCode)} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center"}}>{cp?t.cp:t.copyEmbed}</Btn>
       </Fragment>}
-      <p style={{margin:"12px 0 0",fontSize:11,color:th.t3,textAlign:"center"}}>Teams are stored for 24 months. Bookmark this link to return anytime.</p>
+      <p style={{margin:"12px 0 0",fontSize:11,color:th.t3,textAlign:"center"}}>{X("stored")}</p>
     </div>
   </div>;
 }
@@ -3388,7 +3390,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
         </div>
         <div>
           <label style={{fontSize:10,color:th.t3,fontWeight:600,display:"block",marginBottom:3}}>{t.dest||"Destination"}</label>
-          <input value={form.dest} onChange={function(e){setForm({...form,dest:e.target.value});}} placeholder="City, Country" maxLength={50} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
+          <input value={form.dest} onChange={function(e){setForm({...form,dest:e.target.value});}} placeholder={X("city")} maxLength={50} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
         </div>
         <div>
           <label style={{fontSize:10,color:th.t3,fontWeight:600,display:"block",marginBottom:3}}>{t.startDate||"Start date"}</label>
@@ -3401,7 +3403,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
       </div>
       <div style={{marginTop:10}}>
         <label style={{fontSize:10,color:th.t3,fontWeight:600,display:"block",marginBottom:3}}>{t.project||"Project / Purpose"}</label>
-        <input value={form.project} onChange={function(e){setForm({...form,project:e.target.value});}} placeholder="Optional" maxLength={80} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
+        <input value={form.project} onChange={function(e){setForm({...form,project:e.target.value});}} placeholder={X("optional")} maxLength={80} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>
       </div>
       <div style={{display:"flex",gap:8,marginTop:14,justifyContent:"flex-end"}}>
         <button onClick={resetForm} style={{padding:"7px 16px",borderRadius:8,border:"1px solid "+th.gbd,background:"transparent",color:th.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:F}}>{t.cancel||"Cancel"}</button>
@@ -3535,18 +3537,18 @@ async function cropLogo(file){
 function TeamLogo({team,th,size=30,editable=false,onChange=null,locked=false}){
   const ref=useRef(null);const[busy,setBusy]=useState(false);const[menu,setMenu]=useState(false);
   const logo=safeLogo(team.logo);const initial=(team.name||"?").trim().charAt(0).toUpperCase();
-  const pick=async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f||!onChange)return;setBusy(true);try{onChange(await cropLogo(f));}catch(err){alert("That image could not be used. Try a PNG or JPG.");}finally{setBusy(false);}};
+  const pick=async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f||!onChange)return;setBusy(true);try{onChange(await cropLogo(f));}catch(err){alert(X("logoBad"));}finally{setBusy(false);}};
   const face=<span style={{width:size,height:size,borderRadius:"50%",overflow:"hidden",display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:logo?"#fff":th.al,color:th.ac,fontWeight:800,fontSize:Math.round(size*0.45),border:"1px solid "+th.bd,opacity:busy?.5:1}}>{logo?<img src={logo} alt="" width={size} height={size} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:initial}</span>;
   if(!editable||locked)return face;
   return <span style={{position:"relative",display:"inline-flex"}}>
-    <button type="button" onClick={()=>logo?setMenu(m=>!m):ref.current&&ref.current.click()} aria-label={logo?"Team logo: change or remove":"Add a team logo"} title={logo?"Change or remove the team logo":"Add a team logo"} style={{padding:0,border:0,background:"none",cursor:"pointer",borderRadius:"50%",display:"inline-flex",position:"relative"}}>
+    <button type="button" onClick={()=>logo?setMenu(m=>!m):ref.current&&ref.current.click()} aria-label={logo?X("logoMenu"):X("logoAdd")} title={logo?X("logoMenu"):X("logoAdd")} style={{padding:0,border:0,background:"none",cursor:"pointer",borderRadius:"50%",display:"inline-flex",position:"relative"}}>
       {face}
       {!logo&&<span aria-hidden="true" style={{position:"absolute",right:-2,bottom:-2,width:13,height:13,borderRadius:"50%",background:th.ac,color:"#fff",fontSize:11,lineHeight:"13px",textAlign:"center",fontWeight:800,border:"1.5px solid #fff"}}>+</span>}
     </button>
     <input ref={ref} type="file" accept="image/*" onChange={pick} style={{display:"none"}}/>
     {menu&&<span role="menu" style={{position:"absolute",top:size+6,left:0,zIndex:60,background:th.sf,border:"1px solid "+th.bd,borderRadius:12,boxShadow:"0 8px 24px rgba(30,27,75,.16)",padding:4,display:"flex",flexDirection:"column",minWidth:150}}>
-      <button role="menuitem" type="button" onClick={()=>{setMenu(false);ref.current&&ref.current.click();}} style={{textAlign:"start",padding:"8px 10px",border:0,background:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:th.tx,borderRadius:8,fontFamily:F}}>Change logo</button>
-      <button role="menuitem" type="button" onClick={()=>{setMenu(false);onChange&&onChange(null);}} style={{textAlign:"start",padding:"8px 10px",border:0,background:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:"#DC2626",borderRadius:8,fontFamily:F}}>Remove logo</button>
+      <button role="menuitem" type="button" onClick={()=>{setMenu(false);ref.current&&ref.current.click();}} style={{textAlign:"start",padding:"8px 10px",border:0,background:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:th.tx,borderRadius:8,fontFamily:F}}>{X("logoChange")}</button>
+      <button role="menuitem" type="button" onClick={()=>{setMenu(false);onChange&&onChange(null);}} style={{textAlign:"start",padding:"8px 10px",border:0,background:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:"#DC2626",borderRadius:8,fontFamily:F}}>{X("logoRemove")}</button>
     </span>}
   </span>;
 }
@@ -3661,8 +3663,8 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   // ─── Undo/Redo ───
   const historyRef=useRef([]);const redoRef=useRef([]);const skipHistoryRef=useRef(false);
   const pushHistory=(prev)=>{if(skipHistoryRef.current){skipHistoryRef.current=false;return;}historyRef.current=[...historyRef.current.slice(-19),JSON.stringify(prev)];redoRef.current=[];};
-  const undo=()=>{if(!historyRef.current.length)return;const prev=historyRef.current.pop();redoRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(prev));flash("Undo");};
-  const redo=()=>{if(!redoRef.current.length)return;const next=redoRef.current.pop();historyRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(next));flash("Redo");};
+  const undo=()=>{if(!historyRef.current.length)return;const prev=historyRef.current.pop();redoRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(prev));flash(X("undo"));};
+  const redo=()=>{if(!redoRef.current.length)return;const next=redoRef.current.pop();historyRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(next));flash(X("redo"));};
   // teamRef = the newest version, even before React re-renders (fast drags toggle several days per frame)
   const teamRef=useRef(team);teamRef.current=team;
   const updateWithHistory=(newTeam)=>{pushHistory(teamRef.current);teamRef.current=newTeam;onUpdate(newTeam);};
@@ -3687,7 +3689,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   const confirmAdd=async()=>{
     const n=nn.trim();
     if(!n||!nc)return;
-    if(nPin.length!==6||!/^\d{6}$/.test(nPin)){flash("PIN must be exactly 6 digits");return;}
+    if(nPin.length!==6||!/^\d{6}$/.test(nPin)){flash(X("pin6"));return;}
     const ph=await hashPin(nPin);
     const teamHasApprover=!!team.approver||team.members.some(x=>x.isApprover);
     const becomeApprover=nIsApprover&&!teamHasApprover;
@@ -3712,20 +3714,20 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       const meUnlocked=team.members.find(x=>x.id===unlockedId);
       const meIsApprover=meUnlocked&&(meUnlocked.isApprover||team.approver===meUnlocked.id);
       if(unlockedId!==id&&!meIsApprover){
-        flash("PIN required to delete this member");
+        flash(X("pinReqDel"));
         return;
       }
     }
     const m=target;updateWithHistory({...team,members:team.members.filter(x=>x.id!==id),log:addLogEntry(team,`${(m&&m.name)||"Member"} was removed`)});if(aId===id)setAId(null);flash(t.mr);};
-  const ren=(id,n)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
-  const setCo=(id,cc)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
-  const setPto=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
-  const setGroup=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.group=val.slice(0,24);else delete nx.group;return nx;})});};
-  const setRegion=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
+  const ren=(id,n)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
+  const setCo=(id,cc)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
+  const setPto=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
+  const setGroup=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.group=val.slice(0,24);else delete nx.group;return nx;})});};
+  const setRegion=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
   const tog=(y,m,d)=>{
     const team=teamRef.current;
     if(!aId||locked)return;
-    if(isPinLocked(aId)){flash("Enter PIN to edit this member");return;}
+    if(isPinLocked(aId)){flash(X("pinEnter"));return;}
     const key=dk(y,m,d);
     const member=team.members.find(function(x){return x.id===aId;});
     if(!member)return;
@@ -3794,13 +3796,13 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   const pinModalEl = pinPrompt ? (
     <div onClick={()=>setPinPrompt(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div onClick={e=>e.stopPropagation()} style={{background:th.bg,borderRadius:16,padding:24,width:300,maxWidth:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
-        <div style={{fontSize:15,fontWeight:700,color:th.tx,marginBottom:4,fontFamily:F}}>Enter PIN</div>
+        <div style={{fontSize:15,fontWeight:700,color:th.tx,marginBottom:4,fontFamily:F}}>{X("pinTitle")}</div>
         <div style={{fontSize:11,color:th.t3,marginBottom:16,fontFamily:F}}>{(team.members.find(x=>x.id===pinPrompt)||{}).name}</div>
         <input autoFocus type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={pinInput} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setPinInput(v);setPinErr(false);}} onKeyDown={e=>{if(e.key==="Enter")tryUnlock();if(e.key==="Escape")setPinPrompt(null);}} style={{width:"100%",padding:"12px",borderRadius:10,border:"2px solid "+(pinErr?"#EF4444":th.ac),fontSize:18,fontFamily:FM,color:th.tx,background:th.sf,outline:"none",letterSpacing:8,textAlign:"center"}} placeholder="______"/>
-        {pinErr&&<div style={{color:"#EF4444",fontSize:11,fontWeight:600,marginTop:6,textAlign:"center",fontFamily:F}}>Wrong PIN</div>}
+        {pinErr&&<div style={{color:"#EF4444",fontSize:11,fontWeight:600,marginTop:6,textAlign:"center",fontFamily:F}}>{X("pinWrong")}</div>}
         <div style={{display:"flex",gap:8,marginTop:16}}>
-          <button onClick={tryUnlock} disabled={pinInput.length!==6} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:pinInput.length===6?th.ac:th.t3,color:"#fff",fontSize:13,fontWeight:700,fontFamily:F,cursor:pinInput.length===6?"pointer":"not-allowed",opacity:pinInput.length===6?1:0.5}}>Unlock</button>
-          <button onClick={()=>{setPinPrompt(null);setPinInput("");setPinErr(false);}} style={{padding:"10px 16px",borderRadius:10,border:"1px solid "+th.bd,background:"transparent",color:th.t2,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer"}}>Cancel</button>
+          <button onClick={tryUnlock} disabled={pinInput.length!==6} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:pinInput.length===6?th.ac:th.t3,color:"#fff",fontSize:13,fontWeight:700,fontFamily:F,cursor:pinInput.length===6?"pointer":"not-allowed",opacity:pinInput.length===6?1:0.5}}>{X("unlock")}</button>
+          <button onClick={()=>{setPinPrompt(null);setPinInput("");setPinErr(false);}} style={{padding:"10px 16px",borderRadius:10,border:"1px solid "+th.bd,background:"transparent",color:th.t2,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer"}}>{X("cancel")}</button>
         </div>
       </div>
     </div>
@@ -3821,19 +3823,19 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
     setSetPinFor(null);
     setNewPinInput("");
     setConfirmPinInput("");
-    flash("PIN set");
+    flash(X("pinSet"));
   };
   const setPinModalEl = setPinFor ? (
     <div onClick={()=>{setSetPinFor(null);setNewPinInput("");setConfirmPinInput("");}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div onClick={e=>e.stopPropagation()} style={{background:th.bg,borderRadius:16,padding:24,width:320,maxWidth:"100%",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
-        <div style={{fontSize:15,fontWeight:700,color:th.tx,marginBottom:4,fontFamily:F}}>Set a PIN</div>
-        <div style={{fontSize:11,color:th.t3,marginBottom:16,fontFamily:F,lineHeight:1.4}}>Protect <b>{(team.members.find(x=>x.id===setPinFor)||{}).name}</b> with a 6-digit PIN. This cannot be reset later.</div>
+        <div style={{fontSize:15,fontWeight:700,color:th.tx,marginBottom:4,fontFamily:F}}>{X("setPin")}</div>
+        <div style={{fontSize:11,color:th.t3,marginBottom:16,fontFamily:F,lineHeight:1.4}}>{X("pinProtect",{n:(team.members.find(x=>x.id===setPinFor)||{}).name||""})}</div>
         <input autoFocus type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={newPinInput} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setNewPinInput(v);}} placeholder="6-digit PIN" style={{width:"100%",padding:"12px",borderRadius:10,border:"2px solid "+(newPinInput.length===6?"#10B981":th.bd),fontSize:18,fontFamily:FM,color:th.tx,background:th.sf,outline:"none",letterSpacing:8,textAlign:"center",marginBottom:8}}/>
-        <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={confirmPinInput} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setConfirmPinInput(v);}} onKeyDown={e=>{if(e.key==="Enter")savePin();if(e.key==="Escape"){setSetPinFor(null);setNewPinInput("");setConfirmPinInput("");}}} placeholder="Confirm PIN" style={{width:"100%",padding:"12px",borderRadius:10,border:"2px solid "+(confirmPinInput.length===6&&confirmPinInput===newPinInput?"#10B981":th.bd),fontSize:18,fontFamily:FM,color:th.tx,background:th.sf,outline:"none",letterSpacing:8,textAlign:"center"}}/>
-        {confirmPinInput.length===6&&confirmPinInput!==newPinInput&&<div style={{color:"#EF4444",fontSize:11,fontWeight:600,marginTop:6,textAlign:"center",fontFamily:F}}>PINs do not match</div>}
+        <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={confirmPinInput} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setConfirmPinInput(v);}} onKeyDown={e=>{if(e.key==="Enter")savePin();if(e.key==="Escape"){setSetPinFor(null);setNewPinInput("");setConfirmPinInput("");}}} placeholder={X("confirmPin")} style={{width:"100%",padding:"12px",borderRadius:10,border:"2px solid "+(confirmPinInput.length===6&&confirmPinInput===newPinInput?"#10B981":th.bd),fontSize:18,fontFamily:FM,color:th.tx,background:th.sf,outline:"none",letterSpacing:8,textAlign:"center"}}/>
+        {confirmPinInput.length===6&&confirmPinInput!==newPinInput&&<div style={{color:"#EF4444",fontSize:11,fontWeight:600,marginTop:6,textAlign:"center",fontFamily:F}}>{X("pinMismatch")}</div>}
         <div style={{display:"flex",gap:8,marginTop:16}}>
-          <button onClick={savePin} disabled={newPinInput.length!==6||newPinInput!==confirmPinInput} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:newPinInput.length===6&&newPinInput===confirmPinInput?th.ac:th.t3,color:"#fff",fontSize:13,fontWeight:700,fontFamily:F,cursor:newPinInput.length===6&&newPinInput===confirmPinInput?"pointer":"not-allowed",opacity:newPinInput.length===6&&newPinInput===confirmPinInput?1:0.5}}>Save PIN</button>
-          <button onClick={()=>{setSetPinFor(null);setNewPinInput("");setConfirmPinInput("");}} style={{padding:"10px 16px",borderRadius:10,border:"1px solid "+th.bd,background:"transparent",color:th.t2,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer"}}>Cancel</button>
+          <button onClick={savePin} disabled={newPinInput.length!==6||newPinInput!==confirmPinInput} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:newPinInput.length===6&&newPinInput===confirmPinInput?th.ac:th.t3,color:"#fff",fontSize:13,fontWeight:700,fontFamily:F,cursor:newPinInput.length===6&&newPinInput===confirmPinInput?"pointer":"not-allowed",opacity:newPinInput.length===6&&newPinInput===confirmPinInput?1:0.5}}>{X("savePin")}</button>
+          <button onClick={()=>{setSetPinFor(null);setNewPinInput("");setConfirmPinInput("");}} style={{padding:"10px 16px",borderRadius:10,border:"1px solid "+th.bd,background:"transparent",color:th.t2,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer"}}>{X("cancel")}</button>
         </div>
       </div>
     </div>
@@ -3870,8 +3872,8 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       <div style={{width:1,height:20,background:th.bd}}/>
       <LangDrop lang={lang} set={setLang} th={th}/>
       <div style={{width:1,height:20,background:th.bd}}/>
-      <Btn th={th} v="ghost" sz="sm" onClick={undo} disabled={!historyRef.current.length} style={{fontSize:11}}>↩ Undo</Btn>
-      <Btn th={th} v="ghost" sz="sm" onClick={redo} disabled={!redoRef.current.length} style={{fontSize:11}}>↪ Redo</Btn>
+      <Btn th={th} v="ghost" sz="sm" onClick={undo} disabled={!historyRef.current.length} style={{fontSize:11}}>↩ {X("undo")}</Btn>
+      <Btn th={th} v="ghost" sz="sm" onClick={redo} disabled={!redoRef.current.length} style={{fontSize:11}}>↪ {X("redo")}</Btn>
       <div style={{width:1,height:20,background:th.bd}}/>
       {isAdmin&&<Btn th={th} v="ghost" sz="sm" icon={locked?"unlock":"lock"} onClick={toggleLock}>{locked?t.unlock:t.lock}</Btn>}
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>generatePDFReport(team,t)}>{t.pdf}</Btn>
@@ -3880,8 +3882,8 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportXLSX(team,t)}>Excel</Btn>
       {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>{t.approvedPdf}</Btn>}
       <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>Import</Btn>
-      <label title="Unused days from last year carried into this year (0 = off)" style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2,fontWeight:600}}>Carry over up to
-        <input type="number" min="0" max="60" value={team.carryMax||0} onChange={e=>{const v=Math.max(0,Math.min(60,parseInt(e.target.value)||0));const nt={...team};if(v)nt.carryMax=v;else delete nt.carryMax;updateWithHistory(nt);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11}}/> days</label>
+      <label title={X("carryTitle")} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2,fontWeight:600}}>{X("carryUpTo")}
+        <input type="number" min="0" max="60" value={team.carryMax||0} onChange={e=>{const v=Math.max(0,Math.min(60,parseInt(e.target.value)||0));const nt={...team};if(v)nt.carryMax=v;else delete nt.carryMax;updateWithHistory(nt);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11}}/> {X("days")}</label>
       {onDeleteForever&&<Btn th={th} v="ghost" sz="sm" onClick={()=>{setDelText("");setDelOpen(true);}} style={{color:"#DC2626",borderColor:"#FECACA"}}>{NY.delBtn}</Btn>}
       <div style={{width:1,height:20,background:th.bd}}/>
       <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}>
@@ -3904,7 +3906,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         {/* Add Member button — TOP of sidebar */}
         <div style={{padding:"4px 8px 6px",display:"flex",flexDirection:"column",gap:4}}>
           {!locked&&!adding&&<Btn th={th} sz="sm" icon="plus" onClick={startAdd} disabled={team.members.length>=50} style={{width:"100%",justifyContent:"center"}}>{t.am}</Btn>}
-          {!locked&&!adding&&team.members.length<50&&<button onClick={()=>setShowCSVImport(true)} style={{width:"100%",marginTop:4,padding:"6px 8px",border:"none",background:"none",color:th.t2,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}}>Add several people at once</button>}
+          {!locked&&!adding&&team.members.length<50&&<button onClick={()=>setShowCSVImport(true)} style={{width:"100%",marginTop:4,padding:"6px 8px",border:"none",background:"none",color:th.t2,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}}>{X("several")}</button>}
           {(()=>{const am=team.members.find(x=>x.id===aId);if(!am||am.pinHash)return null;return <button onClick={()=>{setSetPinFor(am.id);setNewPinInput("");setConfirmPinInput("");}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"1.5px solid #F59E0B",background:"rgba(254,243,199,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#92400E",marginTop:4}}><Ic n="lock" s={12} c="#92400E"/> Set PIN to protect</button>;})()}
           <button onClick={function(){setHolBr(true);if(mob)setSb(false);}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #EF4444)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(245,158,11,0.3)"}}><Ic n="flag" s={12} c="#fff"/> {t.ch}</button>
         </div>
@@ -3970,7 +3972,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
             <span style={{fontSize:12,fontWeight:600,color:ac.t}}>{t.ed}: {am.name}</span>
             <span style={{fontSize:11,color:ac.t,opacity:.7}}>{t.tap}</span>
           </div>
-          <button onClick={()=>setHalfMode(h=>!h)} aria-pressed={halfMode} title="Half-day mode: tap a day to make it a half day" style={{padding:"6px 12px",borderRadius:20,border:"1.5px solid "+ac.d,background:halfMode?ac.d:"transparent",color:halfMode?"#fff":ac.t,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>½ {halfMode?"on":"day"}</button>
+          <button onClick={()=>setHalfMode(h=>!h)} aria-pressed={halfMode} title={X("halfTitle")} style={{padding:"6px 12px",borderRadius:20,border:"1.5px solid "+ac.d,background:halfMode?ac.d:"transparent",color:halfMode?"#fff":ac.t,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>{halfMode?X("halfOn"):X("halfDay")}</button>
           <button onClick={()=>{setAId(null);setHalfMode(false);flash(am.name+": "+fmtDays(usedOf(am))+" "+((usedOf(am)===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>Done · {fmtDays(usedOf(am))} {(usedOf(am)===1)?t.dy:t.dys}</button>
         </div>}
 
@@ -4031,10 +4033,10 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         {view==="summary"&&<Fragment>
           <h3 style={{margin:"0 0 14px",fontSize:16,fontWeight:700,color:th.tx}}>{t.tv} — {yr}</h3>
           {(()=>{const countries=new Set();team.members.forEach(m=>{if(m.country)countries.add(m.country);});
-            if(!countries.size) return <div style={{color:th.t3,fontSize:13,textAlign:"center",padding:30}}>No countries assigned.</div>;
+            if(!countries.size) return <div style={{color:th.t3,fontSize:13,textAlign:"center",padding:30}}>{X("noCountries")}</div>;
             const allH={};[...countries].forEach(cc=>computeHolidays(cc,yr).forEach(h=>{if(!allH[h])allH[h]=[];allH[h].push(cc);}));
             const dates=Object.keys(allH).sort();
-            return <div style={{display:"flex",flexDirection:"column",gap:6}}>{dates.map(d=>{const p=pk(d);const dow=new Date(p.y,p.m,p.d).toLocaleDateString("en",{weekday:"short"});const affected=team.members.filter(m=>(allH[d]||[]).includes(m.country));
+            return <div style={{display:"flex",flexDirection:"column",gap:6}}>{dates.map(d=>{const p=pk(d);const dow=new Date(p.y,p.m,p.d).toLocaleDateString(dateLocale(),{weekday:"short"});const affected=team.members.filter(m=>(allH[d]||[]).includes(m.country));
               return <div key={d} style={{background:th.sf,borderRadius:6,border:`1px solid ${th.bd}`,padding:"8px 12px",display:"flex",alignItems:"center",gap:10}}>
                 <div style={{minWidth:36,textAlign:"center"}}><div style={{fontSize:15,fontWeight:700,color:th.ht,fontFamily:F}}>{p.d}</div><div style={{fontSize:9,color:th.t3,fontWeight:600}}>{t.M[p.m].slice(0,3)}</div></div>
                 <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:th.tx}}>{holName(d)}</div><div style={{fontSize:10,color:th.t3}}>{dow} — {affected.map(m=>m.name).join(", ")}</div></div>
@@ -4080,7 +4082,12 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
     {holBr&&<HolBrowser onClose={()=>setHolBr(false)} th={th} t={t} year={yr}/>}
 
     {/* Smart Optimizer Modal */}
-    {showOptimizer&&(()=>{const mem=team.members.find(m=>m.id===showOptimizer);if(!mem)return null;const suggestions=findBridgeDays(mem.country,yr);
+    {showOptimizer&&(()=>{const mem=team.members.find(m=>m.id===showOptimizer);if(!mem)return null;
+      // Every 1–3 working-day gap that joins this person's days off (weekends, own national + regional holidays, booked days)
+      const hs=[yr-1,yr,yr+1].filter(y=>y>=YEAR_MIN&&y<=YEAR_MAX).flatMap(y=>mem.country?getAllHolidays(mem,y):[]);
+      const loc=lang==="en"?"en-GB":lang;const fd=k=>{const p2=pk(k);try{return new Date(p2.y,p2.m,p2.d,12).toLocaleDateString(loc,{weekday:"short",day:"numeric",month:"short"});}catch(e){return k;}};
+      const hn=k=>{const rows=hNames[mem.country]&&hNames[mem.country].h&&hNames[mem.country].h[k];return rows&&rows[0]?(rows[0][0]||rows[0][1]):holName(k);};
+      const suggestions=mem.country?findBridges({year:yr,holidays:hs,booked:mem.days||[],sevenDay:!!team.w7,today:yr===CY?dk(CY,CM,CD):"",limit:10}).map(b=>({take:b.take,off:b.cost,gain:b.length,label:(b.take.length===1?fd(b.take[0]):fd(b.take[0])+" – "+fd(b.take[b.take.length-1]))+" → "+fd(b.from)+" – "+fd(b.to)+" ("+[...new Set(b.holidays.map(hn))].join(", ")+")"})):[];
       return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowOptimizer(null)}>
         <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:480,width:"100%",maxHeight:"70vh",display:"flex",flexDirection:"column",boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
           <div style={{padding:"16px 20px",borderBottom:`1px solid ${th.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -4088,16 +4095,16 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
             <button onClick={()=>setShowOptimizer(null)} style={{background:th.sh,border:"none",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
           </div>
           <div style={{flex:1,overflowY:"auto",padding:"12px 16px"}}>
-            {suggestions.length===0?<div style={{textAlign:"center",padding:30,color:th.t3,fontSize:13}}>No bridge day opportunities found for {yr}.</div>:
+            {suggestions.length===0?<div style={{textAlign:"center",padding:30,color:th.t3,fontSize:13}}>{X("bridgeNone",{y:yr})}</div>:
             suggestions.map((s,i)=> <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:i%2===0?th.bg:"transparent",borderRadius:8,marginBottom:4}}>
               <div style={{width:36,height:36,borderRadius:10,background:"#D1FAE5",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 <span style={{fontSize:14,fontWeight:800,color:"#065F46"}}>{s.gain}d</span>
               </div>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:600,color:th.tx}}>{s.label}</div>
-                <div style={{fontSize:11,color:th.t3}}>Take {s.off} day{s.off>1?"s":""} off → get {s.gain} consecutive days</div>
+                <div style={{fontSize:11,color:th.t3}}>{X("bridgeTake",{o:s.off,g:s.gain})}</div>
               </div>
-              <Btn th={th} v="ghost" sz="sm" onClick={()=>{const newDays=[...(mem.days||[]),...s.take.filter(d=>!(mem.days||[]).includes(d))];updateWithHistory({...team,members:team.members.map(m=>m.id===mem.id?{...m,days:newDays}:m)});flash(`Added ${s.off} day${s.off>1?"s":""}`);}} style={{fontSize:11}}>+ Add</Btn>
+              <Btn th={th} v="ghost" sz="sm" onClick={()=>{const newDays=[...(mem.days||[]),...s.take.filter(d=>!(mem.days||[]).includes(d))];updateWithHistory({...team,members:team.members.map(m=>m.id===mem.id?{...m,days:newDays}:m)});flash(X("added",{n:s.off}));}} style={{fontSize:11}}>+ {X("add")}</Btn>
             </div>)}
           </div>
         </div>
@@ -4126,33 +4133,33 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         updateWithHistory({...team,members,log:addLogEntry(team,"Import: "+(msg||"no changes"))});
         setShowCSVImport(false);setCsvText("");flash(msg||"Nothing to import");
       };
-      const badge=a=>a==="add"?{bg:"#ECFDF5",c:"#047857",l:"new"}:a==="update"?{bg:"#EEF2FF",c:"#4338CA",l:"update"}:{bg:"#FEF2F2",c:"#B91C1C",l:"skip"};
+      const badge=a=>a==="add"?{bg:"#ECFDF5",c:"#047857",l:X("isNew")}:a==="update"?{bg:"#EEF2FF",c:"#4338CA",l:X("update")}:{bg:"#FEF2F2",c:"#B91C1C",l:X("skip")};
       return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={()=>setShowCSVImport(false)}>
-      <div role="dialog" aria-label="Add people or import days" onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:620,width:"100%",maxHeight:"92vh",overflowY:"auto",padding:22,boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,boxSizing:"border-box"}}>
+      <div role="dialog" aria-label={X("importT")} onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:620,width:"100%",maxHeight:"92vh",overflowY:"auto",padding:22,boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,boxSizing:"border-box"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
-          <h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx}}>Add people or import vacation days</h3>
-          <button aria-label="Close" onClick={()=>setShowCSVImport(false)} style={{background:th.sh,border:"none",borderRadius:"50%",width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
+          <h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx}}>{X("importT")}</h3>
+          <button aria-label={X("close")} onClick={()=>setShowCSVImport(false)} style={{background:th.sh,border:"none",borderRadius:"50%",width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
         </div>
-        <p style={{margin:"0 0 8px",fontSize:12,color:th.t2,lineHeight:1.5}}>One line per person or per period: <b>Name, Country, Start, End</b>. Country and dates are optional. Paste from Excel or a list, or choose a CSV file. People already on the team are matched by name and only get the new days.</p>
-        <textarea value={csvText} onChange={e=>setCsvText(e.target.value)} placeholder={"Ana Pop, RO\nLukas Weber, Germany\nIoana Mureșan, RO, 2027-07-05, 2027-07-16"} rows={6} aria-label="List to import" style={{width:"100%",padding:10,border:`1.5px solid ${th.bd}`,borderRadius:10,fontSize:12,fontFamily:FM,resize:"vertical",outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/>
+        <p style={{margin:"0 0 8px",fontSize:12,color:th.t2,lineHeight:1.5}}>{X("importHelp")}</p>
+        <textarea value={csvText} onChange={e=>setCsvText(e.target.value)} placeholder={"Ana Pop, RO\nLukas Weber, Germany\nIoana Mureșan, RO, 2027-07-05, 2027-07-16"} rows={6} aria-label={X("listImport")} style={{width:"100%",padding:10,border:`1.5px solid ${th.bd}`,borderRadius:10,fontSize:12,fontFamily:FM,resize:"vertical",outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/>
         <label style={{display:"inline-block",marginTop:8}}>
           <input type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" style={{display:"none"}} onChange={e=>{const f=(e.target.files&&e.target.files[0]);if(f){const r=new FileReader();r.onload=()=>setCsvText(String(r.result||""));r.readAsText(f);}e.target.value="";}}/>
-          <span style={{display:"inline-block",padding:"8px 14px",background:th.sh,borderRadius:10,cursor:"pointer",fontSize:12,fontWeight:600,color:th.t2,border:`1px solid ${th.bd}`}}>Choose a CSV file</span>
+          <span style={{display:"inline-block",padding:"8px 14px",background:th.sh,borderRadius:10,cursor:"pointer",fontSize:12,fontWeight:600,color:th.t2,border:`1px solid ${th.bd}`}}>{X("chooseCsv")}</span>
         </label>
         {plan.rows.length>0&&<div style={{marginTop:12,border:`1px solid ${th.bd}`,borderRadius:12,overflow:"hidden"}}>
-          <div style={{padding:"8px 12px",fontSize:12,fontWeight:700,color:th.tx,background:th.sh}}>Preview · {plan.adds.length} new · {nUpd} updated{plan.skipped?` · ${plan.skipped} skipped`:""}</div>
+          <div style={{padding:"8px 12px",fontSize:12,fontWeight:700,color:th.tx,background:th.sh}}>{X("preview")} · {plan.adds.length} {X("isNew")} · {nUpd} {X("updated")}{plan.skipped?` · ${plan.skipped} ${X("skipped")}`:""}</div>
           <div style={{maxHeight:220,overflowY:"auto"}}>
             {plan.rows.slice(0,200).map((r,i)=>{const b=badge(r.action);return <div key={i} style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 44px 70px 58px",gap:8,alignItems:"center",padding:"6px 12px",borderTop:i?`1px solid ${th.bl}`:"none",fontSize:12,color:th.tx}}>
               <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.note||""}>{r.name}{r.note&&<span style={{display:"block",fontSize:11,color:"#B45309"}}>{r.note}</span>}</span>
               <span style={{fontFamily:FM,fontWeight:700,color:th.t2}}>{r.country||"—"}</span>
-              <span style={{color:th.t2}}>{r.days.length?`${r.days.length} day${r.days.length!==1?"s":""}`:"—"}</span>
+              <span style={{color:th.t2}}>{r.days.length?`${r.days.length} ${r.days.length!==1?X("days"):X("day")}`:"—"}</span>
               <span style={{fontSize:11,fontWeight:700,padding:"2px 6px",borderRadius:6,background:b.bg,color:b.c,textAlign:"center"}}>{b.l}</span>
             </div>;})}
           </div>
         </div>}
         <div style={{display:"flex",gap:8,marginTop:14,justifyContent:"flex-end"}}>
-          <Btn th={th} v="ghost" onClick={()=>setShowCSVImport(false)}>Cancel</Btn>
-          <Btn th={th} disabled={locked||(!plan.adds.length&&!nUpd)} onClick={apply}>{plan.adds.length||nUpd?`Apply · ${plan.adds.length} new, ${nUpd} updated`:"Apply"}</Btn>
+          <Btn th={th} v="ghost" onClick={()=>setShowCSVImport(false)}>{X("cancel")}</Btn>
+          <Btn th={th} disabled={locked||(!plan.adds.length&&!nUpd)} onClick={apply}>{plan.adds.length||nUpd?`${X("apply")} · ${plan.adds.length} ${X("isNew")}, ${nUpd} ${X("updated")}`:X("apply")}</Btn>
         </div>
       </div>
     </div>;})()}
@@ -4174,9 +4181,9 @@ function ErrorBoundary({children}) {
   if (hasError) {
     return <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:F,padding:40,background:"#F2F1EE",textAlign:"center"}}>
       <div style={{fontSize:48,marginBottom:16}}>🌴</div>
-      <h1 style={{fontSize:22,fontWeight:700,color:"#1A1A1A",margin:"0 0 8px"}}>Something went wrong</h1>
-      <p style={{fontSize:14,color:"#6B6B6B",margin:"0 0 24px",lineHeight:1.6}}>The app encountered an unexpected error. Your team data is safe.</p>
-      <button onClick={()=>{window.location.hash="";window.location.reload();}} style={{padding:"12px 28px",borderRadius:10,border:"none",background:"#2563EB",color:"#fff",fontSize:14,fontWeight:700,fontFamily:F,cursor:"pointer"}}>Go to Home Page</button>
+      <h1 style={{fontSize:22,fontWeight:700,color:"#1A1A1A",margin:"0 0 8px"}}>{X("errT")}</h1>
+      <p style={{fontSize:14,color:"#6B6B6B",margin:"0 0 24px",lineHeight:1.6}}>{X("errD")}</p>
+      <button onClick={()=>{window.location.hash="";window.location.reload();}} style={{padding:"12px 28px",borderRadius:10,border:"none",background:"#2563EB",color:"#fff",fontSize:14,fontWeight:700,fontFamily:F,cursor:"pointer"}}>{X("home")}</button>
     </div>;
   }
   return children;
@@ -4206,6 +4213,8 @@ export default function App(){
   // Opening a team picks its year: "year=YYYY" in the link if present, else the default
   const setTeam=tm=>{let y=null;try{const lp=linkParams();const ym=lp.match(/[#&?]year=(\d{4})/);if(tm&&ym&&lp.indexOf("team="+tm.id)>=0)y=clampYear(parseInt(ym[1]));}catch(e){}setViewYear(y);setTeamRaw(tm);};const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState("en");const[theme,setTheme]=useState("light");
   const th=TH[theme];const t=TX[lang];
+  setTextLang(lang);
+  useEffect(()=>{try{document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";}catch(e){}},[lang]);
 
   useEffect(()=>{(async()=>{
     const sl=await db.ld("drift-lang");const st=await db.ld("drift-theme");
