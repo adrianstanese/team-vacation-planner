@@ -76,15 +76,38 @@ export async function PUT(request: NextRequest) {
   return NextResponse.json({ error: "Busy, try again" }, { status: 503, headers: NO_STORE });
 }
 
-// Keeps the version a save replaced (time travel and recovery, 30 days): at most one copy per hour, plus always
-// one before a save that drops members or many days. A failed snapshot never fails the save.
+// Keeps the version a save replaced (time travel and recovery, 30 days): at most one copy per hour, plus one
+// before a save that drops members or many days (at most one such copy per 10 minutes). Never a copy identical to
+// the newest one. Per team the 4 oldest and 20 newest copies are kept, within a byte budget, so flooding a team
+// cannot push its good copies out; site-wide ceilings throttle brand-new teams first. A failed snapshot never fails
+// the save.
 type Sql = Awaited<ReturnType<typeof authDb>>;
+const KEEP_OLDEST = 4, KEEP_NEWEST = 20;         // per team: the oldest copies survive any flood of new ones
+const TEAM_BUDGET = 6 * 1024 * 1024;              // per team: stored bytes of all its copies
+const SOFT_CEILING = 150 * 1024 * 1024;           // all teams: above this, teams younger than 7 days get no copies
+const HARD_CEILING = 300 * 1024 * 1024;           // all teams: above this, no new copies at all (logged)
 const dayCount = (d: TeamDoc | null) => (d?.members || []).reduce((n, m) => n + (Array.isArray(m?.days) ? m.days.length : 0), 0);
 async function snapshot(sql: Sql, id: string, before: TeamDoc, after: TeamDoc) {
   try {
     const big = (after.members || []).length < (before.members || []).length || dayCount(after) < dayCount(before) - 10;
-    await sql`INSERT INTO team_versions (id, data) SELECT ${id}, ${JSON.stringify(before)}::jsonb
-      WHERE ${big} OR NOT EXISTS (SELECT 1 FROM team_versions WHERE id = ${id} AND at > now() - interval '1 hour')`;
+    const [sz] = await sql`SELECT pg_total_relation_size('team_versions')::bigint AS b,
+      (SELECT COALESCE(SUM(pg_column_size(data)), 0) FROM team_versions WHERE id = ${id})::bigint AS t,
+      (SELECT expires_at > now() + interval '23 months 23 days' FROM teams WHERE id = ${id}) AS young`;
+    const total = Number(sz?.b || 0);
+    if (total > HARD_CEILING) { console.error("team_versions over its hard ceiling: snapshots paused", total); return; }
+    if (total > SOFT_CEILING && sz?.young) { console.error("team_versions over its soft ceiling: no snapshot for a new team", id); return; }
+    if (Number(sz?.t || 0) > TEAM_BUDGET) { console.error("team over its snapshot budget", id); return; }
+    const json = JSON.stringify(before);
+    const ins = await sql`INSERT INTO team_versions (id, data) SELECT ${id}, ${json}::jsonb
+      WHERE (
+        NOT EXISTS (SELECT 1 FROM team_versions WHERE id = ${id} AND at > now() - interval '1 hour')
+        OR (${big} AND NOT EXISTS (SELECT 1 FROM team_versions WHERE id = ${id} AND at > now() - interval '10 minutes'))
+      )
+      AND NOT EXISTS (SELECT 1 FROM (SELECT data FROM team_versions WHERE id = ${id} ORDER BY at DESC LIMIT 1) n WHERE n.data = ${json}::jsonb)
+      RETURNING vid`;
+    if (ins.length) await sql`DELETE FROM team_versions WHERE id = ${id}
+      AND vid NOT IN (SELECT vid FROM team_versions WHERE id = ${id} ORDER BY at DESC LIMIT ${KEEP_NEWEST})
+      AND vid NOT IN (SELECT vid FROM team_versions WHERE id = ${id} ORDER BY at ASC LIMIT ${KEEP_OLDEST})`;
   } catch (e) { console.error("snapshot failed", e); }
 }
 

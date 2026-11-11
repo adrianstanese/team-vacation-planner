@@ -1405,6 +1405,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const colorOf=useCallback(id=>{const i=team.members.findIndex(m=>m.id===id);return MC[(i<0?0:i)%MC.length];},[team.members]);
   const holInfoCb=useCallback(key=>holidayInfo(key,team.members,yr,hNames),[team.members,yr,hNames]);
   const holOf=useCallback(m=>holSetOf(m,yr),[yr]);
+  // Export code loads ahead of the first click, so print windows open straight from the click (popup blockers)
+  useEffect(()=>{const t0=setTimeout(()=>{import("./reports").catch(()=>{});},1200);return()=>clearTimeout(t0);},[]);
   const pendN=team.approver?pendingApprovals(team,yr,threshold).length:0;
   const wrOk=team.members.reduce((n,m)=>n+(m.days||[]).filter(k=>typeof k==="string"&&k.startsWith(yr+"-")).length,0)>=5;
   const approveIds=ids=>{if(!ids.length)return;const cur=teamRef.current;const set=new Set(ids);const names=cur.members.filter(m=>set.has(m.id)).map(m=>m.name||"Member");
@@ -1412,9 +1414,15 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const requestChanges=(m,note,day)=>{const cur=teamRef.current;if(cur.locked){flash(t.locked);return;}const by=(cur.members.find(x=>x.id===cur.approver)||{}).name||"Approver";
     const text=note?V("changesComment",{note}):V("changesNoNote");const c={...(cur.comments||{})};c[day]=[...(c[day]||[]),{by,at:new Date().toISOString(),t:("@"+(m.name||"")+" "+text).slice(0,280)}];
     updateWithHistory({...cur,comments:c,log:addLogEntry(cur,by+" asked "+(m.name||"a member")+" for changes")});flash(V("requestedToast",{n:m.name||""}));};
-  const restoreVersion=(raw,at)=>{const cur=teamRef.current;if(cur.locked){flash(t.locked);return;}const v=teamForYear(raw,yr);if(!v||!Array.isArray(v.members)){flash("Not saved");return;}
+  // Restore = everyone's days, half days and approval for the viewed year go back to the version; people removed since
+  // come back. Nobody is removed, other years and team settings stay as they are, and Undo works right after.
+  const restoreVersion=(raw,at)=>{const cur=teamRef.current;if(cur.locked){flash(t.locked);return;}const old=teamForYear(raw,yr);if(!old||!Array.isArray(old.members)){flash("Not saved");return;}
+    type RM={id:string;days?:string[];half?:string[];approved?:boolean};
+    const om=new Map<string,RM>((old.members as RM[]).filter(m=>m&&m.id).map(m=>[m.id,m] as [string,RM]));
+    const members=cur.members.map(m=>{const o=om.get(m.id);if(!o)return m;const nm={...m,days:Array.isArray(o.days)?o.days:[],approved:!!o.approved};if(Array.isArray(o.half)&&o.half.length)nm.half=o.half;else delete nm.half;return nm;});
+    (old.members as RM[]).forEach(o=>{if(o&&o.id&&!cur.members.some(m=>m.id===o.id))members.push(o);});
     let when=at;try{when=new Date(at).toLocaleString(dateLocale(),{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});}catch(e){}
-    updateWithHistory({...v,id:cur.id,comments:cur.comments,log:addLogEntry(cur,"Restored "+yr+" to the version from "+when)});flash(V("ttRestored",{d:when}));};
+    updateWithHistory({...cur,members,log:addLogEntry(cur,"Restored "+yr+" days to the version from "+when)});flash(V("ttRestored",{d:when}));};
 
   const startAdd=()=>{if(locked){flash(t.locked);return;}if(team.members.length>=50){flash(t.mx);return;}setAdding(true);setNn("");setNc(null);setNr(null);};
   const confirmAdd=async()=>{
@@ -1486,6 +1494,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       const nm={...mm,days:nd};if(nh.length||mm.half)nm.half=nh;return nm;
     }),log:addLogEntry(team,(member.name||"Member")+what+key)});
     buzz();
+    try{const pc=document.querySelector('[data-ym="'+y+"-"+m+'"] [data-day="'+d+'"]');if(pc){pc.classList.remove("tvp-popd");void (pc as HTMLElement).offsetWidth;pc.classList.add("tvp-popd");setTimeout(()=>pc.classList.remove("tvp-popd"),400);}}catch(e){}
     if(!has){try{const hol=holSetOf(member,y);const before=streaksOf({...member,days:ds},y,hol,!!team.w7).find(st=>st.start<=key&&st.end>=key);
       const after=streaksOf({...member,days:nd},y,hol,!!team.w7).find(st=>st.start<=key&&st.end>=key);
       if(after&&after.leave>=5&&!(before&&before.leave>=5)){const cell=document.querySelector('[data-ym="'+y+"-"+m+'"] [data-day="'+d+'"]');celebrate(cell);flash("🎉 "+V("celebrate",{n:after.length}));}}catch(e){}}

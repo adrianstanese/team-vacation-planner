@@ -136,12 +136,12 @@ html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-
 .tvp-pop::backdrop { display: none; }
 
 /* Day toggle pop (calendar cells) and the celebration burst */
-[data-day][aria-pressed="true"] { animation: tvp-day-pop .34s cubic-bezier(.2, 1.8, .4, 1); }
+[data-day].tvp-popd { animation: tvp-day-pop .34s cubic-bezier(.2, 1.8, .4, 1); }
 @keyframes tvp-day-pop { 0% { transform: scale(.82); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
 .tvp-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; }
 .tvp-confetti i { position: fixed; width: 8px; height: 12px; border-radius: 2px; will-change: transform, opacity; }
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
-  [data-day][aria-pressed="true"] { animation: none; }
+  [data-day].tvp-popd { animation: none; }
   .tvp-pop { transition: none; }
 }

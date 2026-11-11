@@ -31,7 +31,7 @@ export default function Privacy() {
       <p>Team Vacation Planner{OPERATOR_NAME ? <> is run by {OPERATOR_NAME}{OPERATOR_ADDRESS ? `, ${OPERATOR_ADDRESS}` : ""}</> : null}. Contact: <a href="mailto:contact@stanese.ro">contact@stanese.ro</a>.</p>
 
       <h2 style={h2}>What we store</h2>
-      <p>For each team: the team name, members&apos; names, country and region, vacation days and half days, allowances, groups, comments, an optional logo, and an activity log. We also store hashed PINs (never the PIN itself). For security, we keep failed PIN attempts (no IP address) and failed admin sign-in attempts with the IP address, for one day, and a count of new teams per IP address for one day. We count visits by country, worked out from your browser&apos;s time zone, without storing your IP address. Our hosting provider processes IP addresses in its server logs to deliver the site and protect it from abuse.</p>
+      <p>For each team: the team name, members&apos; names, country and region, vacation days and half days, allowances, groups, comments, an optional logo, and an activity log. We also store hashed PINs (never the PIN itself). To let teams undo mistakes, we keep earlier versions of each team (at most one per hour while it changes, plus one before large deletions); anyone with the team link can see them, but a removed member who had a PIN is never shown or restored from them. For security, we keep failed PIN attempts (no IP address) and failed admin sign-in attempts with the IP address, for one day, and a count of new teams per IP address for one day. We count visits by country, worked out from your browser&apos;s time zone, without storing your IP address. Our hosting provider processes IP addresses in its server logs to deliver the site and protect it from abuse.</p>
 
       <h2 style={h2}>Why, and on what basis</h2>
       <p>To run the planner you asked for (GDPR Art. 6(1)(b)). Colleagues added by someone else are processed for our and the team&apos;s legitimate interest in planning absences (Art. 6(1)(f)). The same basis covers security logs and site administration.</p>
@@ -43,7 +43,7 @@ export default function Privacy() {
       <p>We keep your preferences, your list of teams, team owner keys and temporary PIN sessions in your browser&apos;s storage. They stay on your device and are used only to make the tool work. No cookies are used, except a sign-in cookie for the site administrator.</p>
 
       <h2 style={h2}>How long</h2>
-      <p>Teams are deleted 24 months after they are created. A deleted team stays restorable for 30 days and is then erased. The admin action log is kept for 12 months. Security attempt logs are kept for one day.</p>
+      <p>Teams are deleted 24 months after they are created. A deleted team stays restorable for 30 days and is then erased. Earlier versions of a team are erased after 30 days, at once when the team is erased, and on request (we then also remove you from them). The admin action log is kept for 12 months. Security attempt logs are kept for one day.</p>
 
       <h2 style={h2}>Where</h2>
       <p>Data is hosted by Vercel Inc. (website) and Neon (database). Where data is processed outside the EU, transfers rely on the EU–US Data Privacy Framework or the European Commission&apos;s standard contractual clauses.</p>

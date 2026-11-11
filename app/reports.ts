@@ -526,6 +526,7 @@ export function printReport(team, t) {
   html += '</body></html>';
 
   var win = window.open('','_blank','width=1100,height=800');
+  if (!win) { try { window.dispatchEvent(new CustomEvent("tvp-save-error", { detail: "Your browser blocked the print window. Allow pop-ups for this site and try again." })); } catch (e) { /* no window */ } return; }
   win.document.write(html);
   win.document.close();
   win.focus();

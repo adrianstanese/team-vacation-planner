@@ -57,6 +57,9 @@ function Body({ teamId, team, yr, th, toView, onRestore, onClose }: Props) {
   const pick = (i: number) => { setSel(i); setConfirm(false); };
   const past = doc ? toView(doc.data) : null;
   const diff = past ? diffTeams(past, team) : null;
+  // What a restore changes: days, half days and approval for this year, and people removed since come back
+  const changed = diff ? diff.changed.filter(c => c.added.length || c.removed.length || c.approval !== undefined) : [];
+  const restorable = changed.length + (diff ? diff.membersRemoved.length : 0);
 
   return <>
     <p className="v3-sub" style={{ color: th.t2 }}>{V("ttSub")}</p>
@@ -82,13 +85,10 @@ function Body({ teamId, team, yr, th, toView, onRestore, onClose }: Props) {
         <div className="v3-diff" style={{ borderColor: th.gbd || th.bd }}>
           {!diff ? <p style={{ color: th.t3 }}>{V("ttLoading")}</p> : <>
             <h3 style={{ color: th.tx }}>{V("ttSince")} <span style={{ color: th.t3, fontWeight: 500 }}>· {doc && when(doc.at)}</span></h3>
-            {diff.total === 0 && <p style={{ color: th.t2 }}>{V("ttNone", { y: yr })}</p>}
-            {diff.renamed && <p style={{ color: th.tx }}>✎ {V("ttTeamRenamed", diff.renamed)}</p>}
-            {diff.logoChanged && <p style={{ color: th.tx }}>◎ {V("ttLogo")}</p>}
-            {diff.membersAdded.length > 0 && <p style={{ color: th.tx }}>＋ {V("ttJoined", { names: diff.membersAdded.join(", ") })}</p>}
+            {restorable === 0 && <p style={{ color: th.t2 }}>{V("ttNone", { y: yr })}</p>}
             {diff.membersRemoved.length > 0 && <p style={{ color: th.tx }}>－ {V("ttLeft", { names: diff.membersRemoved.join(", ") })}</p>}
             <ul className="v3-dlist">
-              {diff.changed.map(c => <li key={c.id}>
+              {changed.map(c => <li key={c.id}>
                 <span style={{ color: th.tx, fontWeight: 650 }}>{c.name}</span>
                 {c.renamedFrom && <span style={{ color: th.t3 }}> ({V("ttRenamed", { from: c.renamedFrom })})</span>}
                 <span className="v3-chips">
@@ -102,7 +102,7 @@ function Body({ teamId, team, yr, th, toView, onRestore, onClose }: Props) {
                 </div>}
               </li>)}
             </ul>
-            {diff.total > 0 && !confirm && <button type="button" className="v3-btn v3-primary" style={{ background: th.ac }} onClick={() => setConfirm(true)}>↺ {V("ttRestore", { y: yr })}</button>}
+            {restorable > 0 && !confirm && <button type="button" className="v3-btn v3-primary" style={{ background: th.ac }} onClick={() => setConfirm(true)}>↺ {V("ttRestore", { y: yr })}</button>}
             {confirm && doc && <div className="v3-confirm" style={{ background: th.al, color: th.tx }}>
               <p>{V("ttConfirm", { y: yr })}</p>
               <div className="v3-row">

@@ -190,6 +190,13 @@ export async function POST(req: NextRequest) {
       return t;
     });
     if (r.ok) await logAction(sql, action, id, who);
+    // Erasure: the removed member also disappears from the team's earlier versions
+    if (r.ok && action === "removeMember") {
+      try {
+        await sql`UPDATE team_versions SET data = jsonb_set(data, '{members}', COALESCE((SELECT jsonb_agg(m) FROM jsonb_array_elements(COALESCE(data->'members', '[]'::jsonb)) m WHERE m->>'id' IS DISTINCT FROM ${memberId}), '[]'::jsonb))
+          WHERE id = ${id} AND data->'members' @> ${JSON.stringify([{ id: memberId }])}::jsonb`;
+      } catch { /* table may not exist yet */ }
+    }
     return json(r, r.ok ? 200 : 409);
   }
 

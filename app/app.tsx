@@ -15,7 +15,7 @@ const loadWS=()=>import("./workspace");
 const WS=nextDynamic(loadWS,{ssr:false,loading:()=><div style={{minHeight:"100vh"}} aria-busy="true"/>});
 if(typeof window!=="undefined"){try{if(/team=/.test(window.location.hash))loadWS();else{const ric=(window as Window&{requestIdleCallback?:(cb:()=>void)=>number}).requestIdleCallback;if(ric)ric(()=>{loadWS();});else setTimeout(()=>{loadWS();},1500);}}catch(e){}}
 // Report and export builders load on the first click (app/reports.ts)
-export const R=fn=>(...a)=>import("./reports").then(m=>m[fn](...a));
+export const R=fn=>(...a)=>import("./reports").then(m=>m[fn](...a)).catch(e=>{console.error(e);try{window.dispatchEvent(new CustomEvent("tvp-save-error",{detail:"Could not start the export. Reload the page and try again."}));}catch(_){/* no window */}});
 // ─── Algorithmic Holiday Engine (2026–2035) ──────────────────────
 // Western Easter: Anonymous Gregorian algorithm
 function westernEaster(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),month=Math.floor((h+l-7*m+114)/31),day=((h+l-7*m+114)%31)+1;return{m:month,d:day};}
