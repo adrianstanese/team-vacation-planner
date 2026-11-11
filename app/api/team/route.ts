@@ -1,4 +1,5 @@
 import { getSql } from "@/lib/db";
+import { adminDb } from "@/lib/adminAuth";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -48,11 +49,16 @@ export async function PUT(request: NextRequest) {
   return NextResponse.json({ ok: true, v: rows[0]?.v || null }, { headers: NO_STORE });
 }
 
+// DELETE ?id= → the team leaves the public site but is kept in teams_trash, where the site admin can restore it.
+// (Pages opened before Nov 2026 called this when someone only removed a team from their own list.)
 export async function DELETE(request: NextRequest) {
-  const sql = await getSql();
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
   if (!ID.test(id)) return NextResponse.json({ ok: true });
-  await sql`DELETE FROM teams WHERE id = ${id}`;
+  const sql = await adminDb(); // makes sure teams_trash exists
+  await sql`WITH gone AS (DELETE FROM teams WHERE id = ${id} RETURNING id, data, updated_at, expires_at)
+    INSERT INTO teams_trash (id, data, updated_at, expires_at, deleted_at)
+    SELECT id, data, updated_at, expires_at, now() FROM gone
+    ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at, expires_at = EXCLUDED.expires_at, deleted_at = now()`;
   return NextResponse.json({ ok: true });
 }

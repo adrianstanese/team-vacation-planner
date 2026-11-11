@@ -3553,8 +3553,36 @@ function ComingUp({team,th,lang}){
   </div>;
 }
 
+// ─── Small strings for next-year prompt and team deletion (11 languages) ───
+const NY_TX={
+  en:{plan:"Time to plan {y}",sub:"Everyone's {y} holidays are ready. Start picking vacation days.",open:"Open {y}",later:"Not now",delBtn:"Delete team…",delT:"Delete this team for everyone?",delB:"Everyone with the link loses access to {n}. This cannot be undone by you.",delType:"Type the team name to confirm",delGo:"Delete for everyone",cancel:"Cancel",removed:"Team deleted"},
+  fr:{plan:"Planifiez {y}",sub:"Les jours fériés {y} de chacun sont prêts. Commencez à choisir vos congés.",open:"Ouvrir {y}",later:"Plus tard",delBtn:"Supprimer l'équipe…",delT:"Supprimer cette équipe pour tout le monde ?",delB:"Tous ceux qui ont le lien perdront l'accès à {n}. Vous ne pourrez pas annuler.",delType:"Saisissez le nom de l'équipe pour confirmer",delGo:"Supprimer pour tous",cancel:"Annuler",removed:"Équipe supprimée"},
+  de:{plan:"Zeit, {y} zu planen",sub:"Alle Feiertage für {y} sind da. Wählen Sie Ihre Urlaubstage.",open:"{y} öffnen",later:"Später",delBtn:"Team löschen…",delT:"Dieses Team für alle löschen?",delB:"Alle mit dem Link verlieren den Zugriff auf {n}. Sie können das nicht rückgängig machen.",delType:"Teamnamen zur Bestätigung eingeben",delGo:"Für alle löschen",cancel:"Abbrechen",removed:"Team gelöscht"},
+  es:{plan:"Es hora de planificar {y}",sub:"Los festivos de {y} de todos ya están. Empieza a elegir días.",open:"Abrir {y}",later:"Ahora no",delBtn:"Eliminar equipo…",delT:"¿Eliminar este equipo para todos?",delB:"Todos los que tengan el enlace perderán el acceso a {n}. No podrás deshacerlo.",delType:"Escribe el nombre del equipo para confirmar",delGo:"Eliminar para todos",cancel:"Cancelar",removed:"Equipo eliminado"},
+  pt:{plan:"Hora de planear {y}",sub:"Os feriados de {y} de todos já estão prontos. Comece a escolher dias.",open:"Abrir {y}",later:"Agora não",delBtn:"Eliminar equipa…",delT:"Eliminar esta equipa para todos?",delB:"Todos com o link perdem o acesso a {n}. Não poderá desfazer.",delType:"Escreva o nome da equipa para confirmar",delGo:"Eliminar para todos",cancel:"Cancelar",removed:"Equipa eliminada"},
+  ro:{plan:"E timpul să planificați {y}",sub:"Sărbătorile legale din {y} ale tuturor sunt gata. Începeți să alegeți zilele de concediu.",open:"Deschide {y}",later:"Mai târziu",delBtn:"Șterge echipa…",delT:"Ștergi echipa pentru toată lumea?",delB:"Toți cei cu linkul pierd accesul la {n}. Nu poți anula.",delType:"Scrie numele echipei pentru confirmare",delGo:"Șterge pentru toți",cancel:"Anulează",removed:"Echipa a fost ștearsă"},
+  hu:{plan:"Ideje megtervezni: {y}",sub:"Mindenki {y}-es ünnepnapjai készen állnak. Kezdjétek el a szabadságot.",open:"{y} megnyitása",later:"Később",delBtn:"Csapat törlése…",delT:"Törlöd a csapatot mindenkinek?",delB:"A linkkel rendelkezők elveszítik a hozzáférést: {n}. Nem vonható vissza.",delType:"A megerősítéshez írd be a csapat nevét",delGo:"Törlés mindenkinek",cancel:"Mégse",removed:"Csapat törölve"},
+  sv:{plan:"Dags att planera {y}",sub:"Allas helgdagar för {y} är klara. Börja välja semesterdagar.",open:"Öppna {y}",later:"Inte nu",delBtn:"Radera team…",delT:"Radera teamet för alla?",delB:"Alla med länken förlorar åtkomst till {n}. Du kan inte ångra det.",delType:"Skriv teamets namn för att bekräfta",delGo:"Radera för alla",cancel:"Avbryt",removed:"Teamet raderat"},
+  it:{plan:"È ora di pianificare il {y}",sub:"Le festività {y} di tutti sono pronte. Iniziate a scegliere le ferie.",open:"Apri {y}",later:"Non ora",delBtn:"Elimina team…",delT:"Eliminare questo team per tutti?",delB:"Chi ha il link perderà l'accesso a {n}. Non potrai annullare.",delType:"Scrivi il nome del team per confermare",delGo:"Elimina per tutti",cancel:"Annulla",removed:"Team eliminato"},
+  bg:{plan:"Време е да планирате {y}",sub:"Празниците за {y} на всички са готови. Започнете да избирате дни.",open:"Отвори {y}",later:"Не сега",delBtn:"Изтрий екипа…",delT:"Да изтрия ли екипа за всички?",delB:"Всички с връзката губят достъп до {n}. Не можеш да отмениш.",delType:"Въведи името на екипа за потвърждение",delGo:"Изтрий за всички",cancel:"Отказ",removed:"Екипът е изтрит"},
+  ar:{plan:"حان وقت التخطيط لعام {y}",sub:"عطل الجميع لعام {y} جاهزة. ابدأوا باختيار أيام الإجازة.",open:"افتح {y}",later:"ليس الآن",delBtn:"حذف الفريق…",delT:"حذف هذا الفريق للجميع؟",delB:"سيفقد كل من لديه الرابط الوصول إلى {n}. لا يمكنك التراجع.",delType:"اكتب اسم الفريق للتأكيد",delGo:"حذف للجميع",cancel:"إلغاء",removed:"تم حذف الفريق"},
+};
+function NextYearPrompt({team,yr,onYear,th,lang}){
+  const L=NY_TX[lang]||NY_TX.en;const ny=yr+1;const key="tvp-ny-"+team.id+"-"+ny;
+  const[hidden,setHidden]=useState(true);
+  useEffect(()=>{let h=true;try{h=localStorage.getItem(key)==="1";}catch(e){}const id=setTimeout(()=>setHidden(h),0);return()=>clearTimeout(id);},[key]);
+  if(hidden||!onYear||yr!==CY||CM<10||ny>YEAR_MAX)return null;
+  const hide=()=>{try{localStorage.setItem(key,"1");}catch(e){}setHidden(true);};
+  return <div dir={lang==="ar"?"rtl":"ltr"} style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 14px",borderRadius:12,marginBottom:10,background:"linear-gradient(135deg,rgba(124,58,237,.10),rgba(16,185,129,.08))",border:"1px solid "+th.gbd,fontFamily:F}}>
+    <div style={{flex:"1 1 220px"}}><div style={{fontSize:14,fontWeight:700,color:th.tx}}>{L.plan.replace("{y}",ny)}</div><div style={{fontSize:12,color:th.t2}}>{L.sub.replace("{y}",ny)}</div></div>
+    <button onClick={()=>onYear(ny)} style={{padding:"8px 16px",minHeight:36,borderRadius:999,border:"none",background:th.ac,color:th.ti||"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:F}}>{L.open.replace("{y}",ny)} →</button>
+    <button onClick={hide} style={{padding:"8px 10px",minHeight:36,borderRadius:999,border:"none",background:"none",color:th.t2,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:F}}>{L.later}</button>
+  </div>;
+}
+
 function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members||[]).filter(function(m){return(m.days||[]).indexOf(today)>=0;});if(!out.length)return <div style={{padding:"8px 14px",background:"rgba(16,185,129,.08)",borderRadius:10,border:"1px solid rgba(16,185,129,.15)",marginBottom:10,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,color:"#059669"}}><span>✅</span>{t.fullTeam||"Full team in today!"}</div>;return <div style={{padding:"8px 14px",background:out.length>=3?"rgba(239,68,68,.06)":"rgba(245,158,11,.06)",borderRadius:10,border:"1px solid "+(out.length>=3?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)"),marginBottom:10}}><div style={{fontSize:10,fontWeight:700,color:out.length>=3?"#DC2626":"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{t.outToday||"Out today"} ({out.length})</div><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{out.map(function(m){var mc=MC[team.members.indexOf(m)%MC.length];return <span key={m.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:8,background:mc.b,fontSize:11,fontWeight:600,color:mc.t}}><span style={{width:6,height:6,borderRadius:"50%",background:mc.d}}></span>{m.name}</span>;})}</div></div>;}
-function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
+function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=null,th,t,lang,setLang,theme,setTheme}){
+  const[delOpen,setDelOpen]=useState(false);const[delText,setDelText]=useState("");const NY=NY_TX[lang]||NY_TX.en;
   const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
   // ─── PIN feature state (Step 1: declarations only, no UI yet) ─────
   const[nPin,setNPin]=useState("");
@@ -3807,6 +3835,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportXLSX(team,t)}>Excel</Btn>
       {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>{t.approvedPdf}</Btn>}
       <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>Import</Btn>
+      {onDeleteForever&&<Btn th={th} v="ghost" sz="sm" onClick={()=>{setDelText("");setDelOpen(true);}} style={{color:"#DC2626",borderColor:"#FECACA"}}>{NY.delBtn}</Btn>}
       <div style={{width:1,height:20,background:th.bd}}/>
       <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}>
         <span style={{fontWeight:600}}>{t.alertLabel}</span>
@@ -3910,6 +3939,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
           </div>;
         })()}
 
+        <NextYearPrompt team={team} yr={yr} onYear={onYear} th={th} lang={lang}/>
         <WhosOutBanner team={rawTeam||team} th={th} t={t}/>
         <ComingUp team={rawTeam||team} th={th} lang={lang}/>
         {view==="cal"&&!am&&team.members.length>0&&!locked&&<div style={{background:th.al,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:th.ac,fontWeight:500}}>{t.sel}</div>}
@@ -4026,6 +4056,17 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
     })()}
 
     {/* CSV Import Modal */}
+    {delOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={()=>setDelOpen(false)}>
+      <div role="alertdialog" aria-label={NY.delT} dir={lang==="ar"?"rtl":"ltr"} onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:420,width:"100%",padding:22,boxShadow:th.sl,boxSizing:"border-box",fontFamily:F}}>
+        <h3 style={{margin:"0 0 8px",fontSize:16,fontWeight:700,color:"#B91C1C"}}>{NY.delT}</h3>
+        <p style={{margin:"0 0 12px",fontSize:13,color:th.t2,lineHeight:1.5}}>{NY.delB.replace("{n}",team.name||"")}</p>
+        <label style={{fontSize:12,fontWeight:600,color:th.t2}}>{NY.delType}<input value={delText} onChange={e=>setDelText(e.target.value)} autoFocus style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:6,padding:"9px 12px",borderRadius:10,border:"1.5px solid "+th.bd,background:th.bg,color:th.tx,fontSize:14,fontFamily:F}}/></label>
+        <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:14}}>
+          <Btn th={th} v="ghost" onClick={()=>setDelOpen(false)}>{NY.cancel}</Btn>
+          <button disabled={delText.trim()!==(team.name||"").trim()} onClick={()=>{setDelOpen(false);onDeleteForever&&onDeleteForever(team.id);}} style={{padding:"9px 16px",borderRadius:10,border:"none",background:"#DC2626",color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:F,opacity:delText.trim()!==(team.name||"").trim()?.45:1}}>{NY.delGo}</button>
+        </div>
+      </div>
+    </div>}
     {showCSVImport&&(()=>{
       const plan=planImport(csvText,team.members,EU_C,{sevenDay:!!team.w7,max:50});
       const nUpd=Object.keys(plan.updates).length;
@@ -4201,6 +4242,10 @@ export default function App(){
     return()=>{clearInterval(iv);document.removeEventListener("visibilitychange",refresh);window.removeEventListener("focus",refresh);};
   },[openId]);
 
+  const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);try{localStorage.removeItem("team:"+id);}catch(e){}};
+  // Delete for everyone: only from inside the team, after typing its name; the server keeps a restorable copy
+  const deleteForever=async id=>{await db.del("team:"+id,true);delTeam(id);goHome();};
+
   if(screen==="ws"&&team) {
     const tv=teamForYear(team,vy);
     // Check for special view modes via hash params
@@ -4236,8 +4281,8 @@ export default function App(){
     }
     const acc=/^#[0-9A-Fa-f]{6}$/.test(String(tv.accentColor||""))?tv.accentColor:null;
     const thv=acc?{...th,ac:acc,ah:acc,al:acc+"14",am:acc+"55"}:th;
-    return <ErrorBoundary><WS team={tv} rawTeam={team} onYear={changeYear} onUpdate={update} onGoHome={goHome} th={thv} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
+    return <ErrorBoundary><WS team={tv} rawTeam={team} onYear={changeYear} onUpdate={update} onGoHome={goHome} onDeleteForever={deleteForever} th={thv} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
   }
-  const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);db.del("team:"+id,true);};
+  // "Remove" on the front page only takes the team off this browser's list; the team stays for everyone else
   return <ErrorBoundary><Link href="/admin" prefetch={false} aria-label="Admin sign-in" style={{position:"fixed",right:6,bottom:4,zIndex:5,fontSize:10,fontFamily:F,color:th.t3,opacity:.28,textDecoration:"none",padding:"2px 4px"}}>admin</Link><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
 }
