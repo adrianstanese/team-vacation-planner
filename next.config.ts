@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // React Compiler, opt-in: only components marked "use memo" (the v3 components) are compiled.
+  // The older app.tsx code does not follow the compiler's rules everywhere, so it stays as it is.
+  reactCompiler: { compilationMode: "annotation" },
   typescript: {
     ignoreBuildErrors: true,
   },

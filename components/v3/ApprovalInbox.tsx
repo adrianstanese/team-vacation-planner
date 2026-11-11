@@ -19,6 +19,7 @@ export default function ApprovalInbox({ open, onClose, team, yr, threshold, th, 
   open: boolean; onClose: () => void; team: TeamView; yr: number; threshold: number; th: Th;
   colorOf: (id: string) => Col; onApprove: (ids: string[]) => void; onRequest: (m: Member, note: string, day: string) => void;
 }) {
+  "use memo";
   const [done, setDone] = useState<Record<string, true>>({});
   const [dx, setDx] = useState(0);
   const [leaving, setLeaving] = useState<"" | "r" | "l">("");

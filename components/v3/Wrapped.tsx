@@ -58,6 +58,7 @@ export default function Wrapped({ open, onClose, team, yr, holOf, sevenDay, logo
 }
 
 function Story({ team, yr, holOf, sevenDay, logo, onClose }: { team: TeamView; yr: number; holOf: (m: Member) => Set<string>; sevenDay: boolean; logo?: string | null; onClose: () => void }) {
+  "use memo";
   const st = useMemo(() => wrappedStats(team, yr, holOf, sevenDay), [team, yr, holOf, sevenDay]);
   const reduce = typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const [i, setI] = useState(0);

@@ -24,6 +24,7 @@ export default function TimeTravel({ open, ...p }: Props & { open: boolean }) {
 
 // Mounted fresh each time the sheet opens, so nothing needs resetting
 function Body({ teamId, team, yr, th, toView, onRestore, onClose }: Props) {
+  "use memo";
   const [vers, setVers] = useState<Ver[] | null>(null);
   const [err, setErr] = useState(false);
   const [sel, setSel] = useState(0);

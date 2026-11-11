@@ -17,6 +17,7 @@ export default function TodayTiles({ team, yr, th, colorOf, holOf, holInfo, acti
   team: TeamView; yr: number; th: Th; colorOf: (id: string) => Col; holOf: (m: Member) => Set<string>; holInfo: (k: string) => HolInfo;
   active: Member | null; threshold: number; onWrapped: () => void; showWrapped: boolean; onPick: (id: string) => void;
 }) {
+  "use memo";
   const today = keyOf(new Date());
   if (!today.startsWith(yr + "-")) return null;
   const out = outOn(team, today);

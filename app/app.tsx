@@ -13,11 +13,12 @@ import { withTransition, celebrate, buzz } from "@/lib/motion";
 const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr:false});
 const TimeTravel=nextDynamic(()=>import("@/components/v3/TimeTravel"),{ssr:false});
 const Wrapped=nextDynamic(()=>import("@/components/v3/Wrapped"),{ssr:false});
+// Report and export builders load on the first click (app/reports.ts)
+const R=fn=>(...a)=>import("./reports").then(m=>m[fn](...a));
 // Public holidays of a member for a year, cached by country + region
 const HOL_CACHE=new Map();
 function holSetOf(m,yr){const k=yr+"|"+((m&&m.country)||"")+"|"+((m&&m.region)||"");let v=HOL_CACHE.get(k);if(!v){v=new Set(m&&m.country?getAllHolidays(m,yr):[]);if(HOL_CACHE.size>400)HOL_CACHE.clear();HOL_CACHE.set(k,v);}return v;}
 import "./frontpage.css";
-import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { buildSheets } from "@/lib/xlsxSheets";
 import { mergeTeam } from "@/lib/merge";
 import { planImport } from "@/lib/importPlan";
@@ -159,7 +160,7 @@ MC:{type:"W",days:["E+1","E+39","E+50","E+60"]},
 // Public holidays for countries on the Islamic calendar, 2026–2035, from python-holidays 0.107 (MIT) via the
 // NonWorkingDays dataset. Added on top of the rules above (never removes a date). Built by scripts/build-holiday-names.mjs data.
 const LUNAR_EXTRA={"SA":{"2026":"0222,0319,0320,0321,0322,0323,0324,0526,0527,0528,0529,0531,0923","2027":"0222,0309,0310,0311,0312,0314,0515,0516,0517,0518,0519,0923","2028":"0222,0226,0227,0228,0229,0301,0504,0505,0506,0507,0508,0509,0923,0924","2029":"0214,0215,0216,0217,0218,0219,0222,0423,0424,0425,0426,0923","2030":"0203,0204,0205,0206,0221,0222,0412,0413,0414,0415,0416,0417,0923","2031":"0124,0125,0126,0127,0128,0129,0222,0223,0401,0402,0403,0404,0406,0923","2032":"0113,0114,0115,0116,0118,0222,0321,0322,0323,0324,0923","2033":"0102,0103,0104,0105,0222,0310,0311,0312,0313,0314,0315,0922,0923,1222,1223,1224,1225,1226,1227","2034":"0222,0228,0301,0302,0303,0305,0923,0924,1211,1212,1213,1214","2035":"0217,0218,0219,0220,0221,0222,0923,1130,1201,1202,1203,1204,1205"},"AE":{"2026":"0101,0320,0321,0322,0526,0527,0528,0529,0616,0825,1202,1203","2027":"0101,0309,0310,0311,0515,0516,0517,0518,0606,0814,1202,1203","2028":"0101,0226,0227,0228,0504,0505,0506,0507,0525,0803,1202,1203","2029":"0101,0214,0215,0216,0423,0424,0425,0426,0514,0724,1202,1203","2030":"0101,0204,0205,0206,0412,0413,0414,0415,0503,0713,1202,1203","2031":"0101,0124,0125,0126,0401,0402,0403,0404,0423,0702,1202,1203","2032":"0101,0114,0115,0116,0321,0322,0323,0324,0411,0620,1202,1203","2033":"0101,0102,0103,0104,0310,0311,0312,0313,0401,0609,1202,1203,1223,1224,1225","2034":"0101,0228,0301,0302,0303,0321,0530,1202,1203,1212,1213,1214","2035":"0101,0217,0218,0219,0220,0311,0520,1201,1202,1203"},"MA":{"2026":"0101,0111,0114,0320,0321,0501,0527,0528,0616,0730,0814,0820,0821,0825,0826,1031,1106,1118","2027":"0101,0111,0114,0309,0310,0501,0516,0517,0606,0730,0814,0815,0820,0821,1031,1106,1118","2028":"0101,0111,0114,0226,0227,0501,0505,0506,0525,0730,0803,0804,0814,0820,0821,1031,1106,1118","2029":"0101,0111,0114,0214,0215,0424,0425,0501,0514,0724,0725,0730,0814,0820,0821,1031,1106,1118","2030":"0101,0111,0114,0204,0205,0413,0414,0501,0503,0713,0714,0730,0814,0820,0821,1031,1106,1118","2031":"0101,0111,0114,0124,0125,0402,0403,0423,0501,0702,0703,0730,0814,0820,0821,1031,1106,1118","2032":"0101,0111,0114,0115,0322,0323,0411,0501,0620,0621,0730,0814,0820,0821,1031,1106,1118","2033":"0101,0102,0103,0111,0114,0311,0312,0401,0501,0609,0610,0730,0814,0820,0821,1031,1106,1118,1223,1224","2034":"0101,0111,0114,0301,0302,0321,0501,0530,0531,0730,0814,0820,0821,1031,1106,1118,1212,1213","2035":"0101,0111,0114,0218,0219,0311,0501,0520,0521,0730,0814,0820,0821,1031,1106,1118,1201,1202"},"BH":{"2026":"0101,0320,0321,0322,0501,0527,0528,0529,0616,0624,0625,0825,1216,1217","2027":"0101,0309,0310,0311,0501,0516,0517,0518,0606,0614,0615,0814,1216,1217","2028":"0101,0226,0227,0228,0501,0505,0506,0507,0525,0602,0603,0803,1216,1217","2029":"0101,0214,0215,0216,0424,0425,0426,0501,0514,0522,0523,0724,1216,1217","2030":"0101,0204,0205,0206,0413,0414,0415,0501,0503,0511,0512,0713,1216,1217","2031":"0101,0124,0125,0126,0402,0403,0404,0423,0501,0502,0702,1216,1217","2032":"0101,0114,0115,0116,0322,0323,0324,0411,0419,0420,0501,0620,1216,1217","2033":"0101,0102,0103,0104,0311,0312,0313,0401,0409,0410,0501,0609,1216,1217,1223,1224,1225","2034":"0101,0301,0302,0303,0321,0329,0330,0501,0530,1212,1213,1214,1216,1217","2035":"0101,0218,0219,0220,0311,0319,0320,0501,0520,1201,1202,1203,1216,1217"},"TR":{"2026":"0101,0320,0321,0322,0423,0501,0519,0527,0528,0529,0530,0715,0830,1029","2027":"0101,0309,0310,0311,0423,0501,0516,0517,0518,0519,0715,0830,1029","2028":"0101,0226,0227,0228,0423,0501,0505,0506,0507,0508,0519,0715,0830,1029","2029":"0101,0214,0215,0216,0423,0424,0425,0426,0427,0501,0519,0715,0830,1029","2030":"0101,0204,0205,0206,0413,0414,0415,0416,0423,0501,0519,0715,0830,1029","2031":"0101,0124,0125,0126,0402,0403,0404,0405,0423,0501,0519,0715,0830,1029","2032":"0101,0114,0115,0116,0322,0323,0324,0325,0423,0501,0519,0715,0830,1029","2033":"0101,0102,0103,0104,0311,0312,0313,0314,0423,0501,0519,0715,0830,1029,1223,1224,1225","2034":"0101,0301,0302,0303,0304,0423,0501,0519,0715,0830,1029,1212,1213,1214","2035":"0101,0218,0219,0220,0221,0423,0501,0519,0715,0830,1029,1201,1202,1203"}};
-function computeHolidays(cc, year) {
+export function computeHolidays(cc, year) {
   const fixed = (FIXED[cc] || []).map(d => `${year}-${d}`);
   const rules = EASTER_RULES[cc];
   if (!rules) { const lx0=LUNAR_EXTRA[cc]&&LUNAR_EXTRA[cc][year]; if(!lx0) return fixed; return [...new Set(fixed.concat(lx0.split(",").map(function(md){return year+"-"+md.slice(0,2)+"-"+md.slice(2);})))].sort(); }
@@ -388,7 +389,7 @@ CA:[
 };
 
 // ─── Country Data ────────────────────────────────────────────────
-const EU_C=[{c:"AL",n:"Albania",f:"🇦🇱"},{c:"AD",n:"Andorra",f:"🇦🇩"},{c:"AT",n:"Austria",f:"🇦🇹"},{c:"BY",n:"Belarus",f:"🇧🇾"},{c:"BE",n:"Belgium",f:"🇧🇪"},{c:"BA",n:"Bosnia & Herz.",f:"🇧🇦"},{c:"BG",n:"Bulgaria",f:"🇧🇬"},{c:"HR",n:"Croatia",f:"🇭🇷"},{c:"CY",n:"Cyprus",f:"🇨🇾"},{c:"CZ",n:"Czechia",f:"🇨🇿"},{c:"DK",n:"Denmark",f:"🇩🇰"},{c:"EE",n:"Estonia",f:"🇪🇪"},{c:"FI",n:"Finland",f:"🇫🇮"},{c:"FR",n:"France",f:"🇫🇷"},{c:"DE",n:"Germany",f:"🇩🇪"},{c:"GR",n:"Greece",f:"🇬🇷"},{c:"HU",n:"Hungary",f:"🇭🇺"},{c:"IS",n:"Iceland",f:"🇮🇸"},{c:"IE",n:"Ireland",f:"🇮🇪"},{c:"IT",n:"Italy",f:"🇮🇹"},{c:"XK",n:"Kosovo",f:"🇽🇰"},{c:"LV",n:"Latvia",f:"🇱🇻"},{c:"LI",n:"Liechtenstein",f:"🇱🇮"},{c:"LT",n:"Lithuania",f:"🇱🇹"},{c:"LU",n:"Luxembourg",f:"🇱🇺"},{c:"MK",n:"N. Macedonia",f:"🇲🇰"},{c:"MT",n:"Malta",f:"🇲🇹"},{c:"MD",n:"Moldova",f:"🇲🇩"},{c:"MC",n:"Monaco",f:"🇲🇨"},{c:"ME",n:"Montenegro",f:"🇲🇪"},{c:"NL",n:"Netherlands",f:"🇳🇱"},{c:"NO",n:"Norway",f:"🇳🇴"},{c:"PL",n:"Poland",f:"🇵🇱"},{c:"PT",n:"Portugal",f:"🇵🇹"},{c:"RO",n:"Romania",f:"🇷🇴"},{c:"RS",n:"Serbia",f:"🇷🇸"},{c:"SK",n:"Slovakia",f:"🇸🇰"},{c:"SI",n:"Slovenia",f:"🇸🇮"},{c:"SM",n:"San Marino",f:"🇸🇲"},{c:"ES",n:"Spain",f:"🇪🇸"},{c:"SE",n:"Sweden",f:"🇸🇪"},{c:"CH",n:"Switzerland",f:"🇨🇭"},{c:"TR",n:"Turkey",f:"🇹🇷"},{c:"UA",n:"Ukraine",f:"🇺🇦"},{c:"GB",n:"United Kingdom",f:"🇬🇧"},{c:"SA",n:"Saudi Arabia",f:"🇸🇦"},{c:"AE",n:"UAE",f:"🇦🇪"},{c:"CL",n:"Chile",f:"🇨🇱"},{c:"BR",n:"Brazil",f:"🇧🇷"},{c:"MA",n:"Morocco",f:"🇲🇦"},{c:"KZ",n:"Kazakhstan",f:"🇰🇿"},{c:"BH",n:"Bahrain",f:"🇧🇭"},{c:"US",n:"United States",f:"🇺🇸"},{c:"CA",n:"Canada",f:"🇨🇦"},{c:"AU",n:"Australia",f:"🇦🇺"}].sort((a,b)=>a.n.localeCompare(b.n));
+export const EU_C=[{c:"AL",n:"Albania",f:"🇦🇱"},{c:"AD",n:"Andorra",f:"🇦🇩"},{c:"AT",n:"Austria",f:"🇦🇹"},{c:"BY",n:"Belarus",f:"🇧🇾"},{c:"BE",n:"Belgium",f:"🇧🇪"},{c:"BA",n:"Bosnia & Herz.",f:"🇧🇦"},{c:"BG",n:"Bulgaria",f:"🇧🇬"},{c:"HR",n:"Croatia",f:"🇭🇷"},{c:"CY",n:"Cyprus",f:"🇨🇾"},{c:"CZ",n:"Czechia",f:"🇨🇿"},{c:"DK",n:"Denmark",f:"🇩🇰"},{c:"EE",n:"Estonia",f:"🇪🇪"},{c:"FI",n:"Finland",f:"🇫🇮"},{c:"FR",n:"France",f:"🇫🇷"},{c:"DE",n:"Germany",f:"🇩🇪"},{c:"GR",n:"Greece",f:"🇬🇷"},{c:"HU",n:"Hungary",f:"🇭🇺"},{c:"IS",n:"Iceland",f:"🇮🇸"},{c:"IE",n:"Ireland",f:"🇮🇪"},{c:"IT",n:"Italy",f:"🇮🇹"},{c:"XK",n:"Kosovo",f:"🇽🇰"},{c:"LV",n:"Latvia",f:"🇱🇻"},{c:"LI",n:"Liechtenstein",f:"🇱🇮"},{c:"LT",n:"Lithuania",f:"🇱🇹"},{c:"LU",n:"Luxembourg",f:"🇱🇺"},{c:"MK",n:"N. Macedonia",f:"🇲🇰"},{c:"MT",n:"Malta",f:"🇲🇹"},{c:"MD",n:"Moldova",f:"🇲🇩"},{c:"MC",n:"Monaco",f:"🇲🇨"},{c:"ME",n:"Montenegro",f:"🇲🇪"},{c:"NL",n:"Netherlands",f:"🇳🇱"},{c:"NO",n:"Norway",f:"🇳🇴"},{c:"PL",n:"Poland",f:"🇵🇱"},{c:"PT",n:"Portugal",f:"🇵🇹"},{c:"RO",n:"Romania",f:"🇷🇴"},{c:"RS",n:"Serbia",f:"🇷🇸"},{c:"SK",n:"Slovakia",f:"🇸🇰"},{c:"SI",n:"Slovenia",f:"🇸🇮"},{c:"SM",n:"San Marino",f:"🇸🇲"},{c:"ES",n:"Spain",f:"🇪🇸"},{c:"SE",n:"Sweden",f:"🇸🇪"},{c:"CH",n:"Switzerland",f:"🇨🇭"},{c:"TR",n:"Turkey",f:"🇹🇷"},{c:"UA",n:"Ukraine",f:"🇺🇦"},{c:"GB",n:"United Kingdom",f:"🇬🇧"},{c:"SA",n:"Saudi Arabia",f:"🇸🇦"},{c:"AE",n:"UAE",f:"🇦🇪"},{c:"CL",n:"Chile",f:"🇨🇱"},{c:"BR",n:"Brazil",f:"🇧🇷"},{c:"MA",n:"Morocco",f:"🇲🇦"},{c:"KZ",n:"Kazakhstan",f:"🇰🇿"},{c:"BH",n:"Bahrain",f:"🇧🇭"},{c:"US",n:"United States",f:"🇺🇸"},{c:"CA",n:"Canada",f:"🇨🇦"},{c:"AU",n:"Australia",f:"🇦🇺"}].sort((a,b)=>a.n.localeCompare(b.n));
 
 // ─── i18n (compact) ──────────────────────────────────────────────
 const LANGS={en:{f:"🇬🇧",l:"EN"},fr:{f:"🇫🇷",l:"FR"},de:{f:"🇩🇪",l:"DE"},es:{f:"🇪🇸",l:"ES"},pt:{f:"🇵🇹",l:"PT"},ro:{f:"🇷🇴",l:"RO"},hu:{f:"🇭🇺",l:"HU"},sv:{f:"🇸🇪",l:"SV"},it:{f:"🇮🇹",l:"IT"},bg:{f:"🇧🇬",l:"BG"},ar:{f:"🇦🇪",l:"AR"}};
@@ -546,7 +547,7 @@ function computeRegionalHolidays(cc, regionId, year) {
   return all;
 }
 
-function getAllHolidays(member, year) {
+export function getAllHolidays(member, year) {
   var base = computeHolidays(member.country, year);
   var regional = computeRegionalHolidays(member.country, member.region, year);
   var combined = {};
@@ -584,22 +585,22 @@ function workingDaysRemaining(member, year) {
 
 const F="'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif";
 const FM="'SF Mono','Fira Code',monospace";
-const MC=[{b:"#DBEAFE",t:"#1E40AF",d:"#3B82F6"},{b:"#FCE7F3",t:"#9D174D",d:"#EC4899"},{b:"#D1FAE5",t:"#065F46",d:"#10B981"},{b:"#FEF3C7",t:"#92400E",d:"#F59E0B"},{b:"#E0E7FF",t:"#3730A3",d:"#6366F1"},{b:"#FFE4E6",t:"#9F1239",d:"#F43F5E"},{b:"#CCFBF1",t:"#134E4A",d:"#14B8A6"},{b:"#FED7AA",t:"#9A3412",d:"#F97316"},{b:"#E9D5FF",t:"#6B21A8",d:"#A855F7"},{b:"#CFFAFE",t:"#155E75",d:"#06B6D4"},{b:"#FEE2E2",t:"#991B1B",d:"#EF4444"},{b:"#D9F99D",t:"#3F6212",d:"#84CC16"},{b:"#FBCFE8",t:"#831843",d:"#F472B6"},{b:"#BAE6FD",t:"#0C4A6E",d:"#0EA5E9"},{b:"#FDE68A",t:"#78350F",d:"#FBBF24"},{b:"#C7D2FE",t:"#3730A3",d:"#818CF8"},{b:"#A7F3D0",t:"#064E3B",d:"#34D399"},{b:"#FECACA",t:"#7F1D1D",d:"#F87171"},{b:"#DDD6FE",t:"#5B21B6",d:"#8B5CF6"},{b:"#99F6E4",t:"#115E59",d:"#2DD4BF"},{b:"#FDE047",t:"#713F12",d:"#EAB308"},{b:"#F0ABFC",t:"#701A75",d:"#D946EF"},{b:"#67E8F9",t:"#164E63",d:"#22D3EE"},{b:"#FDA4AF",t:"#881337",d:"#FB7185"},{b:"#86EFAC",t:"#14532D",d:"#4ADE80"},{b:"#FED7AA",t:"#7C2D12",d:"#EA580C"},{b:"#A5F3FC",t:"#155E75",d:"#0891B2"},{b:"#DDD6FE",t:"#5B21B6",d:"#7C3AED"},{b:"#FBCFE8",t:"#9D174D",d:"#DB2777"},{b:"#BBF7D0",t:"#166534",d:"#16A34A"},{b:"#FECACA",t:"#991B1B",d:"#DC2626"},{b:"#FEF08A",t:"#854D0E",d:"#CA8A04"},{b:"#BFDBFE",t:"#1E3A8A",d:"#2563EB"},{b:"#F5D0FE",t:"#86198F",d:"#C026D3"},{b:"#A7F3D0",t:"#065F46",d:"#059669"},{b:"#FDA4AF",t:"#9F1239",d:"#E11D48"},{b:"#BAE6FD",t:"#075985",d:"#0284C7"},{b:"#FDE68A",t:"#92400E",d:"#D97706"},{b:"#C7D2FE",t:"#312E81",d:"#4F46E5"},{b:"#FBCFE8",t:"#831843",d:"#BE185D"},{b:"#99F6E4",t:"#134E4A",d:"#0D9488"},{b:"#E9D5FF",t:"#581C87",d:"#9333EA"},{b:"#FEF3C7",t:"#78350F",d:"#B45309"},{b:"#A7F3D0",t:"#14532D",d:"#15803D"},{b:"#FECDD3",t:"#881337",d:"#BE123C"},{b:"#DDD6FE",t:"#4C1D95",d:"#6D28D9"},{b:"#67E8F9",t:"#0E7490",d:"#0E7490"},{b:"#D9F99D",t:"#365314",d:"#65A30D"},{b:"#FED7AA",t:"#9A3412",d:"#C2410C"},{b:"#FCE7F3",t:"#831843",d:"#A21CAF"}];
+export const MC=[{b:"#DBEAFE",t:"#1E40AF",d:"#3B82F6"},{b:"#FCE7F3",t:"#9D174D",d:"#EC4899"},{b:"#D1FAE5",t:"#065F46",d:"#10B981"},{b:"#FEF3C7",t:"#92400E",d:"#F59E0B"},{b:"#E0E7FF",t:"#3730A3",d:"#6366F1"},{b:"#FFE4E6",t:"#9F1239",d:"#F43F5E"},{b:"#CCFBF1",t:"#134E4A",d:"#14B8A6"},{b:"#FED7AA",t:"#9A3412",d:"#F97316"},{b:"#E9D5FF",t:"#6B21A8",d:"#A855F7"},{b:"#CFFAFE",t:"#155E75",d:"#06B6D4"},{b:"#FEE2E2",t:"#991B1B",d:"#EF4444"},{b:"#D9F99D",t:"#3F6212",d:"#84CC16"},{b:"#FBCFE8",t:"#831843",d:"#F472B6"},{b:"#BAE6FD",t:"#0C4A6E",d:"#0EA5E9"},{b:"#FDE68A",t:"#78350F",d:"#FBBF24"},{b:"#C7D2FE",t:"#3730A3",d:"#818CF8"},{b:"#A7F3D0",t:"#064E3B",d:"#34D399"},{b:"#FECACA",t:"#7F1D1D",d:"#F87171"},{b:"#DDD6FE",t:"#5B21B6",d:"#8B5CF6"},{b:"#99F6E4",t:"#115E59",d:"#2DD4BF"},{b:"#FDE047",t:"#713F12",d:"#EAB308"},{b:"#F0ABFC",t:"#701A75",d:"#D946EF"},{b:"#67E8F9",t:"#164E63",d:"#22D3EE"},{b:"#FDA4AF",t:"#881337",d:"#FB7185"},{b:"#86EFAC",t:"#14532D",d:"#4ADE80"},{b:"#FED7AA",t:"#7C2D12",d:"#EA580C"},{b:"#A5F3FC",t:"#155E75",d:"#0891B2"},{b:"#DDD6FE",t:"#5B21B6",d:"#7C3AED"},{b:"#FBCFE8",t:"#9D174D",d:"#DB2777"},{b:"#BBF7D0",t:"#166534",d:"#16A34A"},{b:"#FECACA",t:"#991B1B",d:"#DC2626"},{b:"#FEF08A",t:"#854D0E",d:"#CA8A04"},{b:"#BFDBFE",t:"#1E3A8A",d:"#2563EB"},{b:"#F5D0FE",t:"#86198F",d:"#C026D3"},{b:"#A7F3D0",t:"#065F46",d:"#059669"},{b:"#FDA4AF",t:"#9F1239",d:"#E11D48"},{b:"#BAE6FD",t:"#075985",d:"#0284C7"},{b:"#FDE68A",t:"#92400E",d:"#D97706"},{b:"#C7D2FE",t:"#312E81",d:"#4F46E5"},{b:"#FBCFE8",t:"#831843",d:"#BE185D"},{b:"#99F6E4",t:"#134E4A",d:"#0D9488"},{b:"#E9D5FF",t:"#581C87",d:"#9333EA"},{b:"#FEF3C7",t:"#78350F",d:"#B45309"},{b:"#A7F3D0",t:"#14532D",d:"#15803D"},{b:"#FECDD3",t:"#881337",d:"#BE123C"},{b:"#DDD6FE",t:"#4C1D95",d:"#6D28D9"},{b:"#67E8F9",t:"#0E7490",d:"#0E7490"},{b:"#D9F99D",t:"#365314",d:"#65A30D"},{b:"#FED7AA",t:"#9A3412",d:"#C2410C"},{b:"#FCE7F3",t:"#831843",d:"#A21CAF"}];
 
 // ─── Utilities ───────────────────────────────────────────────────
 const gid=()=>{var a=new Uint8Array(16);crypto.getRandomValues(a);return Array.from(a).map(b=>b.toString(16).padStart(2,"0")).join("");};
-const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+export const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 
-const dim=(y,m)=>new Date(y,m+1,0).getDate();
-const fdm=(y,m)=>{const d=new Date(y,m,1).getDay();return d===0?6:d-1;};
-const dk=(y,m,d)=>`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-const pk=k=>{const[y,m,d]=k.split("-").map(Number);return{y,m:m-1,d};};
-const isWe=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
+export const dim=(y,m)=>new Date(y,m+1,0).getDate();
+export const fdm=(y,m)=>{const d=new Date(y,m,1).getDay();return d===0?6:d-1;};
+export const dk=(y,m,d)=>`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+export const pk=k=>{const[y,m,d]=k.split("-").map(Number);return{y,m:m-1,d};};
+export const isWe=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
 const N=new Date(),CY=N.getFullYear(),CM=N.getMonth(),CD=N.getDate();
 // Reports and exports only ever see well-formed values (stops HTML hidden in a year, date or number field)
 const ISO_DATE=/^\d{4}-\d{2}-\d{2}$/;
-const safeYear=t=>{const y=Number(t&&t.year);return Number.isInteger(y)&&y>=2000&&y<=2100?y:CY;};
-function reportSafe(team){
+export const safeYear=t=>{const y=Number(t&&t.year);return Number.isInteger(y)&&y>=2000&&y<=2100?y:CY;};
+export function reportSafe(team){
   const isObj=v=>!!v&&typeof v==="object";
   return {...team,year:safeYear(team),name:String(team&&team.name||""),
     members:(Array.isArray(team&&team.members)?team.members:[]).filter(isObj).map(m=>({...m,name:String(m.name||""),
@@ -804,10 +805,10 @@ const db={
 };
 
 // Safe file name from a team name: no path or reserved characters, max 60 chars
-function fileBase(name){var b=String(name||"team").replace(/<[^>]*>/g,"").replace(/[\\/:*?"<>|#%&{}$!'`@+=]+/g,"").replace(/\s+/g,"_").replace(/_+/g,"_").replace(/^[_.]+|[_.]+$/g,"").slice(0,60);return b||"team";}
+export function fileBase(name){var b=String(name||"team").replace(/<[^>]*>/g,"").replace(/[\\/:*?"<>|#%&{}$!'`@+=]+/g,"").replace(/\s+/g,"_").replace(/_+/g,"_").replace(/^[_.]+|[_.]+$/g,"").slice(0,60);return b||"team";}
 
 // Shows a progress cursor while an export runs
-function withBusy(p){try{document.body.style.cursor="progress";}catch(e){}return Promise.resolve(p).finally(function(){try{document.body.style.cursor="";}catch(e){}});}
+export function withBusy(p){try{document.body.style.cursor="progress";}catch(e){}return Promise.resolve(p).finally(function(){try{document.body.style.cursor="";}catch(e){}});}
 
 // ─── Excel export (.xlsx) ────────────────────────────────────────
 function exportXLSX(team, t){
@@ -828,7 +829,7 @@ function exportXLSX(team, t){
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a"); a.href = url; a.download = name; a.click();
     setTimeout(function(){URL.revokeObjectURL(url);},1000);
-  })().catch(function(e){ console.warn("xlsx failed, using legacy .xls", e); exportXLSLegacy(team, t); }));
+  })().catch(function(e){ console.warn("xlsx failed, using legacy .xls", e); R("exportXLSLegacy")(team, t); }));
 }
 
 // ─── ICS Export ──────────────────────────────────────────────────
@@ -854,539 +855,13 @@ function downloadICS(member, teamName) {
 }
 
 // ─── PDF Report ──────────────────────────────────────────────────
-function generatePDFReport(team, t) {
-  team = reportSafe(team);
-  var yr = safeYear(team);
-  var months = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
 
-  // Collect all holidays
-  var allHols = {};
-  team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){allHols[h]=true;}); });
 
-  // Overlap analysis
-  var allDays = {};
-  team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
-  var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
-  var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
-
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' - '+yr+'</title>';
-  html += '<style>';
-  html += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;margin:30px 40px;color:#1f2937;font-size:12px}';
-  html += 'h1{font-size:22px;margin:0 0 2px;color:#1f2937}';
-  html += '.sub{font-size:12px;color:#6b7280;margin:0 0 16px}';
-  html += '.hdr{border-bottom:3px solid #7C3AED;padding-bottom:10px;margin-bottom:16px}';
-  html += '.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}';
-  html += '.leg-item{display:flex;align-items:center;gap:4px;font-size:11px}';
-  html += '.dot{width:10px;height:10px;border-radius:3px;display:inline-block}';
-  // Timeline styles
-  html += '.tl-title{font-size:13px;font-weight:700;margin:16px 0 8px;color:#374151}';
-  html += '.tl-row{display:flex;align-items:center;margin-bottom:3px}';
-  html += '.tl-name{width:90px;font-size:11px;font-weight:600;color:#374151;flex-shrink:0}';
-  html += '.tl-bar{display:flex;gap:0}';
-  html += '.tl-day{width:14px;height:14px;border-radius:2px;margin:0 0.5px}';
-  html += '.tl-hdr{display:flex;margin-left:90px;margin-bottom:2px}';
-  html += '.tl-hdr-d{width:14px;font-size:7px;text-align:center;color:#9ca3af;margin:0 0.5px}';
-  // Calendar grid
-  html += '.cal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}';
-  html += '.cal-month{border:1px solid #e5e7eb;border-radius:8px;padding:10px}';
-  html += '.cal-title{font-size:12px;font-weight:700;color:#1f2937;margin-bottom:6px}';
-  html += '.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}';
-  html += '.cal-lbl{font-size:8px;font-weight:700;color:#9ca3af;text-align:center;padding:2px}';
-  html += '.cal-d{font-size:9px;text-align:center;border-radius:3px;padding:3px 0;font-weight:400;color:#374151}';
-  html += '.cal-we{color:#d1d5db}';
-  html += '.cal-hol{background:#fee2e2;color:#dc2626;font-weight:700}';
-  html += '.cal-v1{color:#fff;font-weight:700;border-radius:3px}';
-  // Stats & table
-  html += '.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}';
-  html += '.stat{border:1px solid #e5e7eb;border-radius:8px;padding:10px;text-align:center}';
-  html += '.stat-val{font-size:20px;font-weight:800;color:#374151}';
-  html += '.stat-lbl{font-size:10px;color:#6b7280;margin-top:2px}';
-  html += 'table{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}';
-  html += 'th,td{padding:6px 10px;border:1px solid #e5e7eb;text-align:left}';
-  html += 'th{background:#f9fafb;font-weight:700;color:#374151}';
-  html += '.footer{margin-top:24px;font-size:9px;color:#d1d5db;text-align:right}';
-  html += '@media print{body{margin:20px}}';
-  html += '</style></head><body>';
-
-  // Header
-  html += '<div class="hdr"><h1>'+esc(team.name)+'</h1>';
-  html += '<div class="sub">'+yr+' &middot; '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' &middot; Generated '+new Date().toLocaleDateString()+'</div></div>';
-
-  // Legend
-  html += '<div class="legend">';
-  team.members.forEach(function(m,i){
-    var c=MC[i%MC.length];
-    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
-  });
-  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">Holiday</span></div>';
-  html += '</div>';
-
-  // Stats boxes
-  var avgCov = team.members.length > 0 ? Math.round((1 - totalDays / (team.members.length * 260)) * 100) : 100;
-  html += '<div class="stats">';
-  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">Total vacation days</div></div>';
-  html += '<div class="stat"><div class="stat-val" style="color:#EF4444">'+overlaps.length+'</div><div class="stat-lbl">Overlap days</div></div>';
-  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">Team members</div></div>';
-  html += '<div class="stat"><div class="stat-val" style="color:#10B981">'+avgCov+'%</div><div class="stat-lbl">Avg coverage</div></div>';
-  html += '</div>';
-
-  // Timeline per month (only months with activity)
-  for (var mo = 0; mo < 12; mo++) {
-    var daysInMonth = dim(yr, mo);
-    var hasActivity = false;
-    team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ var p=pk(d); if(p.m===mo) hasActivity=true; }); });
-    if (!hasActivity) continue;
-
-    html += '<div class="tl-title">'+months[mo]+' '+yr+' &mdash; Timeline</div>';
-    // Day headers
-    html += '<div class="tl-hdr">';
-    for(var d=1;d<=daysInMonth;d++) html += '<div class="tl-hdr-d">'+d+'</div>';
-    html += '</div>';
-    // Member bars
-    team.members.forEach(function(m,i){
-      var c = MC[i%MC.length];
-      html += '<div class="tl-row"><div class="tl-name">'+esc(m.name)+'</div><div class="tl-bar">';
-      for(var d=1;d<=daysInMonth;d++){
-        var key = dk(yr,mo,d);
-        var has = (m.days||[]).indexOf(key) >= 0; var isPending=false;
-        html += '<div class="tl-day" style="background:'+(has?c.d:(isPending?c.d+'80':'#f3f4f6'))+(isPending?';background-image:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.4) 2px,rgba(255,255,255,.4) 4px)':'')+'"></div>';
-      }
-      html += '</div></div>';
-    });
-  }
-
-  // Calendar grid — 12 months, 3 per row
-  html += '<div class="tl-title">Year Calendar</div>';
-  html += '<div class="cal-grid">';
-  for (var mo2 = 0; mo2 < 12; mo2++) {
-    html += '<div class="cal-month"><div class="cal-title">'+months[mo2]+'</div><div class="cal-days">';
-    for(var dl=0;dl<7;dl++) html += '<div class="cal-lbl">'+dayL[dl]+'</div>';
-    var firstDay = fdm(yr,mo2);
-    var daysInMo = dim(yr,mo2);
-    for(var bl=0;bl<firstDay;bl++) html += '<div></div>';
-    for(var d2=1;d2<=daysInMo;d2++){
-      var key2=dk(yr,mo2,d2);
-      var dow=(firstDay+d2-1)%7;
-      var isWe2=dow>=5;
-      var isHol2=!!allHols[key2];
-      var who=[];
-      team.members.forEach(function(m,i){if((m.days||[]).indexOf(key2)>=0)who.push(i);});
-      var cls='cal-d';
-      var sty='';
-      if(isWe2) cls+=' cal-we';
-      if(isHol2) cls+=' cal-hol';
-      if(who.length===1) { cls+=' cal-v1'; sty='background:'+MC[who[0]%MC.length].d; }
-      else if(who.length===2) { cls+=' cal-v1'; sty='background:linear-gradient(135deg,'+MC[who[0]%MC.length].d+' 50%,'+MC[who[1]%MC.length].d+' 50%)'; }
-      else if(who.length>=3) { cls+=' cal-v1'; sty='background:#EF4444'; }
-      html += '<div class="'+cls+'"'+(sty?' style="'+sty+'"':'')+'>'+d2+'</div>';
-    }
-    html += '</div></div>';
-  }
-  html += '</div>';
-
-  // Summary table
-  html += '<div class="tl-title">'+(t.summary||'Member Summary')+'</div>';
-  html += '<table><tr><th>'+(t.mb||'Member')+'</th><th>'+(t.co||'Country')+'</th><th>'+(t.dys||'Days')+'</th><th>'+(t.timeline||'Periods')+'</th></tr>';
-  team.members.forEach(function(m,i){
-    var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
-    var sorted = (m.days||[]).slice().sort();
-    // Group into ranges
-    var ranges = [];
-    var ri = 0;
-    while(ri < sorted.length){
-      var start = sorted[ri]; var end = start;
-      while(ri+1 < sorted.length){
-        var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);
-        var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;
-        if(diff<=3){ri++;end=sorted[ri];}else break;
-      }
-      if(start===end) ranges.push(start.slice(5));
-      else ranges.push(start.slice(5)+' to '+end.slice(5));
-      ri++;
-    }
-    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+esc(m.name)+'</td>';
-    html += '<td>'+(co?co.f+' '+co.n:'—')+'</td>';
-    html += '<td style="text-align:center;font-weight:700">'+sorted.length+'</td>';
-    html += '<td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
-  });
-  html += '</table>';
-
-  // Overlaps
-  if(overlaps.length){
-    html += '<div class="tl-title">'+(t.overlapDays||'Overlap Days')+' ('+overlaps.length+')</div>';
-    html += '<table><tr><th>Date</th><th>Members Out</th></tr>';
-    overlaps.forEach(function(e){
-      html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+(e[1] as string[]).map(esc).join(', ')+'</td></tr>';
-    });
-    html += '</table>';
-  }
-
-  html += '<div class="footer">Team Vacation Planner &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString()+'</div>';
-  html += '</body></html>';
-
-  var base = fileBase(team.name)+"_"+yr+"_report";
-  var fallback = function(){
-    var blob = new Blob([html], { type: "text/html" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a"); a.href = url; a.download = base+".html"; a.click();
-    setTimeout(function(){URL.revokeObjectURL(url);},1000);
-  };
-  return withBusy(downloadHtmlAsPdf(html, base+".pdf").catch(function(e){ console.warn("PDF failed, downloading HTML instead", e); fallback(); }));
-}
-
-function generateApprovedPDF(team, t) {
-  team = reportSafe(team);
-  var yr = safeYear(team);
-  var MO = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var moS = MO.map(function(m){return m.slice(0,3);});
-  var DL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
-  var apr = team.approver ? team.members.find(function(m){return m.id===team.approver;}) : null;
-  var aprName = apr ? apr.name : (t.approverLabel||"Approver");
-  var now = new Date();
-  var ds = now.getDate()+" "+MO[now.getMonth()]+" "+now.getFullYear();
-
-  var am = team.members.filter(function(m){
-    return m.approved===true && (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length > 0;
-  });
-  var tot = 0;
-  am.forEach(function(m){ tot += (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length; });
-
-  // Labels
-  var L = {
-    title: t.approvalCert || "Approved Vacation Schedule",
-    badge: "✓ " + (t.approved||"APPROVED"),
-    members: t.mbs || "Members",
-    appDays: (t.approved||"Approved") + " " + (t.dys||"Days"),
-    avg: t.avgDays || "Avg/Person",
-    sect1: (t.approved||"Approved") + " " + (t.dys||"Days") + " — " + (t.summary||"Summary"),
-    member: t.mb || "Member",
-    country: t.co || "Country",
-    days: t.dys || "Days",
-    pto: t.pto || "PTO",
-    periods: t.timeline || "Periods",
-    sect2: t.cal || "Calendar",
-    we: t.sa || "Weekend",
-    hol: t.holiday || t.hol || "Holiday",
-    vacation: t.onVac || "Vacation",
-    approver: t.approverLabel || "Approver",
-    ack: t.mb || "Team Member",
-    date: t.today || "Date"
-  };
-
-  var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' — '+L.title+' '+yr+'</title>';
-  h += '<style>';
-  h += '@page{size:A4 landscape;margin:10mm 12mm}';
-  h += '*{box-sizing:border-box}';
-  h += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0;padding:0;color:#111827;font-size:8.5px;line-height:1.3;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
-  // Header
-  h += '.hd{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #4f46e5;padding-bottom:8px;margin-bottom:8px}';
-  h += '.hd-l{display:flex;align-items:center;gap:10px}';
-  h += '.hd-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center}';
-  h += '.hd-icon svg{width:16px;height:16px}';
-  h += '.hd h1{font-size:14px;margin:0;font-weight:800;letter-spacing:-.3px}';
-  h += '.hd-sub{font-size:8px;color:#6b7280;margin:1px 0 0}';
-  h += '.badge{padding:3px 10px;border-radius:10px;font-size:7px;font-weight:800;letter-spacing:.6px;background:#dcfce7;color:#166534;border:1px solid #86efac;text-transform:uppercase}';
-  // Stats
-  h += '.st{display:flex;gap:12px;margin:6px 0 8px}';
-  h += '.st-c{flex:1;text-align:center;padding:6px 0;background:#f5f3ff;border-radius:6px;border:1px solid #e0e7ff}';
-  h += '.st-n{font-size:18px;font-weight:800;color:#4f46e5}';
-  h += '.st-l{font-size:6.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;font-weight:700}';
-  // Table
-  h += '.s{font-size:9px;font-weight:700;color:#312e81;margin:8px 0 4px;padding-bottom:2px;border-bottom:1.5px solid #c7d2fe}';
-  h += 'table{width:100%;border-collapse:collapse}';
-  h += 'th{background:#f5f3ff;color:#312e81;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:4px 5px;text-align:left;border-bottom:1.5px solid #c7d2fe}';
-  h += 'td{padding:3px 5px;border-bottom:1px solid #f3f4f6;font-size:8px}';
-  h += 'tr:nth-child(even){background:#faf9ff}';
-  h += 'tr{page-break-inside:avoid;break-inside:avoid}';
-  h += '.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}';
-  h += '.ch{display:inline-block;padding:1px 6px;border-radius:3px;font-size:7px;font-weight:700;margin:0 1px;white-space:nowrap}';
-  // Calendar
-  h += '.cg{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:4px 0 6px}';
-  h += '.cm{border:1px solid #e5e7eb;border-radius:4px;padding:3px;page-break-inside:avoid;break-inside:avoid}';
-  h += '.ct{font-size:7.5px;font-weight:700;text-align:center;color:#312e81;margin-bottom:2px}';
-  h += '.cd-g{display:grid;grid-template-columns:repeat(7,1fr);gap:0}';
-  h += '.dl{text-align:center;font-size:5.5px;color:#9ca3af;font-weight:700}';
-  h += '.d{text-align:center;font-size:6.5px;padding:1.5px 0;color:#6b7280}';
-  h += '.d-we{background:#f3f4f6;color:#c9c9c9}';
-  h += '.d-h{background:#fef2f2;color:#ef4444;font-weight:700}';
-  h += '.d-v{background:#ef4444;color:#fff;font-weight:800;border-radius:2px}';
-  h += '.d-v2{color:#fff;font-weight:800;border-radius:2px}';
-  // Legend
-  h += '.lg{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0;padding:3px 6px;background:#f9fafb;border-radius:3px;border:1px solid #e5e7eb;font-size:7px}';
-  h += '.lg-i{display:flex;align-items:center;gap:2px}';
-  h += '.lg-b{width:8px;height:8px;border-radius:2px;display:inline-block}';
-  // Footer
-  h += '.ft{display:flex;justify-content:space-between;align-items:flex-end;border-top:1.5px solid #4f46e5;padding-top:6px;margin-top:6px}';
-  h += '.sig{flex:1}';
-  h += '.sig-line{border-top:1px solid #374151;margin-top:20px;padding-top:3px}';
-  h += '.sig-n{font-size:9px;font-weight:700;color:#111827}';
-  h += '.sig-r{font-size:7px;color:#6b7280}';
-  h += '.wm{font-size:6px;color:#d1d5db;text-align:center;margin-top:4px;letter-spacing:.3px}';
-  h += '</style></head><body>';
-
-  // ── Header
-  h += '<div class="hd"><div class="hd-l">';
-  h += '<div class="hd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg></div>';
-  h += '<div><h1>'+esc(team.name)+'</h1><p class="hd-sub">'+L.title+' '+yr+' · '+ds+'</p></div>';
-  h += '</div><span class="badge">'+L.badge+'</span></div>';
-
-  // ── Stats
-  h += '<div class="st">';
-  h += '<div class="st-c"><div class="st-n">'+am.length+'</div><div class="st-l">'+L.members+'</div></div>';
-  h += '<div class="st-c"><div class="st-n">'+tot+'</div><div class="st-l">'+L.appDays+'</div></div>';
-  h += '<div class="st-c"><div class="st-n">'+Math.round(tot/(am.length||1))+'</div><div class="st-l">'+L.avg+'</div></div>';
-  h += '</div>';
-
-  // ── Table
-  h += '<div class="s">'+L.sect1+'</div>';
-  h += '<table><tr><th>'+L.member+'</th><th>'+L.country+'</th><th style="text-align:center;width:40px">'+L.days+'</th><th style="text-align:center;width:50px">'+L.pto+'</th><th>'+L.periods+'</th></tr>';
-  am.forEach(function(m) {
-    var days = (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).sort();
-    var co = EU_C.find(function(x){return x.c===m.country;});
-    var mc = MC[team.members.indexOf(m)%MC.length];
-    // Periods
-    var rng=[],rS=null,rP=null;
-    days.forEach(function(d){
-      var p=d.split("-");var dt=new Date(+p[0],+p[1]-1,+p[2]);
-      if(!rP){rS=d;rP=dt;return;}
-      if((dt-rP)/864e5<=3){rP=dt;}
-      else{rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));rS=d;rP=dt;}
-    });
-    if(rS)rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));
-    var ps=m.pto?days.length+"/"+m.pto:"–";
-    h+='<tr><td><span class="dot" style="background:'+mc.d+'"></span><strong>'+esc(m.name)+'</strong></td>';
-    h+='<td>'+(co?co.f+" "+co.n:"–")+'</td>';
-    h+='<td style="text-align:center;font-weight:700;color:'+mc.d+';font-size:11px">'+days.length+'</td>';
-    h+='<td style="text-align:center;font-weight:600">'+ps+'</td>';
-    h+='<td>'+rng.map(function(r){return '<span class="ch" style="color:'+mc.d+';background:'+mc.d+'10;border:1px solid '+mc.d+'30">'+r+'</span>';}).join("")+'</td></tr>';
-  });
-  h+='</table>';
-
-  // ── Calendar (6 per row for landscape)
-  h+='<div class="s">'+L.sect2+' '+yr+'</div>';
-  h+='<div class="cg">';
-  var hs={};
-  am.forEach(function(m){if(m.country)getAllHolidays(m,yr).forEach(function(x){hs[x]=true;});});
-  for(var mo=0;mo<12;mo++){
-    h+='<div class="cm"><div class="ct">'+MO[mo]+'</div><div class="cd-g">';
-    for(var dl=0;dl<7;dl++)h+='<div class="dl">'+DL[dl]+'</div>';
-    var fd=fdm(yr,mo),dm2=dim(yr,mo);
-    for(var bl=0;bl<fd;bl++)h+='<div></div>';
-    for(var d=1;d<=dm2;d++){
-      var k=dk(yr,mo,d),dw=(fd+d-1)%7,we=dw>=5,ih=!!hs[k];
-      var w=[];am.forEach(function(m){if((m.days||[]).indexOf(k)>=0)w.push(team.members.indexOf(m));});
-      var cl="d",st="";
-      if(we)cl+=" d-we";
-      if(ih&&w.length===0)cl+=" d-h";
-      if(w.length===1){cl+=" d-v";st="background:"+MC[w[0]%MC.length].d;}
-      else if(w.length>=2){cl+=" d-v";st="background:#dc2626";}
-      h+='<div class="'+cl+'"'+(st?' style="'+st+'"':'')+'>'+d+'</div>';
-    }
-    h+='</div></div>';
-  }
-  h+='</div>';
-
-  // ── Legend
-  h+='<div class="lg">';
-  am.forEach(function(m){
-    var mc=MC[team.members.indexOf(m)%MC.length];
-    h+='<span class="lg-i"><span class="lg-b" style="background:'+mc.d+'"></span><strong>'+esc(m.name)+'</strong></span>';
-  });
-  h+='<span style="color:#d1d5db">|</span>';
-  h+='<span class="lg-i"><span class="lg-b" style="background:#f3f4f6;border:1px solid #d1d5db"></span>'+L.we+'</span>';
-  h+='<span class="lg-i"><span class="lg-b" style="background:#fef2f2;border:1px solid #fecaca"></span>'+L.hol+'</span>';
-  h+='<span class="lg-i"><span class="lg-b" style="background:#ef4444"></span>'+L.vacation+'</span>';
-  h+='</div>';
-
-  // ── Signatures
-  h+='<div class="ft">';
-  h+='<div class="sig"><div class="sig-line"><div class="sig-n">'+esc(aprName)+'</div><div class="sig-r">'+L.approver+' · '+ds+'</div></div></div>';
-  h+='<div style="width:40px"></div>';
-  h+='<div class="sig"><div class="sig-line"><div class="sig-n">&nbsp;</div><div class="sig-r">'+L.ack+' · '+L.date+'</div></div></div>';
-  h+='</div>';
-  h+='<div class="wm">vacationplanner.team · '+ds+'</div>';
-  h+='</body></html>';
-
-  var fname=fileBase(team.name)+"_"+yr+"_approved.pdf";
-  return withBusy(downloadHtmlAsPdf(h, fname).catch(function(e){
-    console.warn("PDF failed, opening print view instead", e);
-    var w2=window.open("","_blank");if(!w2)return;w2.document.write(h);w2.document.close();w2.focus();setTimeout(function(){w2.print();},500);
-  }));
-}
-
-function _fd(d,mo){var p=d.split("-");return parseInt(p[2])+" "+mo[parseInt(p[1])-1];}
-function _fd2(dt,mo){return dt.getDate()+" "+mo[dt.getMonth()];}
+export function _fd(d,mo){var p=d.split("-");return parseInt(p[2])+" "+mo[parseInt(p[1])-1];}
+export function _fd2(dt,mo){return dt.getDate()+" "+mo[dt.getMonth()];}
 
 
 // ─── Print Report (opens formatted view in new window with print dialog) ──
-function printReport(team, t) {
-  team = reportSafe(team);
-  var yr = safeYear(team);
-  var months = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
-
-  var allHols = {};
-  team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){allHols[h]=true;}); });
-
-  var allDays = {};
-  team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
-  var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
-  var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
-
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' - '+yr+'</title>';
-  html += '<style>';
-  html += '*{box-sizing:border-box;margin:0;padding:0}';
-  html += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;margin:0;padding:24px 32px;color:#1f2937;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
-  html += '@page{margin:15mm;size:A4 landscape}';
-  html += 'h1{font-size:20px;margin:0 0 2px;color:#1f2937}';
-  html += '.sub{font-size:11px;color:#6b7280;margin:0 0 14px}';
-  html += '.hdr{border-bottom:3px solid #7C3AED;padding-bottom:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-end}';
-  html += '.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}';
-  html += '.leg-item{display:flex;align-items:center;gap:3px;font-size:10px}';
-  html += '.dot{width:8px;height:8px;border-radius:2px;display:inline-block}';
-  // Stats
-  html += '.stats{display:flex;gap:8px;margin-bottom:14px}';
-  html += '.stat{flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center}';
-  html += '.stat-val{font-size:18px;font-weight:800;color:#374151}';
-  html += '.stat-red{font-size:18px;font-weight:800;color:#EF4444}';
-  html += '.stat-grn{font-size:18px;font-weight:800;color:#10B981}';
-  html += '.stat-lbl{font-size:9px;color:#6b7280;margin-top:1px}';
-  // Timeline
-  html += '.tl-title{font-size:12px;font-weight:700;margin:14px 0 6px;color:#374151;border-bottom:2px solid #7C3AED;padding-bottom:3px}';
-  html += '.tl-row{display:flex;align-items:center;margin-bottom:2px}';
-  html += '.tl-name{width:80px;font-size:10px;font-weight:600;color:#374151;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
-  html += '.tl-bar{display:flex}';
-  html += '.tl-day{width:12px;height:12px;border-radius:2px;margin:0 0.5px}';
-  html += '.tl-hdr{display:flex;margin-left:80px;margin-bottom:1px}';
-  html += '.tl-hdr-d{width:12px;font-size:7px;text-align:center;color:#9ca3af;margin:0 0.5px}';
-  // Calendar
-  html += '.cal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}';
-  html += '.cal-month{border:1px solid #e5e7eb;border-radius:6px;padding:6px}';
-  html += '.cal-title{font-size:10px;font-weight:700;color:#1f2937;margin-bottom:4px}';
-  html += '.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}';
-  html += '.cal-lbl{font-size:7px;font-weight:700;color:#9ca3af;text-align:center;padding:1px}';
-  html += '.cal-d{font-size:8px;text-align:center;border-radius:2px;padding:2px 0;color:#374151}';
-  html += '.cal-we{color:#d1d5db}';
-  html += '.cal-hol{background:#fee2e2;color:#dc2626;font-weight:700}';
-  html += '.cal-v1{color:#fff;font-weight:700}';
-  // Table
-  html += 'table{width:100%;border-collapse:collapse;margin:8px 0;font-size:10px}';
-  html += 'th,td{padding:4px 8px;border:1px solid #e5e7eb;text-align:left}';
-  html += 'th{background:#f9fafb;font-weight:700;color:#374151}';
-  html += '.footer{margin-top:16px;font-size:8px;color:#d1d5db;text-align:right}';
-  html += '@media print{.no-print{display:none!important}}';
-  html += '</style></head><body>';
-
-  // Print button
-  html += '<div class="no-print" style="position:fixed;top:10px;right:10px;z-index:100"><button onclick="window.print()" style="padding:8px 20px;border-radius:8px;border:none;background:#7C3AED;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Print / Save as PDF</button></div>';
-
-  // Header
-  html += '<div class="hdr"><div><h1>'+esc(team.name)+'</h1><div class="sub">'+yr+' &middot; '+team.members.length+' members &middot; Generated '+new Date().toLocaleDateString()+'</div></div><div style="font-size:9px;color:#9ca3af">vacationplanner.team</div></div>';
-
-  // Legend
-  html += '<div class="legend">';
-  team.members.forEach(function(m,i){
-    var c=MC[i%MC.length];
-    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
-  });
-  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">Holiday</span></div>';
-  html += '</div>';
-
-  // Stats
-  var avgCov = team.members.length > 0 ? Math.round((1 - totalDays / (team.members.length * 260)) * 100) : 100;
-  html += '<div class="stats">';
-  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">Total vacation days</div></div>';
-  html += '<div class="stat"><div class="stat-red">'+overlaps.length+'</div><div class="stat-lbl">Overlap days</div></div>';
-  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">Team members</div></div>';
-  html += '<div class="stat"><div class="stat-grn">'+avgCov+'%</div><div class="stat-lbl">Avg coverage</div></div>';
-  html += '</div>';
-
-  // Timeline per active month
-  for(var mo=0;mo<12;mo++){
-    var daysInMonth = dim(yr,mo);
-    var hasActivity = false;
-    team.members.forEach(function(m){(m.days||[]).forEach(function(d){var p=pk(d);if(p.m===mo)hasActivity=true;});});
-    if(!hasActivity) continue;
-    html += '<div class="tl-title">'+months[mo]+' '+yr+'</div>';
-    html += '<div class="tl-hdr">';
-    for(var d=1;d<=daysInMonth;d++) html += '<div class="tl-hdr-d">'+d+'</div>';
-    html += '</div>';
-    team.members.forEach(function(m,i){
-      var c=MC[i%MC.length];
-      html += '<div class="tl-row"><div class="tl-name">'+esc(m.name)+'</div><div class="tl-bar">';
-      for(var d2=1;d2<=daysInMonth;d2++){
-        var key=dk(yr,mo,d2);
-        var has=(m.days||[]).indexOf(key)>=0;var isPnd=false;
-        var isHol2=!!allHols[key];
-        var isWe2=isWe(yr,mo,d2);
-        html += '<div class="tl-day" style="background:'+(has?c.d:isPnd?c.d+'60':isHol2?'#fecaca':isWe2?'#f3f4f6':'#f9fafb')+(isPnd?';background-image:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px)':'')+'"></div>';
-      }
-      html += '</div></div>';
-    });
-  }
-
-  // Calendar grid — 4 per row for landscape
-  html += '<div class="tl-title">Year Calendar '+yr+'</div>';
-  html += '<div class="cal-grid">';
-  for(var mo3=0;mo3<12;mo3++){
-    html += '<div class="cal-month"><div class="cal-title">'+months[mo3]+'</div><div class="cal-days">';
-    for(var dl=0;dl<7;dl++) html += '<div class="cal-lbl">'+dayL[dl]+'</div>';
-    var firstDay=fdm(yr,mo3);
-    var daysInMo=dim(yr,mo3);
-    for(var bl=0;bl<firstDay;bl++) html += '<div></div>';
-    for(var d3=1;d3<=daysInMo;d3++){
-      var key3=dk(yr,mo3,d3);
-      var dow2=(firstDay+d3-1)%7;
-      var isWe3=dow2>=5;
-      var isHol3=!!allHols[key3];
-      var who2=[];
-      team.members.forEach(function(m,i){if((m.days||[]).indexOf(key3)>=0)who2.push(i);});
-      var cls2='cal-d';
-      var sty2='';
-      if(isWe3) cls2+=' cal-we';
-      if(isHol3) cls2+=' cal-hol';
-      if(who2.length===1){cls2+=' cal-v1';sty2='background:'+MC[who2[0]%MC.length].d;}
-      else if(who2.length===2){cls2+=' cal-v1';sty2='background:linear-gradient(135deg,'+MC[who2[0]%MC.length].d+' 50%,'+MC[who2[1]%MC.length].d+' 50%)';}
-      else if(who2.length>=3){cls2+=' cal-v1';sty2='background:#EF4444';}
-      html += '<div class="'+cls2+'"'+(sty2?' style="'+sty2+'"':'')+'>'+d3+'</div>';
-    }
-    html += '</div></div>';
-  }
-  html += '</div>';
-
-  // Summary table
-  html += '<div class="tl-title">Member Summary</div>';
-  html += '<table><tr><th>Member</th><th>Country</th><th>Days</th><th>Vacation Periods</th></tr>';
-  team.members.forEach(function(m,i){
-    var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
-    var sorted=(m.days||[]).slice().sort();
-    var ranges=[]; var ri=0;
-    while(ri<sorted.length){
-      var start=sorted[ri],end=start;
-      while(ri+1<sorted.length){var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;if(diff<=3){ri++;end=sorted[ri];}else break;}
-      if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
-    }
-    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+esc(m.name)+'</td><td>'+(co?co.f+' '+co.n:'—')+'</td><td style="text-align:center;font-weight:700">'+sorted.length+'</td><td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
-  });
-  html += '</table>';
-
-  if(overlaps.length){
-    html += '<div class="tl-title">Overlap Days ('+overlaps.length+')</div>';
-    html += '<table><tr><th>Date</th><th>Members Out</th></tr>';
-    overlaps.forEach(function(e){html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+(e[1] as string[]).map(esc).join(', ')+'</td></tr>';});
-    html += '</table>';
-  }
-
-  html += '<div class="footer">Generated by Team Vacation Planner &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString()+'</div>';
-  html += '</body></html>';
-
-  var win = window.open('','_blank','width=1100,height=800');
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(function(){win.print();},500);
-}
 function getEmbedCode(teamId) {
   const url = `${window.location.origin}${window.location.pathname}#team=${teamId}`;
   return `<iframe src="${url}" width="100%" height="800" frameborder="0" style="border:1px solid #e8e6e1;border-radius:12px;"></iframe>`;
@@ -1559,7 +1034,7 @@ function PrintView({ team, th, t }) {
 
     {/* Print button (hidden in print) */}
     <div style={{ marginTop: 24, textAlign: "center" }}>
-      <button onClick={() => printReport(team, t)} style={{
+      <button onClick={() => R("printReport")(team, t)} style={{
         padding: "12px 32px", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff",
         fontSize: 15, fontWeight: 700, fontFamily: F, cursor: "pointer",
       }}>{t.printBtn}</button>
@@ -1906,172 +1381,6 @@ function ChangeLogView({ team, th, t }) {
 }
 
 // ─── XLSX Export (rich SpreadsheetML with calendar grid, timeline, stats) ────
-function exportXLSLegacy(team, t) {
-  team = reportSafe(team);
-  var yr = safeYear(team);
-  var months = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
-  var mColors = ["#3B82F6","#EC4899","#10B981","#F59E0B","#6366F1","#F43F5E","#14B8A6","#F97316","#A855F7","#06B6D4","#EF4444","#84CC16","#F472B6","#0EA5E9","#FBBF24","#818CF8","#34D399","#F87171","#8B5CF6","#2DD4BF","#EAB308","#D946EF","#22D3EE","#FB7185","#4ADE80"];
-
-  // Collect holidays
-  var allHols = {};
-  team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){allHols[h]=true;}); });
-
-  // Overlap analysis
-  var allDays = {};
-  team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
-  var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
-  var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
-
-  var xml = '<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
-  xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
-
-  // Styles
-  xml += '<Styles>';
-  xml += '<Style ss:ID="Default"><Font ss:FontName="Calibri" ss:Size="10"/></Style>';
-  xml += '<Style ss:ID="title"><Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1" ss:Color="#1F2937"/></Style>';
-  xml += '<Style ss:ID="sub"><Font ss:FontName="Calibri" ss:Size="11" ss:Color="#6B7280"/></Style>';
-  xml += '<Style ss:ID="hdr"><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#374151"/><Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E5E7EB"/></Borders></Style>';
-  xml += '<Style ss:ID="hdr2"><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#7C3AED" ss:Pattern="Solid"/></Style>';
-  xml += '<Style ss:ID="sect"><Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1" ss:Color="#374151"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#7C3AED"/></Borders></Style>';
-  xml += '<Style ss:ID="stat-val"><Font ss:FontName="Calibri" ss:Size="18" ss:Bold="1" ss:Color="#374151"/><Alignment ss:Horizontal="Center"/></Style>';
-  xml += '<Style ss:ID="stat-lbl"><Font ss:FontName="Calibri" ss:Size="9" ss:Color="#6B7280"/><Alignment ss:Horizontal="Center"/></Style>';
-  xml += '<Style ss:ID="stat-red"><Font ss:FontName="Calibri" ss:Size="18" ss:Bold="1" ss:Color="#EF4444"/><Alignment ss:Horizontal="Center"/></Style>';
-  xml += '<Style ss:ID="stat-grn"><Font ss:FontName="Calibri" ss:Size="18" ss:Bold="1" ss:Color="#10B981"/><Alignment ss:Horizontal="Center"/></Style>';
-  xml += '<Style ss:ID="we"><Interior ss:Color="#F9FAFB" ss:Pattern="Solid"/><Font ss:Color="#D1D5DB" ss:FontName="Calibri" ss:Size="9"/><Alignment ss:Horizontal="Center"/></Style>';
-  xml += '<Style ss:ID="hol"><Interior ss:Color="#FEE2E2" ss:Pattern="Solid"/><Font ss:Color="#DC2626" ss:FontName="Calibri" ss:Size="9" ss:Bold="1"/><Alignment ss:Horizontal="Center"/></Style>';
-  xml += '<Style ss:ID="day"><Font ss:FontName="Calibri" ss:Size="9"/><Alignment ss:Horizontal="Center"/></Style>';
-  xml += '<Style ss:ID="day-hdr"><Font ss:FontName="Calibri" ss:Size="8" ss:Bold="1" ss:Color="#9CA3AF"/><Alignment ss:Horizontal="Center"/></Style>';
-  xml += '<Style ss:ID="overlap"><Interior ss:Color="#FEE2E2" ss:Pattern="Solid"/><Font ss:Color="#991B1B" ss:FontName="Calibri" ss:Size="10" ss:Bold="1"/></Style>';
-  xml += '<Style ss:ID="bold"><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1"/></Style>';
-  // Per-member vacation styles
-  for(var si=0;si<25;si++){
-    xml += '<Style ss:ID="v'+si+'"><Interior ss:Color="'+mColors[si]+'" ss:Pattern="Solid"/><Font ss:Color="#FFFFFF" ss:FontName="Calibri" ss:Size="9" ss:Bold="1"/><Alignment ss:Horizontal="Center"/></Style>';
-    xml += '<Style ss:ID="vb'+si+'"><Interior ss:Color="'+mColors[si]+'" ss:Pattern="Solid"/></Style>';
-  }
-  xml += '</Styles>\n';
-
-  // ═══════════ SHEET 1: Dashboard ═══════════
-  xml += '<Worksheet ss:Name="Dashboard"><Table ss:DefaultColumnWidth="65">\n';
-  xml += '<Column ss:Width="120"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="100"/>\n';
-  // Title
-  xml += '<Row ss:Height="30"><Cell ss:StyleID="title"><Data ss:Type="String">'+esc(team.name)+'</Data></Cell></Row>\n';
-  xml += '<Row><Cell ss:StyleID="sub"><Data ss:Type="String">'+yr+' | '+team.members.length+' members | Generated '+new Date().toLocaleDateString()+'</Data></Cell></Row>\n';
-  xml += '<Row></Row>\n';
-  // Stats
-  xml += '<Row><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+totalDays+'</Data></Cell><Cell ss:StyleID="stat-red"><Data ss:Type="Number">'+overlaps.length+'</Data></Cell><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+team.members.length+'</Data></Cell><Cell ss:StyleID="stat-grn"><Data ss:Type="String">'+Math.round((1-totalDays/(team.members.length*260||1))*100)+'%</Data></Cell></Row>\n';
-  xml += '<Row><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Total vacation days</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Overlap days</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Team members</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Avg coverage</Data></Cell></Row>\n';
-  xml += '<Row></Row>\n';
-  // Member summary
-  xml += '<Row><Cell ss:StyleID="sect" ss:MergeAcross="4"><Data ss:Type="String">Member Summary</Data></Cell></Row>\n';
-  xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">Member</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Country</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Days</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Periods</Data></Cell></Row>\n';
-  team.members.forEach(function(m,i){
-    var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
-    var sorted = (m.days||[]).slice().sort();
-    var ranges = []; var ri = 0;
-    while(ri<sorted.length){
-      var start=sorted[ri],end=start;
-      while(ri+1<sorted.length){var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;if(diff<=3){ri++;end=sorted[ri];}else break;}
-      if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
-    }
-    xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+esc(m.name)+'</Data></Cell><Cell><Data ss:Type="String">'+(co?co.n:'')+'</Data></Cell><Cell><Data ss:Type="Number">'+sorted.length+'</Data></Cell><Cell><Data ss:Type="String">'+ranges.join(', ')+'</Data></Cell></Row>\n';
-  });
-  // Overlaps
-  if(overlaps.length){
-    xml += '<Row></Row><Row><Cell ss:StyleID="sect" ss:MergeAcross="3"><Data ss:Type="String">Overlap Days ('+overlaps.length+')</Data></Cell></Row>\n';
-    xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">Date</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Members Out</Data></Cell></Row>\n';
-    overlaps.forEach(function(e){
-      xml += '<Row><Cell ss:StyleID="overlap"><Data ss:Type="String">'+e[0]+'</Data></Cell><Cell><Data ss:Type="String">'+(e[1] as string[]).map(esc).join(', ')+'</Data></Cell></Row>\n';
-    });
-  }
-  xml += '</Table></Worksheet>\n';
-
-  // ═══════════ SHEET 2: Calendar Grid ═══════════
-  xml += '<Worksheet ss:Name="Calendar"><Table ss:DefaultColumnWidth="26">\n';
-  xml += '<Column ss:Width="80"/>';
-  for(var ci=0;ci<37;ci++) xml += '<Column ss:Width="26"/>';
-  xml += '\n';
-
-  for(var mo=0;mo<12;mo++){
-    var daysInMo = dim(yr,mo);
-    var first = fdm(yr,mo);
-    // Month title
-    xml += '<Row ss:Height="22"><Cell ss:StyleID="sect"><Data ss:Type="String">'+months[mo]+' '+yr+'</Data></Cell></Row>\n';
-    // Day headers
-    xml += '<Row><Cell></Cell>';
-    for(var dl=0;dl<7;dl++) xml += '<Cell ss:StyleID="day-hdr"><Data ss:Type="String">'+dayL[dl]+'</Data></Cell>';
-    xml += '</Row>\n';
-    // Calendar rows — each member gets a row per week
-    // First, build the team combined calendar
-    var weeks = []; var week = []; for(var bl=0;bl<first;bl++) week.push(null);
-    for(var d=1;d<=daysInMo;d++){
-      week.push(d);
-      if(week.length===7){weeks.push(week);week=[];}
-    }
-    if(week.length) { while(week.length<7) week.push(null); weeks.push(week); }
-
-    weeks.forEach(function(wk){
-      xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">Team</Data></Cell>';
-      wk.forEach(function(d){
-        if(!d){xml += '<Cell></Cell>';return;}
-        var key = dk(yr,mo,d);
-        var isWe2 = isWe(yr,mo,d);
-        var isHol2 = !!allHols[key];
-        var who = [];
-        team.members.forEach(function(m,i){if((m.days||[]).indexOf(key)>=0) who.push(i);});
-        var sty = 'day';
-        if(isWe2) sty = 'we';
-        if(isHol2) sty = 'hol';
-        if(who.length===1) sty = 'v'+(who[0]%25);
-        else if(who.length>=2) sty = 'overlap';
-        xml += '<Cell ss:StyleID="'+sty+'"><Data ss:Type="Number">'+d+'</Data></Cell>';
-      });
-      xml += '</Row>\n';
-    });
-    xml += '<Row></Row>\n';
-  }
-  xml += '</Table></Worksheet>\n';
-
-  // ═══════════ SHEET 3: Timeline (Gantt) ═══════════
-  xml += '<Worksheet ss:Name="Timeline"><Table ss:DefaultColumnWidth="16">\n';
-  xml += '<Column ss:Width="90"/>';
-  for(var ti=0;ti<31;ti++) xml += '<Column ss:Width="16"/>';
-  xml += '\n';
-
-  for(var mo2=0;mo2<12;mo2++){
-    var daysInMo2 = dim(yr,mo2);
-    var hasActivity = false;
-    team.members.forEach(function(m){(m.days||[]).forEach(function(d){var p=pk(d);if(p.m===mo2)hasActivity=true;});});
-    if(!hasActivity) continue;
-
-    xml += '<Row ss:Height="20"><Cell ss:StyleID="sect"><Data ss:Type="String">'+months[mo2]+'</Data></Cell></Row>\n';
-    // Day number header
-    xml += '<Row><Cell ss:StyleID="day-hdr"><Data ss:Type="String">Name</Data></Cell>';
-    for(var d2=1;d2<=daysInMo2;d2++) xml += '<Cell ss:StyleID="day-hdr"><Data ss:Type="Number">'+d2+'</Data></Cell>';
-    xml += '</Row>\n';
-    // Member Gantt bars
-    team.members.forEach(function(m,i){
-      xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+esc(m.name)+'</Data></Cell>';
-      for(var d3=1;d3<=daysInMo2;d3++){
-        var key2 = dk(yr,mo2,d3);
-        var has = (m.days||[]).indexOf(key2)>=0;
-        var isWe3 = isWe(yr,mo2,d3);
-        var isHol3 = !!allHols[key2];
-        var sty2 = has ? 'vb'+(i%25) : isHol3 ? 'hol' : isWe3 ? 'we' : 'day';
-        xml += '<Cell ss:StyleID="'+sty2+'"><Data ss:Type="String">'+(has?'V':'')+'</Data></Cell>';
-      }
-      xml += '</Row>\n';
-    });
-    xml += '<Row></Row>\n';
-  }
-  xml += '</Table></Worksheet>\n';
-
-  xml += '</Workbook>';
-  var blob = new Blob([xml], { type: "application/vnd.ms-excel" });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a"); a.href = url; a.download = fileBase(team.name)+"_"+yr+".xls"; a.click();
-  URL.revokeObjectURL(url);
-}
 
 // ─── TSV Export for Google Sheets IMPORTDATA ─────────────────────
 function generateTSV(team, t) {
@@ -2783,7 +2092,10 @@ function ShareModal({teamId,teamName,onClose,th,t}){
 
 
 function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
-  const a = ABOUT_TX[lang] || ABOUT_TX.en;
+  const[abx,setAbx]=useState(null);
+  useEffect(()=>{let on=true;import("@/lib/aboutText").then(m=>{if(on)setAbx(m.ABOUT_TX);}).catch(()=>{});return()=>{on=false;};},[]);
+  const a = abx ? (abx[lang] || abx.en) : null;
+  if(!a) return <div style={{minHeight:"100vh",background:th.bg}} aria-busy="true"/>;
   const Section=({icon,title,children})=> <div style={{marginBottom:28}}>
     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
       <div style={{width:36,height:36,borderRadius:G.rXs,background:th.al,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Ic n={icon} s={18} c={th.ac}/></div>
@@ -2935,127 +2247,6 @@ function ContactModal({onClose, th, t}) {
 
 
 
-const ABOUT_TX = {
-en:{
-hero:"A beautiful, free, zero-login team vacation planning tool for teams up to 50. Frosted-glass design. 55 countries, 11 languages, 2026–2035.",
-howTitle:"How It Works",
-s1:"Create a team",s1d:"pick a name and year. You get an instant shareable link.",
-s2d:"enter each person's name and country. Their public holidays are automatically loaded.",
-s3:"Pick vacation days",s3d:"select a member, then click or drag across calendar dates. Weekends are excluded automatically.",
-s4:"Share the link",s4d:"anyone with the link can view the team. Members can set a PIN so only they (or the team owner) can change their days. No accounts, no sign-ups.",
-s5:"Analyze & export",s5d:"switch between views, download reports, and keep your team in sync.",
-calTitle:"Calendar & Planning",viewTitle:"Views & Analytics",shareTitle:"Sharing & Collaboration",
-teamTitle:"Team Management",expTitle:"Export & Integration",designTitle:"Design & Accessibility",dataTitle:"Data & Privacy",
-footer:"Built with care for teams who value simplicity.",
-f1:"12-Month Calendar View",f1d:"Full-year overview with all team members color-coded. Click any day to toggle vacation.",
-f2:"Drag-to-Select",f2d:"Click and drag across multiple days to select a range. Automatically skips weekends.",
-f3:"Multi-Year Support (2026–2035)",f3d:"Holidays computed algorithmically for any year in the range.",
-f4:"Quarterly Focus View",f4d:"Toggle Q1–Q4 to zoom into three months at a time.",
-f5:"55 Countries with Regional Holidays",f5d:"Public holidays for 55 countries. Regional holidays for Spain, Germany, Switzerland, Australia, Canada.",
-f6:"Holiday Clash Detector",f6d:"Warns when someone books vacation on their country's public holiday.",
-f7:"Smart Vacation Optimizer",f7d:"Suggests optimal bridge days for maximum time off.",
-f8:"Heatmap View",f8d:"Color-intensity grid showing daily absence density.",
-f9:"Timeline / Gantt View",f9d:"Horizontal bars showing vacation blocks per member.",
-f10:"Coverage Dashboard",f10d:"Weekly bar chart of team availability percentage.",
-f11:"Team Holidays Summary",f11d:"Aggregated public holidays affecting your team.",
-f12:"Activity Log",f12d:"Chronological feed of all changes with timestamps.",
-f13:"Instant Share Link",f13d:"Unique URL per team. Share via chat, email, or QR.",
-f14:"QR Code",f14d:"Scan to join — colleagues join with their phone camera.",
-f15:"Embeddable Widget",f15d:"Iframe code for any website, wiki, or intranet.",
-f16:"Lock / Unlock Board",f16d:"Admin can lock the board to prevent edits.",
-f17:"Undo / Redo",f17d:"Ctrl+Z / Ctrl+Shift+Z with 20-action history.",
-f18:"PTO Balance Tracker",f18d:"Set PTO allowance per member with visual progress bar.",
-f19:"Working Days Counter",f19d:"Remaining working days excluding weekends, holidays, and vacation.",
-f20:"Approval Workflow",f20d:"Approvers can review and approve vacation for each member.",
-f21:"Regional Holiday Support",f21d:"Members select their specific region for local holidays.",
-f22:"ICS Calendar Export",f22d:"Download .ics files for Google Calendar, Outlook, or Apple Calendar.",
-f23:"PDF / HTML Report",f23d:"Annual report with member table, overlap analysis, and summary.",
-f24:"CSV Import & Export",f24d:"Bulk upload from spreadsheets or export for HR systems.",
-f25:"Excel (XLSX) Export",f25d:"SpreadsheetML file ready for payroll or HR.",
-f26:"TSV / Google Sheets Feed",f26d:"Live auto-refreshing feed via IMPORTDATA().",
-f27:"JSON API",f27d:"Structured data for dashboards, Slack bots, or integrations.",
-f28:"iCal Subscribe URL",f28d:"Webcal URL that auto-updates when vacations change.",
-f29:"Mini Dashboard Widget",f29d:"Compact embeddable widget showing who's out this week.",
-f30:"11 Languages",f30d:"All UI strings fully localized across 11 languages.",
-f31:"3 Frosted-Glass Themes",f31d:"Light, Dark, and Pink with frosted translucent surfaces.",
-f32:"Dark Mode Auto-Detection",f32d:"Respects your OS preference on first load.",
-f33:"Print-Optimized View",f33d:"A3 landscape year-at-a-glance for office walls.",
-f34:"Mini Dashboard Badge",f34d:"Compact 'Who's in today' widget for TV screens.",
-f35:"Visit Counter",f35d:"Anonymous count by country, worked out from your browser's time zone. No IP address is stored.",
-f36:"No Account Needed",f36d:"No sign-up and no passwords. The team link gives access, so share it only with your team.",
-f37:"Automatic Deletion",f37d:"Teams are deleted 24 months after they are created. Deleted teams can be restored for 30 days, then are erased.",
-f38:"Where Data Is Stored",f38d:"Team data is stored in a database at our hosting provider. See the Privacy page for details."
-},
-ro:{
-hero:"Un instrument gratuit și frumos de planificare a concediilor de echipă, fără autentificare, pentru echipe de până la 50 de persoane. Design cu efect de sticlă mată. 55 de țări, 11 limbi, 2026–2035.",
-howTitle:"Cum funcționează",
-s1:"Creează o echipă",s1d:"alege un nume și un an. Primești instant un link partajabil.",
-s2d:"introdu numele și țara fiecărei persoane. Sărbătorile legale se încarcă automat.",
-s3:"Alege zilele de concediu",s3d:"selectează un membru, apoi dă click sau trage pe calendarul de date. Weekendurile sunt excluse automat.",
-s4:"Distribuie linkul",s4d:"oricine are linkul poate vedea echipa. Membrii pot seta un PIN, ca doar ei (sau proprietarul echipei) să le poată schimba zilele. Fără conturi, fără înregistrare.",
-s5:"Analizează și exportă",s5d:"comută între vizualizări, descarcă rapoarte și ține echipa sincronizată.",
-calTitle:"Calendar și Planificare",viewTitle:"Vizualizări și Analiză",shareTitle:"Partajare și Colaborare",
-teamTitle:"Managementul Echipei",expTitle:"Export și Integrare",designTitle:"Design și Accesibilitate",dataTitle:"Date și Confidențialitate",
-footer:"Construit cu grijă pentru echipele care prețuiesc simplitatea.",
-f1:"Calendar 12 Luni",f1d:"Prezentare anuală cu toți membrii codificați prin culori.",
-f2:"Selectare prin tragere",f2d:"Click și trage pentru a selecta mai multe zile. Weekendurile sunt omise.",
-f3:"Suport multi-an (2026–2035)",f3d:"Sărbătorile calculate algoritmic pentru orice an.",
-f4:"Vizualizare pe trimestru",f4d:"Comută Q1–Q4 pentru a focaliza pe trei luni.",
-f5:"55 de țări cu sărbători regionale",f5d:"Sărbători publice + regionale pentru Spania, Germania, Elveția, Australia, Canada.",
-f6:"Detector de conflicte",f6d:"Avertizează când cineva rezervă concediu pe o zi de sărbătoare.",
-f7:"Optimizator de concediu",f7d:"Sugerează zilele optime de punte pentru maxim de timp liber.",
-f8:"Heatmap",f8d:"Grilă de intensitate a absențelor zilnice.",
-f9:"Timeline / Gantt",f9d:"Bare orizontale cu blocurile de concediu per membru.",
-f10:"Panou de acoperire",f10d:"Grafic săptămânal al disponibilității echipei.",
-f11:"Sumar sărbători",f11d:"Vizualizare agregată a sărbătorilor care afectează echipa.",
-f12:"Jurnal de activitate",f12d:"Feed cronologic al tuturor modificărilor.",
-f13:"Link instant de partajare",f13d:"URL unic per echipă. Distribuie prin chat, email sau QR.",
-f14:"Cod QR",f14d:"Scanează pentru a te alătura — cu camera telefonului.",
-f15:"Widget încorporabil",f15d:"Cod iframe pentru orice site sau wiki.",
-f16:"Blocare / Deblocare",f16d:"Adminul poate bloca tabla pentru a preveni editările.",
-f17:"Anulare / Refacere",f17d:"Ctrl+Z / Ctrl+Shift+Z cu istoric de 20 acțiuni.",
-f18:"Tracker PTO",f18d:"Setează alocarea PTO cu bară de progres vizuală.",
-f19:"Contor zile lucrătoare",f19d:"Zile lucrătoare rămase fără weekenduri, sărbători și concedii.",
-f20:"Flux de aprobare",f20d:"Aprobatorii pot revizui și aproba concediul per membru.",
-f21:"Sărbători regionale",f21d:"Membrii selectează regiunea lor pentru sărbători locale precise.",
-f22:"Export ICS",f22d:"Descarcă .ics pentru Google Calendar, Outlook sau Apple Calendar.",
-f23:"Raport PDF / HTML",f23d:"Raport anual cu tabel, analiză suprapuneri și sumar.",
-f24:"Import & Export CSV",f24d:"Încărcare în masă sau export pentru sisteme HR.",
-f25:"Export Excel (XLSX)",f25d:"Fișier SpreadsheetML gata pentru salarizare sau HR.",
-f26:"Feed TSV / Google Sheets",f26d:"Feed live via IMPORTDATA().",
-f27:"API JSON",f27d:"Date structurate pentru dashboarduri sau integrări.",
-f28:"URL abonare iCal",f28d:"URL webcal care se actualizează automat.",
-f29:"Widget mini panou",f29d:"Widget compact cu cine este absent săptămâna aceasta.",
-f30:"11 Limbi",f30d:"Toate textele traduse complet în 11 limbi.",
-f31:"3 teme cu efect de sticlă mată",f31d:"Light, Dark și Pink cu suprafețe translucide.",
-f32:"Detectare automată mod întunecat",f32d:"Respectă preferința sistemului de operare.",
-f33:"Vizualizare optimizată pentru tipărire",f33d:"Format A3 peisaj pentru birouri.",
-f34:"Widget compact",f34d:"Widget 'Cine este prezent azi' pentru ecrane TV.",
-f35:"Contor vizite",f35d:"Numărare anonimă pe țări, dedusă din fusul orar al browserului. Nu se stochează adresa IP.",
-f36:"Fără cont",f36d:"Fără înregistrare și fără parole. Linkul echipei dă acces, așa că trimite-l doar echipei tale.",
-f37:"Ștergere automată",f37d:"Echipele se șterg la 24 de luni de la creare. O echipă ștearsă poate fi restaurată 30 de zile, apoi se șterge definitiv.",
-f38:"Unde sunt stocate datele",f38d:"Datele echipei sunt stocate într-o bază de date la furnizorul nostru de găzduire. Detalii pe pagina Confidențialitate."
-},
-fr:{
-hero:"Un outil gratuit et élégant de planification des congés d'équipe, sans connexion. Pour équipes jusqu'à 50 personnes. 55 pays, 11 langues, 2026–2035.",
-howTitle:"Comment ça marche",s1:"Créez une équipe",s1d:"choisissez un nom et une année. Lien partageable instantané.",s2d:"entrez le nom et le pays de chaque personne. Les jours fériés se chargent automatiquement.",s3:"Choisissez les jours",s3d:"sélectionnez un membre, puis cliquez ou glissez sur le calendrier.",s4:"Partagez le lien",s4d:"toute personne ayant le lien peut voir l'équipe. Les membres peuvent définir un PIN pour que seuls eux (ou le propriétaire de l'équipe) modifient leurs jours. Sans compte, sans inscription.",s5:"Analysez et exportez",s5d:"passez d'une vue à l'autre, téléchargez des rapports.",
-calTitle:"Calendrier et Planification",viewTitle:"Vues et Analytique",shareTitle:"Partage et Collaboration",teamTitle:"Gestion d'Équipe",expTitle:"Export et Intégration",designTitle:"Design et Accessibilité",dataTitle:"Données et Confidentialité",footer:"Conçu avec soin pour les équipes qui valorisent la simplicité.",
-f1:"Calendrier 12 Mois",f1d:"Vue annuelle avec membres codés par couleur.",f2:"Glisser pour sélectionner",f2d:"Cliquez et glissez. Weekends exclus automatiquement.",f3:"Multi-années (2026–2035)",f3d:"Jours fériés calculés algorithmiquement.",f4:"Vue trimestrielle",f4d:"Q1–Q4 pour focaliser sur trois mois.",f5:"55 pays + régions",f5d:"Jours fériés régionaux pour Espagne, Allemagne, Suisse, etc.",f6:"Détecteur de conflits",f6d:"Alerte si congé sur jour férié.",f7:"Optimiseur de congés",f7d:"Suggère les jours ponts optimaux.",f8:"Heatmap",f8d:"Grille d'intensité des absences.",f9:"Timeline / Gantt",f9d:"Barres horizontales par membre.",f10:"Tableau de couverture",f10d:"Graphique hebdomadaire de disponibilité.",f11:"Résumé des fériés",f11d:"Vue agrégée des fériés de l'équipe.",f12:"Journal d'activité",f12d:"Flux chronologique de toutes les modifications.",f13:"Lien de partage",f13d:"URL unique par équipe.",f14:"Code QR",f14d:"Scannez pour rejoindre.",f15:"Widget intégrable",f15d:"Code iframe pour tout site.",f16:"Verrouiller / Déverrouiller",f16d:"L'admin peut verrouiller le tableau.",f17:"Annuler / Refaire",f17d:"Ctrl+Z avec historique de 20 actions.",f18:"Suivi PTO",f18d:"Allocation PTO avec barre de progression.",f19:"Compteur jours ouvrés",f19d:"Jours restants hors weekends et fériés.",f20:"Flux d'approbation",f20d:"Les approbateurs valident les congés.",f21:"Fériés régionaux",f21d:"Sélection de la région pour fériés locaux.",f22:"Export ICS",f22d:"Fichiers .ics pour Google Calendar, Outlook.",f23:"Rapport PDF / HTML",f23d:"Rapport annuel avec tableau et analyse.",f24:"Import & Export CSV",f24d:"Import en masse ou export pour RH.",f25:"Export Excel",f25d:"Fichier SpreadsheetML prêt pour la paie.",f26:"Feed TSV / Google Sheets",f26d:"Feed live via IMPORTDATA().",f27:"API JSON",f27d:"Données structurées pour intégrations.",f28:"URL iCal",f28d:"URL webcal auto-actualisé.",f29:"Widget mini",f29d:"Widget compact des absences.",f30:"11 Langues",f30d:"Interface complètement traduite.",f31:"3 thèmes effet verre dépoli",f31d:"Light, Dark et Pink.",f32:"Détection mode sombre",f32d:"Respecte la préférence OS.",f33:"Vue imprimable",f33d:"Format A3 paysage.",f34:"Badge compact",f34d:"Widget 'Présent aujourd'hui'.",f35:"Compteur visites",f35d:"Comptage anonyme par pays, déduit du fuseau horaire du navigateur. Aucune adresse IP n'est conservée.",f36:"Aucun compte nécessaire",f36d:"Ni inscription ni mot de passe. Le lien de l'équipe donne accès : partagez-le seulement avec votre équipe.",f37:"Suppression automatique",f37d:"Les équipes sont supprimées 24 mois après leur création. Une équipe supprimée peut être restaurée pendant 30 jours, puis elle est effacée.",f38:"Où sont stockées les données",f38d:"Les données d'équipe sont stockées dans une base de données chez notre hébergeur. Détails sur la page Confidentialité."
-},
-de:{
-hero:"Ein schönes, kostenloses Team-Urlaubsplanungstool ohne Anmeldung für Teams bis 50 Personen. 55 Länder, 11 Sprachen, 2026–2035.",
-howTitle:"So funktioniert es",s1:"Team erstellen",s1d:"Name und Jahr wählen. Sofort teilbarer Link.",s2d:"Namen und Land eingeben. Feiertage laden automatisch.",s3:"Urlaubstage wählen",s3d:"Mitglied auswählen, dann Tage im Kalender anklicken oder ziehen.",s4:"Link teilen",s4d:"Wer den Link hat, kann das Team sehen. Mitglieder können eine PIN setzen, damit nur sie (oder der Team-Inhaber) ihre Tage ändern können. Kein Konto, keine Registrierung.",s5:"Analysieren & exportieren",s5d:"Zwischen Ansichten wechseln, Berichte herunterladen.",
-calTitle:"Kalender & Planung",viewTitle:"Ansichten & Analytik",shareTitle:"Teilen & Zusammenarbeit",teamTitle:"Teamverwaltung",expTitle:"Export & Integration",designTitle:"Design & Barrierefreiheit",dataTitle:"Daten & Datenschutz",footer:"Mit Sorgfalt gebaut für Teams, die Einfachheit schätzen.",
-f1:"12-Monats-Kalender",f1d:"Jahresübersicht mit farbcodierten Mitgliedern.",f2:"Ziehen zum Auswählen",f2d:"Klicken und ziehen. Wochenenden automatisch übersprungen.",f3:"Mehrjahresunterstützung (2026–2035)",f3d:"Feiertage algorithmisch berechnet.",f4:"Quartalsansicht",f4d:"Q1–Q4 für drei Monate im Fokus.",f5:"55 Länder + Regionen",f5d:"Regionale Feiertage für Spanien, Deutschland, Schweiz, etc.",f6:"Feiertagskonflikt-Erkennung",f6d:"Warnung bei Urlaub an Feiertagen.",f7:"Urlaubs-Optimierer",f7d:"Vorschläge für optimale Brückentage.",f8:"Heatmap",f8d:"Farbintensität der täglichen Abwesenheiten.",f9:"Timeline / Gantt",f9d:"Horizontale Balken pro Mitglied.",f10:"Abdeckungs-Dashboard",f10d:"Wöchentliches Verfügbarkeitsdiagramm.",f11:"Feiertags-Zusammenfassung",f11d:"Aggregierte Teamfeiertage.",f12:"Aktivitätslog",f12d:"Chronologischer Feed aller Änderungen.",f13:"Sofortiger Teillink",f13d:"Einzigartige URL pro Team.",f14:"QR-Code",f14d:"Scannen zum Beitreten.",f15:"Einbettbares Widget",f15d:"Iframe-Code für jede Website.",f16:"Sperren / Entsperren",f16d:"Admin kann Board sperren.",f17:"Rückgängig / Wiederherstellen",f17d:"Ctrl+Z mit 20-Aktionen-Verlauf.",f18:"PTO-Tracker",f18d:"PTO-Zuteilung mit Fortschrittsbalken.",f19:"Arbeitstage-Zähler",f19d:"Verbleibende Arbeitstage.",f20:"Genehmigungsworkflow",f20d:"Genehmiger prüfen Urlaubsanträge.",f21:"Regionale Feiertage",f21d:"Regionswahl für lokale Feiertage.",f22:"ICS-Export",f22d:".ics-Dateien für Kalender-Apps.",f23:"PDF / HTML Bericht",f23d:"Jahresbericht mit Tabelle und Analyse.",f24:"CSV Import & Export",f24d:"Massenupload oder Export für HR.",f25:"Excel-Export",f25d:"SpreadsheetML für Gehaltsabrechnung.",f26:"TSV / Google Sheets",f26d:"Live-Feed via IMPORTDATA().",f27:"JSON API",f27d:"Strukturierte Daten für Integrationen.",f28:"iCal-Abo-URL",f28d:"Webcal-URL mit Auto-Update.",f29:"Mini-Widget",f29d:"Kompaktes Widget für Abwesenheiten.",f30:"11 Sprachen",f30d:"Komplett lokalisierte Oberfläche.",f31:"3 Themes im Milchglas-Look",f31d:"Light, Dark und Pink.",f32:"Dunkelmodus-Erkennung",f32d:"Respektiert OS-Einstellung.",f33:"Druckoptimierte Ansicht",f33d:"A3 Querformat für Bürowände.",f34:"Kompaktes Badge",f34d:"Widget 'Wer ist heute da'.",f35:"Besucherzähler",f35d:"Anonyme Zählung nach Land, abgeleitet aus der Zeitzone des Browsers. Keine IP-Adresse wird gespeichert.",f36:"Kein Konto nötig",f36d:"Keine Registrierung, keine Passwörter. Der Team-Link gibt Zugriff – teilen Sie ihn nur mit Ihrem Team.",f37:"Automatische Löschung",f37d:"Teams werden 24 Monate nach dem Anlegen gelöscht. Gelöschte Teams können 30 Tage lang wiederhergestellt werden, danach werden sie entfernt.",f38:"Wo die Daten liegen",f38d:"Teamdaten liegen in einer Datenbank bei unserem Hosting-Anbieter. Details auf der Seite Datenschutz."
-},
-es:{hero:"Herramienta gratuita de planificación de vacaciones sin inicio de sesión. Hasta 50 personas. 55 países, 11 idiomas, 2026–2035.",howTitle:"Cómo funciona",s1:"Crea un equipo",s1d:"elige nombre y año. Link compartible al instante.",s2d:"ingresa nombre y país. Los festivos se cargan automáticamente.",s3:"Elige días de vacaciones",s3d:"selecciona un miembro y haz clic o arrastra en el calendario.",s4:"Comparte el enlace",s4d:"cualquiera con el enlace puede ver el equipo. Los miembros pueden poner un PIN para que solo ellos (o el propietario del equipo) cambien sus días. Sin cuentas ni registro.",s5:"Analiza y exporta",s5d:"cambia entre vistas y descarga informes.",calTitle:"Calendario y Planificación",viewTitle:"Vistas y Análisis",shareTitle:"Compartir y Colaboración",teamTitle:"Gestión de Equipo",expTitle:"Exportar e Integración",designTitle:"Diseño y Accesibilidad",dataTitle:"Datos y Privacidad",footer:"Hecho con cariño para equipos que valoran la simplicidad.",f1:"Calendario 12 meses",f1d:"Vista anual con miembros codificados por color.",f2:"Arrastrar para seleccionar",f2d:"Fines de semana excluidos automáticamente.",f3:"Multi-año (2026–2035)",f3d:"Festivos calculados algorítmicamente.",f4:"Vista trimestral",f4d:"Q1–Q4 para tres meses.",f5:"55 países + regiones",f5d:"Festivos regionales para España, Alemania, etc.",f6:"Detector de conflictos",f6d:"Alerta si vacaciones en día festivo.",f7:"Optimizador de vacaciones",f7d:"Sugiere días puente óptimos.",f8:"Heatmap",f8d:"Intensidad diaria de ausencias.",f9:"Timeline / Gantt",f9d:"Barras por miembro.",f10:"Panel de cobertura",f10d:"Gráfico semanal de disponibilidad.",f11:"Resumen festivos",f11d:"Festivos agregados del equipo.",f12:"Registro de actividad",f12d:"Feed cronológico de cambios.",f13:"Enlace instantáneo",f13d:"URL única por equipo.",f14:"Código QR",f14d:"Escanea para unirte.",f15:"Widget incrustable",f15d:"Código iframe para cualquier web.",f16:"Bloquear / Desbloquear",f16d:"Admin puede bloquear el tablero.",f17:"Deshacer / Rehacer",f17d:"Ctrl+Z con historial de 20 acciones.",f18:"Tracker PTO",f18d:"Asignación PTO con barra de progreso.",f19:"Contador días laborables",f19d:"Días restantes sin fines de semana ni festivos.",f20:"Flujo de aprobación",f20d:"Aprobadores revisan vacaciones.",f21:"Festivos regionales",f21d:"Selección de región para festivos locales.",f22:"Exportar ICS",f22d:"Archivos .ics para calendarios.",f23:"Informe PDF / HTML",f23d:"Informe anual con tabla y análisis.",f24:"Importar / Exportar CSV",f24d:"Carga masiva o exportación para RRHH.",f25:"Exportar Excel",f25d:"Archivo listo para nóminas.",f26:"TSV / Google Sheets",f26d:"Feed en vivo.",f27:"API JSON",f27d:"Datos para integraciones.",f28:"URL iCal",f28d:"URL webcal con actualización automática.",f29:"Mini widget",f29d:"Widget compacto de ausencias.",f30:"11 Idiomas",f30d:"Interfaz completamente traducida.",f31:"3 temas efecto vidrio esmerilado",f31d:"Light, Dark y Pink.",f32:"Detección modo oscuro",f32d:"Respeta la preferencia del sistema.",f33:"Vista para imprimir",f33d:"A3 paisaje para oficinas.",f34:"Badge compacto",f34d:"Widget de presencia diaria.",f35:"Contador de visitas",f35d:"Recuento anónimo por país, deducido de la zona horaria del navegador. No se guarda la dirección IP.",f36:"Sin cuenta",f36d:"Sin registro ni contraseñas. El enlace del equipo da acceso: compártelo solo con tu equipo.",f37:"Borrado automático",f37d:"Los equipos se borran 24 meses después de crearse. Un equipo borrado se puede restaurar durante 30 días; después se elimina.",f38:"Dónde se guardan los datos",f38d:"Los datos del equipo se guardan en una base de datos de nuestro proveedor de alojamiento. Detalles en la página de Privacidad."},
-pt:{hero:"Ferramenta gratuita de planeamento de férias sem login. Até 50 pessoas. 55 países, 11 línguas, 2026–2035.",howTitle:"Como funciona",s1:"Crie uma equipa",s1d:"escolha nome e ano. Link partilhável instantâneo.",s2d:"introduza nome e país. Feriados carregam automaticamente.",s3:"Escolha os dias",s3d:"selecione um membro e clique ou arraste no calendário.",s4:"Partilhe o link",s4d:"qualquer pessoa com o link pode ver a equipa. Os membros podem definir um PIN para que só eles (ou o dono da equipa) alterem os seus dias. Sem contas, sem registo.",s5:"Analise e exporte",s5d:"alterne entre vistas e descarregue relatórios.",calTitle:"Calendário e Planeamento",viewTitle:"Vistas e Análise",shareTitle:"Partilha e Colaboração",teamTitle:"Gestão de Equipa",expTitle:"Exportação e Integração",designTitle:"Design e Acessibilidade",dataTitle:"Dados e Privacidade",footer:"Feito com carinho para equipas que valorizam a simplicidade.",f1:"Calendário 12 meses",f1d:"Vista anual com membros codificados por cor.",f2:"Arrastar para selecionar",f2d:"Fins de semana excluídos.",f3:"Multi-ano (2026–2035)",f3d:"Feriados calculados algoritmicamente.",f4:"Vista trimestral",f4d:"Q1–Q4.",f5:"55 países + regiões",f5d:"Feriados regionais.",f6:"Detetor de conflitos",f6d:"Alerta se férias em feriado.",f7:"Otimizador de férias",f7d:"Sugere dias ponte.",f8:"Heatmap",f8d:"Intensidade de ausências.",f9:"Timeline / Gantt",f9d:"Barras por membro.",f10:"Painel de cobertura",f10d:"Gráfico semanal.",f11:"Resumo feriados",f11d:"Feriados agregados.",f12:"Registo de atividade",f12d:"Feed cronológico.",f13:"Link instantâneo",f13d:"URL único por equipa.",f14:"Código QR",f14d:"Digitalize para aderir.",f15:"Widget incorporável",f15d:"Código iframe.",f16:"Bloquear / Desbloquear",f16d:"Admin pode bloquear.",f17:"Anular / Refazer",f17d:"Ctrl+Z.",f18:"Tracker PTO",f18d:"Alocação PTO.",f19:"Contador dias úteis",f19d:"Dias restantes.",f20:"Fluxo de aprovação",f20d:"Aprovadores reveem férias.",f21:"Feriados regionais",f21d:"Seleção de região.",f22:"Exportar ICS",f22d:"Ficheiros .ics.",f23:"Relatório PDF / HTML",f23d:"Relatório anual.",f24:"Importar / Exportar CSV",f24d:"Carga em massa.",f25:"Exportar Excel",f25d:"Ficheiro SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Feed live.",f27:"API JSON",f27d:"Dados estruturados.",f28:"URL iCal",f28d:"URL webcal.",f29:"Mini widget",f29d:"Widget compacto.",f30:"11 Línguas",f30d:"Interface traduzida.",f31:"3 Temas",f31d:"Light, Dark e Pink.",f32:"Deteção modo escuro",f32d:"Respeita preferência OS.",f33:"Vista impressão",f33d:"A3 paisagem.",f34:"Badge compacto",f34d:"Widget presença.",f35:"Contador visitas",f35d:"Contagem anónima por país, deduzida do fuso horário do navegador. Não é guardado o endereço IP.",f36:"Sem conta",f36d:"Sem registo nem palavras-passe. O link da equipa dá acesso: partilhe-o só com a sua equipa.",f37:"Eliminação automática",f37d:"As equipas são eliminadas 24 meses após a criação. Uma equipa eliminada pode ser reposta durante 30 dias; depois é apagada.",f38:"Onde ficam os dados",f38d:"Os dados da equipa ficam numa base de dados no nosso fornecedor de alojamento. Detalhes na página Privacidade."},
-hu:{hero:"Ingyenes csapatszabadság-tervező bejelentkezés nélkül. Max 50 fő. 55 ország, 11 nyelv, 2026–2035.",howTitle:"Hogyan működik",s1:"Csapat létrehozása",s1d:"név és év kiválasztása. Azonnali megosztható link.",s2d:"név és ország megadása. Ünnepnapok automatikusan betöltődnek.",s3:"Szabadságnapok kiválasztása",s3d:"válassz tagot, kattints vagy húzz a naptáron.",s4:"Link megosztása",s4d:"a link birtokában bárki megnézheti a csapatot. A tagok PIN-t állíthatnak be, így csak ők (vagy a csapat tulajdonosa) módosíthatják a napjaikat. Nincs fiók, nincs regisztráció.",s5:"Elemzés és exportálás",s5d:"nézetek váltása, jelentések letöltése.",calTitle:"Naptár és Tervezés",viewTitle:"Nézetek és Elemzés",shareTitle:"Megosztás és Együttműködés",teamTitle:"Csapatkezelés",expTitle:"Export és Integráció",designTitle:"Design és Elérhetőség",dataTitle:"Adatok és Adatvédelem",footer:"Gondossággal készítve az egyszerűséget értékelő csapatoknak.",f1:"12 hónapos naptár",f1d:"Éves áttekintés színkódolt tagokkal.",f2:"Húzás kijelöléshez",f2d:"Hétvégék automatikusan kihagyva.",f3:"Többéves támogatás",f3d:"Ünnepnapok algoritmikusan számítva.",f4:"Negyedéves nézet",f4d:"Q1–Q4.",f5:"55 ország + régiók",f5d:"Regionális ünnepnapok.",f6:"Ünnepnap-ütközés",f6d:"Figyelmeztetés ünnepnapon.",f7:"Szabadság-optimalizáló",f7d:"Optimális áthidaló napok.",f8:"Hőtérkép",f8d:"Napi hiányzási intenzitás.",f9:"Idővonal / Gantt",f9d:"Sávok tagonként.",f10:"Lefedettségi panel",f10d:"Heti elérhetőségi diagram.",f11:"Ünnepnap-összefoglaló",f11d:"Csapat ünnepnapjai.",f12:"Tevékenységnapló",f12d:"Módosítások idővonala.",f13:"Azonnali link",f13d:"Egyedi URL csapatonként.",f14:"QR-kód",f14d:"Szkennelj a csatlakozáshoz.",f15:"Beágyazható widget",f15d:"Iframe-kód.",f16:"Zárolás",f16d:"Admin zárolhatja.",f17:"Visszavonás / Újra",f17d:"Ctrl+Z.",f18:"PTO nyomkövető",f18d:"PTO-kiosztás.",f19:"Munkanapok számlálója",f19d:"Hátralévő munkanapok.",f20:"Jóváhagyási folyamat",f20d:"Jóváhagyók ellenőrzik.",f21:"Regionális ünnepnapok",f21d:"Régió kiválasztása.",f22:"ICS export",f22d:".ics fájlok.",f23:"PDF / HTML jelentés",f23d:"Éves jelentés.",f24:"CSV import / export",f24d:"Tömeges feltöltés.",f25:"Excel export",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Élő feed.",f27:"JSON API",f27d:"Strukturált adatok.",f28:"iCal URL",f28d:"Webcal URL.",f29:"Mini widget",f29d:"Kompakt widget.",f30:"11 Nyelv",f30d:"Teljesen fordított.",f31:"3 Téma",f31d:"Light, Dark, Pink.",f32:"Sötét mód",f32d:"OS-beállítás.",f33:"Nyomtatási nézet",f33d:"A3 fekvő.",f34:"Kompakt badge",f34d:"Jelenlét widget.",f35:"Látogatásszámláló",f35d:"Névtelen számlálás országonként, a böngésző időzónája alapján. IP-címet nem tárolunk.",f36:"Nincs szükség fiókra",f36d:"Nincs regisztráció, nincs jelszó. A csapat linkje ad hozzáférést, ezért csak a csapatoddal oszd meg.",f37:"Automatikus törlés",f37d:"A csapatokat a létrehozás után 24 hónappal töröljük. A törölt csapat 30 napig visszaállítható, utána végleg törlődik.",f38:"Hol tároljuk az adatokat",f38d:"A csapatadatokat a tárhelyszolgáltatónk adatbázisában tároljuk. Részletek az Adatvédelem oldalon."},
-sv:{hero:"Gratis semesterplanerare utan inloggning. Upp till 50 personer. 55 länder, 11 språk, 2026–2035.",howTitle:"Så fungerar det",s1:"Skapa ett team",s1d:"välj namn och år. Delbar länk direkt.",s2d:"ange namn och land. Helgdagar laddas automatiskt.",s3:"Välj semesterdagar",s3d:"välj medlem, klicka eller dra i kalendern.",s4:"Dela länken",s4d:"alla med länken kan se teamet. Medlemmar kan sätta en PIN så att bara de (eller teamets ägare) kan ändra deras dagar. Inga konton, ingen registrering.",s5:"Analysera & exportera",s5d:"växla vyer, ladda ner rapporter.",calTitle:"Kalender & Planering",viewTitle:"Vyer & Analys",shareTitle:"Delning & Samarbete",teamTitle:"Teamhantering",expTitle:"Export & Integration",designTitle:"Design & Tillgänglighet",dataTitle:"Data & Integritet",footer:"Byggt med omsorg för team som värdesätter enkelhet.",f1:"12-månaderskalender",f1d:"Årsöversikt med färgkodade medlemmar.",f2:"Dra för att välja",f2d:"Helger exkluderas.",f3:"Flerårs-stöd",f3d:"Helgdagar beräknade.",f4:"Kvartalsvy",f4d:"Q1–Q4.",f5:"55 länder + regioner",f5d:"Regionala helgdagar.",f6:"Helgdagskonflikt",f6d:"Varning vid helgdag.",f7:"Semesteroptimering",f7d:"Föreslår brödagar.",f8:"Värmekarta",f8d:"Daglig frånvaro.",f9:"Tidslinje / Gantt",f9d:"Staplar per medlem.",f10:"Täckningspanel",f10d:"Veckovis tillgänglighet.",f11:"Helgdagssammanfattning",f11d:"Teamets helgdagar.",f12:"Aktivitetslogg",f12d:"Kronologisk feed.",f13:"Direktlänk",f13d:"Unik URL per team.",f14:"QR-kod",f14d:"Skanna för att gå med.",f15:"Inbäddningsbar widget",f15d:"Iframe-kod.",f16:"Låsa / Låsa upp",f16d:"Admin kan låsa.",f17:"Ångra / Gör om",f17d:"Ctrl+Z.",f18:"PTO-spårare",f18d:"PTO-tilldelning.",f19:"Arbetsdagar kvar",f19d:"Återstående dagar.",f20:"Godkännandeflöde",f20d:"Godkännare granskar.",f21:"Regionala helgdagar",f21d:"Val av region.",f22:"ICS-export",f22d:".ics-filer.",f23:"PDF / HTML-rapport",f23d:"Årsrapport.",f24:"CSV import / export",f24d:"Massuppladdning.",f25:"Excel-export",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Live-feed.",f27:"JSON API",f27d:"Strukturerad data.",f28:"iCal-URL",f28d:"Webcal-URL.",f29:"Miniwidget",f29d:"Kompakt widget.",f30:"11 Språk",f30d:"Helt översatt.",f31:"3 Teman",f31d:"Light, Dark, Pink.",f32:"Mörkt läge",f32d:"OS-inställning.",f33:"Utskriftsvy",f33d:"A3 liggande.",f34:"Kompakt badge",f34d:"Närvarowidget.",f35:"Besöksräknare",f35d:"Anonym räkning per land, utifrån webbläsarens tidszon. Ingen IP-adress sparas.",f36:"Inget konto behövs",f36d:"Ingen registrering och inga lösenord. Teamlänken ger åtkomst, så dela den bara med ditt team.",f37:"Automatisk radering",f37d:"Team raderas 24 månader efter att de skapats. Ett raderat team kan återställas i 30 dagar, sedan tas det bort.",f38:"Var data lagras",f38d:"Teamdata lagras i en databas hos vår webbhotellsleverantör. Detaljer på sidan Integritet."},
-it:{hero:"Strumento gratuito per pianificare le ferie del team senza login. Fino a 50 persone. 55 paesi, 11 lingue, 2026–2035.",howTitle:"Come funziona",s1:"Crea un team",s1d:"scegli nome e anno. Link condivisibile istantaneo.",s2d:"inserisci nome e paese. Le festività si caricano automaticamente.",s3:"Scegli i giorni",s3d:"seleziona un membro, clicca o trascina sul calendario.",s4:"Condividi il link",s4d:"chiunque abbia il link può vedere il team. I membri possono impostare un PIN, così solo loro (o il proprietario del team) possono cambiare i propri giorni. Nessun account, nessuna registrazione.",s5:"Analizza ed esporta",s5d:"cambia vista, scarica report.",calTitle:"Calendario e Pianificazione",viewTitle:"Viste e Analisi",shareTitle:"Condivisione e Collaborazione",teamTitle:"Gestione Team",expTitle:"Esportazione e Integrazione",designTitle:"Design e Accessibilità",dataTitle:"Dati e Privacy",footer:"Costruito con cura per i team che apprezzano la semplicità.",f1:"Calendario 12 mesi",f1d:"Vista annuale con membri colorati.",f2:"Trascina per selezionare",f2d:"Weekend esclusi.",f3:"Multi-anno (2026–2035)",f3d:"Festività calcolate.",f4:"Vista trimestrale",f4d:"Q1–Q4.",f5:"55 paesi + regioni",f5d:"Festività regionali.",f6:"Rilevatore conflitti",f6d:"Avviso se ferie in giorno festivo.",f7:"Ottimizzatore ferie",f7d:"Suggerisce giorni ponte.",f8:"Heatmap",f8d:"Intensità assenze.",f9:"Timeline / Gantt",f9d:"Barre per membro.",f10:"Dashboard copertura",f10d:"Grafico settimanale.",f11:"Riepilogo festività",f11d:"Festività aggregate.",f12:"Log attività",f12d:"Feed cronologico.",f13:"Link istantaneo",f13d:"URL unico per team.",f14:"Codice QR",f14d:"Scansiona per unirti.",f15:"Widget incorporabile",f15d:"Codice iframe.",f16:"Blocca / Sblocca",f16d:"Admin può bloccare.",f17:"Annulla / Ripeti",f17d:"Ctrl+Z.",f18:"Tracker PTO",f18d:"Allocazione PTO.",f19:"Contatore giorni lavorativi",f19d:"Giorni rimanenti.",f20:"Flusso approvazione",f20d:"Approvatori verificano.",f21:"Festività regionali",f21d:"Selezione regione.",f22:"Esporta ICS",f22d:"File .ics.",f23:"Report PDF / HTML",f23d:"Report annuale.",f24:"Import / Export CSV",f24d:"Caricamento massivo.",f25:"Export Excel",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Feed live.",f27:"API JSON",f27d:"Dati strutturati.",f28:"URL iCal",f28d:"URL webcal.",f29:"Mini widget",f29d:"Widget compatto.",f30:"11 Lingue",f30d:"Interfaccia tradotta.",f31:"3 Temi",f31d:"Light, Dark, Pink.",f32:"Rilevamento dark mode",f32d:"Preferenza OS.",f33:"Vista stampa",f33d:"A3 orizzontale.",f34:"Badge compatto",f34d:"Widget presenza.",f35:"Contatore visite",f35d:"Conteggio anonimo per paese, ricavato dal fuso orario del browser. Nessun indirizzo IP viene salvato.",f36:"Nessun account",f36d:"Nessuna registrazione e nessuna password. Il link del team dà accesso: condividilo solo con il tuo team.",f37:"Eliminazione automatica",f37d:"I team vengono eliminati 24 mesi dopo la creazione. Un team eliminato può essere ripristinato per 30 giorni, poi viene cancellato.",f38:"Dove sono i dati",f38d:"I dati del team sono salvati in un database presso il nostro fornitore di hosting. Dettagli nella pagina Privacy."},
-bg:{hero:"Безплатен инструмент за планиране на отпуски без вход. До 50 души. 55 държави, 11 езика, 2026–2035.",howTitle:"Как работи",s1:"Създайте екип",s1d:"избери име и година. Моментален споделяем линк.",s2d:"въведи име и държава. Празниците се зареждат автоматично.",s3:"Изберете дни",s3d:"избери член, кликни или плъзни в календара.",s4:"Споделете линка",s4d:"всеки с линка може да види екипа. Членовете могат да зададат ПИН, така че само те (или собственикът на екипа) да променят дните си. Без профили и регистрация.",s5:"Анализирай и експортирай",s5d:"превключвай изгледи, изтегляй отчети.",calTitle:"Календар и Планиране",viewTitle:"Изгледи и Анализ",shareTitle:"Споделяне и Сътрудничество",teamTitle:"Управление на екипа",expTitle:"Експорт и Интеграция",designTitle:"Дизайн и Достъпност",dataTitle:"Данни и Поверителност",footer:"Създадено с грижа за екипи, които ценят простотата.",f1:"12-месечен календар",f1d:"Годишен преглед с цветово кодирани членове.",f2:"Плъзгане за избор",f2d:"Уикендите се пропускат.",f3:"Мултигодишна поддръжка",f3d:"Празниците изчислени алгоритмично.",f4:"Тримесечен изглед",f4d:"Q1–Q4.",f5:"55 държави + региони",f5d:"Регионални празници.",f6:"Детектор на конфликти",f6d:"Предупреждение при празник.",f7:"Оптимизатор на отпуски",f7d:"Предлага мостови дни.",f8:"Хийтмап",f8d:"Интензитет на отсъствия.",f9:"Таймлайн / Гант",f9d:"Ленти по член.",f10:"Панел на покритие",f10d:"Седмична наличност.",f11:"Обобщение празници",f11d:"Агрегирани празници.",f12:"Дневник на дейността",f12d:"Хронологичен фийд.",f13:"Моментален линк",f13d:"Уникален URL.",f14:"QR код",f14d:"Сканирайте за присъединяване.",f15:"Вграждаем уиджет",f15d:"Iframe код.",f16:"Заключване",f16d:"Админът може да заключи.",f17:"Отмяна / Повторение",f17d:"Ctrl+Z.",f18:"PTO тракер",f18d:"PTO разпределение.",f19:"Работни дни",f19d:"Оставащи дни.",f20:"Одобрителен процес",f20d:"Одобряващите проверяват.",f21:"Регионални празници",f21d:"Избор на регион.",f22:"ICS експорт",f22d:".ics файлове.",f23:"PDF / HTML отчет",f23d:"Годишен отчет.",f24:"CSV импорт / експорт",f24d:"Масово качване.",f25:"Excel експорт",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"Жив фийд.",f27:"JSON API",f27d:"Структурирани данни.",f28:"iCal URL",f28d:"Webcal URL.",f29:"Мини уиджет",f29d:"Компактен уиджет.",f30:"11 Езика",f30d:"Напълно преведен.",f31:"3 Теми",f31d:"Light, Dark, Pink.",f32:"Тъмен режим",f32d:"OS настройка.",f33:"Изглед за печат",f33d:"A3 пейзаж.",f34:"Компактен бадж",f34d:"Уиджет за присъствие.",f35:"Брояч на посещения",f35d:"Анонимно преброяване по държави според часовата зона на браузъра. IP адресът не се пази.",f36:"Без профил",f36d:"Без регистрация и пароли. Линкът на екипа дава достъп, затова го споделяйте само с Вашия екип.",f37:"Автоматично изтриване",f37d:"Екипите се изтриват 24 месеца след създаването. Изтрит екип може да се възстанови в рамките на 30 дни, след това се заличава.",f38:"Къде се пазят данните",f38d:"Данните на екипа се пазят в база данни при нашия хостинг доставчик. Подробности на страницата Поверителност."},
-ar:{hero:"أداة مجانية لتخطيط إجازات الفريق بدون تسجيل دخول. حتى 50 شخصاً. 55 دولة، 11 لغة، 2026–2035.",howTitle:"كيف يعمل",s1:"أنشئ فريقاً",s1d:"اختر اسماً وسنة. رابط مشاركة فوري.",s2d:"أدخل الاسم والدولة. تُحمّل العطل الرسمية تلقائياً.",s3:"اختر أيام الإجازة",s3d:"حدد عضواً، ثم انقر أو اسحب في التقويم.",s4:"شارك الرابط",s4d:"يمكن لأي شخص لديه الرابط رؤية الفريق. يمكن للأعضاء تعيين رمز بحيث لا يغيّر أيامهم سواهم (أو مالك الفريق). بلا حسابات وبلا تسجيل.",s5:"حلّل وصدّر",s5d:"بدّل بين العروض، حمّل التقارير.",calTitle:"التقويم والتخطيط",viewTitle:"العروض والتحليلات",shareTitle:"المشاركة والتعاون",teamTitle:"إدارة الفريق",expTitle:"التصدير والتكامل",designTitle:"التصميم وإمكانية الوصول",dataTitle:"البيانات والخصوصية",footer:"صُنع بعناية للفرق التي تقدّر البساطة.",f1:"تقويم 12 شهراً",f1d:"عرض سنوي بألوان مميزة.",f2:"اسحب للتحديد",f2d:"عطل نهاية الأسبوع مستثناة.",f3:"دعم متعدد السنوات",f3d:"العطل محسوبة خوارزمياً.",f4:"عرض ربع سنوي",f4d:"Q1–Q4.",f5:"55 دولة + مناطق",f5d:"عطل إقليمية.",f6:"كاشف التعارضات",f6d:"تنبيه عند إجازة في يوم عطلة.",f7:"محسّن الإجازات",f7d:"يقترح أيام الجسر.",f8:"خريطة حرارية",f8d:"كثافة الغياب.",f9:"الجدول الزمني",f9d:"أشرطة لكل عضو.",f10:"لوحة التغطية",f10d:"رسم بياني أسبوعي.",f11:"ملخص العطل",f11d:"عطل الفريق المجمعة.",f12:"سجل النشاط",f12d:"تسلسل زمني للتغييرات.",f13:"رابط فوري",f13d:"URL فريد لكل فريق.",f14:"رمز QR",f14d:"امسح للانضمام.",f15:"ويدجت قابل للتضمين",f15d:"كود iframe.",f16:"قفل / فتح",f16d:"المسؤول يمكنه القفل.",f17:"تراجع / إعادة",f17d:"Ctrl+Z.",f18:"متتبع PTO",f18d:"تخصيص PTO.",f19:"عداد أيام العمل",f19d:"الأيام المتبقية.",f20:"سير عمل الموافقة",f20d:"الموافقون يراجعون.",f21:"عطل إقليمية",f21d:"اختيار المنطقة.",f22:"تصدير ICS",f22d:"ملفات .ics.",f23:"تقرير PDF / HTML",f23d:"تقرير سنوي.",f24:"استيراد / تصدير CSV",f24d:"تحميل جماعي.",f25:"تصدير Excel",f25d:"SpreadsheetML.",f26:"TSV / Google Sheets",f26d:"تغذية مباشرة.",f27:"واجهة JSON",f27d:"بيانات منظمة.",f28:"رابط iCal",f28d:"رابط webcal.",f29:"ويدجت مصغر",f29d:"ويدجت مدمج.",f30:"11 لغة",f30d:"واجهة مترجمة بالكامل.",f31:"3 سمات",f31d:"فاتح، داكن، وردي.",f32:"كشف الوضع الداكن",f32d:"يحترم إعداد النظام.",f33:"عرض للطباعة",f33d:"A3 أفقي.",f34:"شارة مدمجة",f34d:"ويدجت الحضور.",f35:"عداد الزيارات",f35d:"عدّ مجهول الهوية حسب الدولة، مستنتج من المنطقة الزمنية للمتصفح. لا يُحفظ عنوان IP.",f36:"لا حاجة لحساب",f36d:"بلا تسجيل وبلا كلمات مرور. رابط الفريق يمنح الوصول، فشاركه مع فريقك فقط.",f37:"حذف تلقائي",f37d:"تُحذف الفرق بعد 24 شهراً من إنشائها. يمكن استعادة الفريق المحذوف خلال 30 يوماً، ثم يُمحى نهائياً.",f38:"أين تُحفظ البيانات",f38d:"تُحفظ بيانات الفريق في قاعدة بيانات لدى مزوّد الاستضافة لدينا. التفاصيل في صفحة الخصوصية."}
-};
 
 function TodayHolidays({th,t}) {
   const today = new Date();
@@ -3813,7 +3004,8 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   const holInfo=key=>holidayInfo(key,team.members,yr,hNames);
   // ─── v3: approval inbox, time travel, Wrapped, Today tiles ───
   const[showInbox,setShowInbox]=useState(false);const[showTT,setShowTT]=useState(false);const[showWr,setShowWr]=useState(false);
-  const colorOf=id=>{const i=team.members.findIndex(m=>m.id===id);return MC[(i<0?0:i)%MC.length];};
+  const colorOf=useCallback(id=>{const i=team.members.findIndex(m=>m.id===id);return MC[(i<0?0:i)%MC.length];},[team.members]);
+  const holInfoCb=useCallback(key=>holidayInfo(key,team.members,yr,hNames),[team.members,yr,hNames]);
   const holOf=useCallback(m=>holSetOf(m,yr),[yr]);
   const pendN=team.approver?pendingApprovals(team,yr,threshold).length:0;
   const wrOk=team.members.reduce((n,m)=>n+(m.days||[]).filter(k=>typeof k==="string"&&k.startsWith(yr+"-")).length,0)>=5;
@@ -4037,11 +3229,11 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       <Btn th={th} v="ghost" sz="sm" icon={null} disabled={false} onClick={()=>setShowTT(true)} style={{fontSize:11}}>⏳ {V("tt")}</Btn>
       <div style={{width:1,height:20,background:th.bd}}/>
       {isAdmin&&<Btn th={th} v="ghost" sz="sm" icon={locked?"unlock":"lock"} onClick={toggleLock}>{locked?t.unlock:t.lock}</Btn>}
-      <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>generatePDFReport(team,t)}>{t.pdf}</Btn>
+      <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>R("generatePDFReport")(team,t)}>{t.pdf}</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>downloadTeamICS(team)}>Team .ics</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportCSV(team,t)}>CSV</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportXLSX(team,t)}>Excel</Btn>
-      {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>generateApprovedPDF(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>{t.approvedPdf}</Btn>}
+      {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>R("generateApprovedPDF")(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>{t.approvedPdf}</Btn>}
       <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>Import</Btn>
       <label title={X("carryTitle")} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2,fontWeight:600}}>{X("carryUpTo")}
         <input type="number" min="0" max="60" value={team.carryMax||0} onChange={e=>{const v=Math.max(0,Math.min(60,parseInt(e.target.value)||0));const nt={...team};if(v)nt.carryMax=v;else delete nt.carryMax;updateWithHistory(nt);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11}}/> {X("days")}</label>
@@ -4116,7 +3308,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
           </div>}
         </div>}
         {/* Conflict alerts */}
-        {view==="cal"&&<TodayTiles team={team} yr={yr} th={th} colorOf={colorOf} holOf={holOf} holInfo={holInfo} active={am||null} threshold={threshold} showWrapped={wrOk} onWrapped={()=>setShowWr(true)} onPick={id=>setAId(id)}/>}
+        {view==="cal"&&<TodayTiles team={team} yr={yr} th={th} colorOf={colorOf} holOf={holOf} holInfo={holInfoCb} active={am||null} threshold={threshold} showWrapped={wrOk} onWrapped={()=>setShowWr(true)} onPick={id=>setAId(id)}/>}
         {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
         <datalist id="tvp-groups">{([...new Set(team.members.map(m=>m.group).filter(Boolean))] as string[]).map(g=><option key={g} value={g}/>)}</datalist>
 
@@ -4163,15 +3355,15 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         {/* Export Pill Bar */}
         {view==="cal"&&team.members.length>0&&<div style={{padding:"8px 14px",background:th.sf,borderRadius:G.rXs,border:"1px solid "+th.bd,display:"flex",alignItems:"center",gap:4,flexWrap:"wrap",marginBottom:12}}>
           <span style={{fontSize:10,fontWeight:700,color:th.t3,marginRight:2}}>EXPORT:</span>
-          <button onClick={function(){generatePDFReport(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.pdf}</button>
+          <button onClick={function(){R("generatePDFReport")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.pdf}</button>
           <button onClick={function(){downloadTeamICS(team)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Team .ics</button>
           <button onClick={function(){exportXLSX(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Excel</button>
           <button onClick={function(){exportCSV(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>CSV</button>
           <button onClick={function(){var tsv=generateTSV(team,t);var blob=new Blob([tsv],{type:"text/tab-separated-values"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=fileBase(team.name)+"_vacations.tsv";a.click();URL.revokeObjectURL(url);}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>TSV</button>
           <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>Share / QR</button>
-          <button onClick={function(){printReport(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
+          <button onClick={function(){R("printReport")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
           <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Import</button>
-          {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<button onClick={function(){generateApprovedPDF(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
+          {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<button onClick={function(){R("generateApprovedPDF")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
         </div>}
 
         {view==="cal"&&team.members.length===0&&<div style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:40,marginBottom:12}}>🌴</div><h2 style={{margin:"0 0 6px",fontSize:20,fontWeight:700,color:th.tx}}>{t.et}</h2><p style={{margin:"0 0 20px",fontSize:14,color:th.t2,lineHeight:1.5}}>{t.es2}</p><Btn th={th} icon="plus" onClick={()=>{setSb(true);setTimeout(startAdd,150);}}>{t.af}</Btn></div>}
