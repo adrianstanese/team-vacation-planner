@@ -2403,53 +2403,55 @@ function TimelineView({team,th,t}) {
 
 // ─── Coverage Dashboard ──────────────────────────────────────────
 function CoverageView({team,th,t}) {
-  const yr=team.year||CY;const total=team.members.length;
-  if(!total) return <div style={{textAlign:"center",padding:40,color:th.t3}}>{t.ndy}</div>;
-
-  // Weekly coverage
+  const yr=team.year||CY;
+  const groups=[...new Set(team.members.map(m=>m.group).filter(Boolean))].sort();
+  const[grp,setGrp]=useState("");
+  const mem=grp?team.members.filter(m=>m.group===grp):team.members;
+  const total=mem.length;
+  if(!team.members.length) return <div style={{textAlign:"center",padding:40,color:th.t3}}>{t.ndy}</div>;
+  // Each member's own public holidays (national + regional) and half days
+  const hol=mem.map(m=>new Set(m.country?getAllHolidays(m,yr):[]));
+  const days=mem.map(m=>new Set(m.days||[]));const half=mem.map(m=>new Set(m.half||[]));
+  // Coverage of a working day = share of people at work: not on vacation (half day = half away) and not on their own public holiday
+  const dayCov=k=>{let present=0;mem.forEach((m,i)=>{if(hol[i].has(k))return;if(days[i].has(k))present+=half[i].has(k)?0.5:0;else present+=1;});return total?present/total:1;};
   const weeks=[];
   let d=new Date(yr,0,1);
-  // Find first Monday
-  while(d.getDay()!==1)d=new Date(d.getTime()+86400000);
+  while(d.getDay()!==1)d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);
   while(d.getFullYear()===yr){
-    const weekStart=new Date(d);const weekDays=[];
-    for(let i=0;i<5;i++){// Mon-Fri
-      const cd=new Date(weekStart.getTime()+i*86400000);
-      if(cd.getFullYear()===yr)weekDays.push(dk(cd.getFullYear(),cd.getMonth(),cd.getDate()));
-    }
-    let maxOut=0;
-    weekDays.forEach(wd=>{const out=team.members.filter(m=>(m.days||[]).includes(wd)).length;if(out>maxOut)maxOut=out;});
-    const avgOut=weekDays.reduce((sum,wd)=>sum+team.members.filter(m=>(m.days||[]).includes(wd)).length,0)/(weekDays.length||1);
-    const coverage=Math.round(((total-avgOut)/total)*100);
+    const keys=[];
+    for(let i=0;i<(team.w7?7:5);i++){const cd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+i);if(cd.getFullYear()===yr)keys.push(dk(cd.getFullYear(),cd.getMonth(),cd.getDate()));}
+    const covs=keys.map(dayCov);
+    const coverage=Math.round((covs.reduce((a2,b2)=>a2+b2,0)/(covs.length||1))*100);
+    const low=Math.round(Math.min(...covs)*100);
     const weekNum=Math.ceil((d-new Date(yr,0,1))/(7*86400000))+1;
-    weeks.push({num:weekNum,coverage,maxOut,month:d.getMonth(),label:`W${weekNum}`});
-    d=new Date(d.getTime()+7*86400000);
+    weeks.push({num:weekNum,coverage,low,month:d.getMonth(),label:`W${weekNum}`,from:keys[0]});
+    d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+7);
   }
-
   return <div>
-    <div style={{textAlign:"center",marginBottom:16}}><span style={{fontSize:18,fontWeight:700,color:th.tx}}>{t.coverage} — {yr}</span></div>
-    {/* Bar chart */}
+    <div style={{textAlign:"center",marginBottom:10}}><span style={{fontSize:18,fontWeight:700,color:th.tx}}>{t.coverage} — {yr}</span></div>
+    <div style={{textAlign:"center",fontSize:12,color:th.t3,marginBottom:12}}>Share of people at work on working days{team.w7?" (7-day week)":" (Mon–Fri)"}; each person's own public holidays count as away.</div>
+    {groups.length>0&&<div role="group" aria-label="Group" style={{display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap",marginBottom:12}}>
+      {["",...groups].map(g=><button key={g||"all"} onClick={()=>setGrp(g)} aria-pressed={grp===g} style={{padding:"4px 12px",borderRadius:999,border:"1px solid "+(grp===g?th.ac:th.gbd),background:grp===g?th.al:th.gbg,color:grp===g?th.ac:th.t2,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:F}}>{g||"Everyone"}</button>)}
+    </div>}
     <div style={{display:"flex",gap:2,alignItems:"end",height:160,padding:"0 4px",marginBottom:12}}>
       {weeks.map((w,i)=>{
         const h=Math.max(4,(w.coverage/100)*140);
         const color=w.coverage>=80?"#10B981":w.coverage>=60?th.wm:"#DC2626";
-        return <div key={i} title={`${w.label}: ${w.coverage}% coverage`}
+        return <div key={i} title={`${w.label} (${w.from}): ${w.coverage}% on average, lowest day ${w.low}%`}
           style={{flex:1,minWidth:0,height:h,background:color,borderRadius:"3px 3px 0 0",opacity:.8,transition:"height .3s"}}/>;
       })}
     </div>
-    {/* Month labels */}
     <div style={{display:"flex",justifyContent:"space-between",padding:"0 4px"}}>
       {Array.from({length:12},(_,i)=> <span key={i} style={{fontSize:10,color:th.t3,fontWeight:600}}>{t.M[i].slice(0,3)}</span>)}
     </div>
-    {/* Stats */}
     <div style={{display:"flex",gap:12,marginTop:20,flexWrap:"wrap",justifyContent:"center"}}>
       {[
-        {label:t.avgCov,value:`${Math.round(weeks.reduce((s,w)=>s+w.coverage,0)/weeks.length)}%`,color:"#10B981"},
-        {label:t.lowWeek,value:`${Math.min(...weeks.map(w=>w.coverage))}%`,color:"#DC2626"},
+        {label:t.avgCov,value:`${Math.round(weeks.reduce((s2,w)=>s2+w.coverage,0)/(weeks.length||1))}%`,color:"#10B981"},
+        {label:t.lowWeek,value:`${weeks.length?Math.min(...weeks.map(w=>w.coverage)):100}%`,color:"#DC2626"},
         {label:t.weeksLow,value:weeks.filter(w=>w.coverage<70).length,color:th.wm},
-      ].map((s,i)=> <div key={i} style={{background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rXs,padding:"12px 20px",textAlign:"center",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-        <div style={{fontSize:24,fontWeight:800,color:s.color,fontFamily:F}}>{s.value}</div>
-        <div style={{fontSize:11,color:th.t3,fontWeight:600,marginTop:2}}>{s.label}</div>
+      ].map((s2,i)=> <div key={i} style={{background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rXs,padding:"12px 20px",textAlign:"center",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+        <div style={{fontSize:24,fontWeight:800,color:s2.color,fontFamily:F}}>{s2.value}</div>
+        <div style={{fontSize:11,color:th.t3,fontWeight:600,marginTop:2}}>{s2.label}</div>
       </div>)}
     </div>
   </div>;
@@ -2460,7 +2462,19 @@ function ConflictAlerts({team,threshold,th,t}) {
   const allDays={};
   team.members.forEach(m=>(m.days||[]).forEach(d=>{if(!allDays[d])allDays[d]=[];allDays[d].push(m.name);}));
   const conflicts=Object.entries(allDays).filter(([,v])=>v.length>=threshold).sort(([a],[b])=>a.localeCompare(b));
-  if(!conflicts.length) return null;
+  // Groups: a day where half or more of a group (and at least 2 people) is away
+  const gm={};team.members.forEach(m=>{if(m.group)(gm[m.group]=gm[m.group]||[]).push(m);});
+  const gAlerts=[];
+  Object.entries(gm).forEach(([g,ms])=>{if(ms.length<2)return;const cnt={};ms.forEach(m=>(m.days||[]).forEach(d=>{(cnt[d]=cnt[d]||[]).push(m.name);}));Object.entries(cnt).forEach(([d,names])=>{if(names.length>=2&&names.length*2>=ms.length)gAlerts.push({g,d,names,of:ms.length});});});
+  gAlerts.sort((x,y)=>x.d.localeCompare(y.d));
+  if(!conflicts.length&&!gAlerts.length) return null;
+  if(!conflicts.length) return <div style={{background:"rgba(245,158,11,.08)",border:"1px solid rgba(245,158,11,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+    <div style={{fontSize:12,fontWeight:700,color:"#B45309",marginBottom:6}}>⚠️ {gAlerts.length} group alert{gAlerts.length>1?"s":""}</div>
+    <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:100,overflowY:"auto"}}>
+      {gAlerts.slice(0,5).map((a2,i)=><div key={i} style={{fontSize:11,color:"#92400E"}}><strong>{a2.d}</strong> · {a2.g}: {a2.names.length} of {a2.of} away — {a2.names.join(", ")}</div>)}
+      {gAlerts.length>5&&<div style={{fontSize:11,color:"#92400E",fontStyle:"italic"}}>+{gAlerts.length-5} more</div>}
+    </div>
+  </div>;
 
   return <div style={{background:th.hc,border:`1px solid ${th.ht}30`,borderRadius:8,padding:"10px 14px",marginBottom:12}}>
     <div style={{fontSize:12,fontWeight:700,color:th.ht,marginBottom:6}}>⚠️ {conflicts.length} coverage alert{conflicts.length>1?"s":""}</div>
@@ -2469,13 +2483,14 @@ function ConflictAlerts({team,threshold,th,t}) {
         <strong>{d}</strong>: {names.length} out — {names.join(", ")}
       </div>)}
       {conflicts.length>5&&<div style={{fontSize:11,color:th.ht,fontStyle:"italic"}}>+{conflicts.length-5} more</div>}
+      {gAlerts.slice(0,3).map((a2,i)=><div key={"g"+i} style={{fontSize:11,color:"#92400E"}}><strong>{a2.d}</strong> · {a2.g}: {a2.names.length} of {a2.of} away</div>)}
     </div>
   </div>;
 }
 
 // ─── Member Row ──────────────────────────────────────────────────
 function SmoothNum({val,style:s}){var[d,setD]=useState(val);var p=useRef(val);useEffect(function(){if(val===p.current)return;var f=p.current;p.current=val;var t0=performance.now();var go=function(now){var r=Math.min((now-t0)/300,1);setD(Math.round(f+(val-f)*r));if(r<1)requestAnimationFrame(go);};requestAnimationFrame(go);},[val]);return <span style={s}>{d}</span>;}
-function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging}){
+function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const[h,setH]=useState(false);const dc=usedOf(m);const allow=m.pto?m.pto+(m.carry||0):0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
@@ -2486,6 +2501,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
       <input autoFocus value={en} onChange={e=>setEn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&en.trim())onFinishRename(en.trim());if(e.key==="Escape")onFinishRename(m.name);}} onBlur={()=>en.trim()?onFinishRename(en.trim()):onFinishRename(m.name)} maxLength={30} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:600,fontFamily:F,color:c.t,outline:"none",padding:"3px 0"}}/>
     </div>
     <CountrySelect value={m.country} onChange={onCountryChange} th={th} t={t}/>
+    {onGroupChange&&<input defaultValue={m.group||""} list="tvp-groups" maxLength={24} placeholder="Group (optional), e.g. Design" aria-label="Group" onBlur={e=>{const v=e.target.value.trim();if(v!==(m.group||""))onGroupChange(v);}} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur();}} style={{padding:"6px 8px",borderRadius:6,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>}
   </div>;
 
   return <div draggable={!locked} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{padding:"6px 10px",opacity:isDragging?0.4:1,borderTop:isDragOver?"2px solid "+th.ac:"none",background:isActive?c.b:h?th.sh:"transparent",borderRadius:8,cursor:"pointer",border:isActive?`1.5px solid ${c.d}40`:"1.5px solid transparent",boxShadow:isActive?th.gwAc:"none",transition:"all .15s"}}>
@@ -2493,7 +2509,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
     <div style={{flex:1,minWidth:0}}>
       <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:4}}>{m.name}{isApprover&&<span title={t.approverLabel||"Approver"} style={{fontSize:11}}>👑</span>}</div>
-      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{dc===0?t.nd:`${fmtDays(dc)} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}{m.carry?<span title="Carried over from last year" style={{color:"#047857"}}>{" +"+m.carry}</span>:null}</span>:""}{approvalMode&&!isApprover?(m.approved?<span style={{color:"#10B981",fontWeight:700,fontSize:9}}>{" ✓"}</span>:<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" ⏳"}</span>):""}</div>
+      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{m.group?<span style={{fontWeight:600}}>{m.group} · </span>:null}{dc===0?t.nd:`${fmtDays(dc)} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}{m.carry?<span title="Carried over from last year" style={{color:"#047857"}}>{" +"+m.carry}</span>:null}</span>:""}{approvalMode&&!isApprover?(m.approved?<span style={{color:"#10B981",fontWeight:700,fontSize:9}}>{" ✓"}</span>:<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" ⏳"}</span>):""}</div>
       {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>allow?"#EF4444":dc>allow*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/allow*100))+"%",transition:"width .3s"}}/></div>}
     {(function(){var yr2=typeof yr!=="undefined"?yr:CY;var mos=Array.from({length:12},function(_,mo){return(m.days||[]).filter(function(d){return d.startsWith(yr2+"-"+String(mo+1).padStart(2,"0"));}).length;});var mx=Math.max.apply(null,mos)||1;if(!(m.days||[]).length)return null;return <svg width="60" height="14" viewBox="0 0 60 14" style={{marginTop:3,opacity:.6}}>{mos.map(function(v,i){var h=Math.max(1,v/mx*12);return <rect key={i} x={i*5} y={14-h} width="4" height={h} rx="1" fill={c.d} opacity={v>0?.8:.15}/>;})}</svg>;})()}{(function(){var ds=(m.days||[]).filter(function(d){return d>dk(CY,CM,CD);}).sort();if(!ds.length)return null;var nd=ds[0].split("-");var diff=Math.ceil((new Date(+nd[0],+nd[1]-1,+nd[2])-new Date(CY,CM,CD))/864e5);if(diff<=0||diff>365)return null;return <div style={{fontSize:9,color:"#8B5CF6",fontWeight:600,marginTop:2,display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:11}}>🏖️</span>{diff===1?(t.tomorrow||"Tomorrow!"):diff+" "+(t.daysUntil||"days until vacation")}</div>;})()}
     </div>
@@ -3704,6 +3720,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   const ren=(id,n)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
   const setCo=(id,cc)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
   const setPto=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
+  const setGroup=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.group=val.slice(0,24);else delete nx.group;return nx;})});};
   const setRegion=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
   const tog=(y,m,d)=>{
     const team=teamRef.current;
@@ -3913,7 +3930,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
               if(m.pinHash&&unlockedId!==m.id&&!meIsAppr){setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
               setAId(m.id);
               if(mob)setSb(false);
-            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
+            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}
@@ -3936,6 +3953,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         </div>}
         {/* Conflict alerts */}
         {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
+        <datalist id="tvp-groups">{[...new Set(team.members.map(m=>m.group).filter(Boolean))].map(g=><option key={g} value={g}/>)}</datalist>
 
         {/* Legend at top */}
         {team.members.length>0&&view==="cal"&&<div style={{marginBottom:10,padding:"8px 12px",background:th.gbg,borderRadius:G.rXs,border:`1px solid ${th.gbd}`,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
