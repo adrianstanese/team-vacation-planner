@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless";
+import { getSql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { buildTeamFeed, type TeamDoc } from "@/lib/ics";
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   }
   let rows: Record<string, unknown>[];
   try {
-    const sql = neon(process.env.DATABASE_URL!);
+    const sql = await getSql();
     rows = await sql`SELECT data FROM teams WHERE id = ${id} AND expires_at > NOW()`;
   } catch {
     console.error("ical: database unavailable");

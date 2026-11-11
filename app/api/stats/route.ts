@@ -1,12 +1,11 @@
 // app/api/stats/route.ts
-import { neon } from "@neondatabase/serverless";
+import { getSql } from "@/lib/db";
 import { NextResponse } from "next/server";
-
-const sql = neon(process.env.DATABASE_URL!);
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const sql = await getSql();
   try {
     const rows = await sql`
       SELECT 

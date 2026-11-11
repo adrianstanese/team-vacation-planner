@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import qrcode from "qrcode-generator";
+import Link from "next/link";
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { buildSheets } from "@/lib/xlsxSheets";
 
@@ -3933,5 +3934,5 @@ export default function App(){
     return <ErrorBoundary><WS team={tv} rawTeam={team} onYear={changeYear} onUpdate={update} onGoHome={goHome} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
   }
   const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);db.del("team:"+id,true);};
-  return <ErrorBoundary><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
+  return <ErrorBoundary><Link href="/admin" prefetch={false} aria-label="Admin sign-in" style={{position:"fixed",right:6,bottom:4,zIndex:5,fontSize:10,fontFamily:F,color:th.t3,opacity:.28,textDecoration:"none",padding:"2px 4px"}}>admin</Link><Landing onCreateTeam={create} onJoinTeam={join} myTeams={myTeams} onOpenTeam={open} onDeleteTeam={delTeam} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;
 }

@@ -1,9 +1,8 @@
-import { neon } from "@neondatabase/serverless";
+import { getSql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
-const sql = neon(process.env.DATABASE_URL!);
-
 export async function GET(request: NextRequest) {
+  const sql = await getSql();
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
   const rows = await sql`SELECT data FROM teams WHERE id = ${id} AND expires_at > NOW()`;
@@ -12,6 +11,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const sql = await getSql();
   const body = await request.json();
   const id = body.id;
   const jsonStr = JSON.stringify(body.data);
@@ -21,6 +21,7 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const sql = await getSql();
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
   await sql`DELETE FROM teams WHERE id = ${id}`;
