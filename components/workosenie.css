@@ -1,0 +1,71 @@
+/* Workoșenie promo, concept A "Orbit glass" (mockups/workosenie-promo). Scoped under .wpo-*. */
+@property --wpo-a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+
+.wpo-duo { display: grid; gap: 18px; grid-template-columns: 1fr; width: 100%; max-width: 1120px; margin: 40px auto 16px; box-sizing: border-box; align-items: stretch; }
+@media (min-width: 900px) { .wpo-duo { grid-template-columns: 1fr 1.15fr; } }
+.wpo-duo > section { margin: 0 !important; max-width: none !important; height: 100%; }
+
+/* The orbit: a rotating light painted ONLY on the 1.5px rim (mask), plus a blurred copy of it as a halo.
+   Both live inside the card's own box, so nothing can spill past its edges. */
+.wpo { position: relative; border-radius: 28px; isolation: isolate; height: 100%;
+  box-shadow: 0 0 50px -14px rgba(255,106,43,.55), 0 0 90px -24px rgba(124,58,237,.5); }
+@media (prefers-reduced-motion: no-preference) { .wpo { animation: wpo-halo 4s ease-in-out infinite alternate; } }
+@keyframes wpo-halo { to { box-shadow: 0 0 70px -10px rgba(255,106,43,.75), 0 0 120px -20px rgba(124,58,237,.6); } }
+.wpo::before, .wpo::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: conic-gradient(from var(--wpo-a), transparent 0 58%, #FF6A2B 68%, #FFC94A 73%, #FF3D7F 78%, #7C3AED 84%, transparent 92%);
+}
+.wpo::before {
+  padding: 2px; z-index: 2;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.wpo::after { z-index: -1; filter: blur(22px); opacity: .85; }
+@media (prefers-reduced-motion: no-preference) {
+  .wpo::before, .wpo::after { animation: wpo-spin 6s linear infinite; }
+}
+@keyframes wpo-spin { to { --wpo-a: 360deg; } }
+
+.wpo-card {
+  position: relative; height: 100%; box-sizing: border-box; border-radius: 28px; padding: 22px; display: grid; gap: 14px; align-content: start; overflow: hidden;
+  background: rgba(255,255,255,.62); backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(255,255,255,.8);
+  box-shadow: 0 1px 0 rgba(255,255,255,.75) inset, 0 24px 60px -28px rgba(76,29,149,.45);
+}
+.wpo-card::before { /* liquid-glass specular sheen */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255,255,255,.6), rgba(255,255,255,0) 38%, rgba(255,255,255,0) 70%, rgba(255,255,255,.2));
+}
+.wpo.dark .wpo-card { background: rgba(30,25,50,.6); border-color: rgba(255,255,255,.12); box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 24px 60px -28px rgba(0,0,0,.7); }
+.wpo.dark .wpo-card::before { background: linear-gradient(140deg, rgba(255,255,255,.12), rgba(255,255,255,0) 40%); }
+
+.wpo-head { position: relative; display: flex; gap: 14px; align-items: center; }
+.wpo-logo { width: 46px; height: 46px; flex: none; border-radius: 14px; display: grid; place-items: center; color: #fff; font: 800 21px/1 var(--font-display, system-ui), system-ui;
+  background: conic-gradient(from 210deg, #FF6A2B, #FF9254, #FFC94A, #2DD4BF, #FF6A2B); box-shadow: 0 10px 30px -8px rgba(255,106,43,.7); }
+.wpo-h { margin: 0; font: 800 clamp(18px, 2.1vw, 23px)/1.15 var(--font-display, system-ui), system-ui; letter-spacing: -.02em; color: #3B0F80; }
+.wpo.dark .wpo-h { color: #F5F3FF; }
+.wpo-h span { background: linear-gradient(95deg, #FF6A2B, #FF3D7F 50%, #7C3AED); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wpo-sub { margin: 3px 0 0; font-size: 14px; line-height: 1.45; color: #6B5B95; }
+.wpo.dark .wpo-sub { color: #B4A8D6; }
+
+.wpo-rota { position: relative; display: grid; gap: 7px; padding: 13px 14px; border-radius: 18px; background: rgba(14,27,46,.88); color: #E7ECF5; font-size: 12px; }
+.wpo-rota .r { display: grid; grid-template-columns: 54px 1fr; align-items: center; gap: 8px; }
+.wpo-rota .bar { position: relative; height: 16px; border-radius: 7px; background: rgba(255,255,255,.06); overflow: hidden; }
+.wpo-rota .bar b { position: absolute; top: 0; bottom: 0; border-radius: 7px; box-shadow: 0 0 14px currentColor; clip-path: inset(0 100% 0 0); }
+.wpo-in .wpo-rota .bar b { clip-path: inset(0 0 0 0); transition: clip-path 1.3s cubic-bezier(.2,.8,.2,1); }
+@media (prefers-reduced-motion: reduce) { .wpo-rota .bar b { clip-path: none; } }
+
+.wpo-feat { position: relative; display: flex; gap: 7px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
+.wpo-feat li { font-size: 12px; font-weight: 600; padding: 6px 11px; border-radius: 999px; background: rgba(255,106,43,.1); color: #C2410C; border: 1px solid rgba(255,106,43,.25); }
+.wpo.dark .wpo-feat li { color: #FFB38A; }
+
+.wpo-foot { position: relative; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.wpo-cta { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 999px; color: #fff; text-decoration: none;
+  font: 700 15px/1 var(--font-body, system-ui), system-ui; background: linear-gradient(135deg, #FF6A2B, #FF3D7F); box-shadow: 0 12px 30px -10px rgba(255,80,60,.75); overflow: hidden; }
+.wpo-cta::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); transform: translateX(-120%); }
+@media (prefers-reduced-motion: no-preference) { .wpo-cta::after { animation: wpo-sheen 3.4s ease-in-out infinite; } }
+@keyframes wpo-sheen { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+.wpo-cta:focus-visible { outline: 3px solid #7C3AED; outline-offset: 3px; }
+.wpo-fine { font-size: 12px; color: #6B5B95; }
+.wpo.dark .wpo-fine { color: #B4A8D6; }
+[dir="rtl"] .wpo-cta .arr { transform: scaleX(-1); }

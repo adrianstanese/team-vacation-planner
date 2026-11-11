@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import qrcode from "qrcode-generator";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import ShareSection from "@/components/ShareSection";
+import BottomDuo from "@/components/WorkoseniePromo";
 import "./frontpage.css";
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { buildSheets } from "@/lib/xlsxSheets";
@@ -2751,7 +2751,7 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
         <p style={{fontSize:12,color:th.t3,margin:0}}>{a.footer}</p>
         <button onClick={onBack} style={{marginTop:16,padding:"10px 28px",borderRadius:G.rXs,border:"none",background:th.ac,color:th.ti,fontSize:14,fontWeight:700,fontFamily:F,cursor:"pointer",boxShadow:`0 4px 20px ${th.ac}35`}}>← {t.back}</button>
       </div>
-      <ShareSection th={th} lang={lang}/>
+      <BottomDuo th={th} lang={lang}/>
     </div>
   </div>;
 }
@@ -3163,7 +3163,7 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
           {vSorted.length>0&&<ul className="cty" aria-label={L.visits}>{vSorted.map(([k,v])=><li key={k}><span className="cc">{k}</span><span className="tr"><i style={{width:Math.max(4,Math.round(v/vMax*100))+"%"}}></i></span><span className="v">{fpFmt(v)}</span></li>)}</ul>}
         </div>
       </section>
-      <div className="wrap"><ShareSection th={th} lang={lang}/></div>
+      <div className="wrap"><BottomDuo th={th} lang={lang}/></div>
     </main>
     <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><button onClick={onContact}>{L.contact}</button></div></footer>
     {children}
@@ -4058,7 +4058,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       
         {view==="trips"&&<TripsView team={team} onUpdate={updateWithHistory} th={th} t={t} yr={yr} holSet={holSet}/>}
         {view==="analytics"&&<AnalyticsDashboard team={team} yr={yr} th={th} t={t}/>}
-        <ShareSection th={th} lang={lang} compact/>
+        <BottomDuo th={th} lang={lang} compact/>
 </main>
     </div>
 
