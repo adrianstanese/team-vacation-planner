@@ -562,12 +562,12 @@ function HeatmapView({team,th,t,holSet}) {
   return <div>
     <div style={{textAlign:"center",marginBottom:12}}><span style={{fontSize:18,fontWeight:700,color:th.tx}}>{t.heatmap} — {yr}</span></div>
     {/* Legend */}
-    <div style={{display:"flex",gap:12,justifyContent:"center",marginBottom:14,flexWrap:"wrap"}}>
-      <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}><div style={{width:14,height:14,borderRadius:3,background:"rgba(220,38,38,.35)"}}/> Vacation (low)</div>
-      <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}><div style={{width:14,height:14,borderRadius:3,background:"rgba(220,38,38,.85)"}}/> Vacation (high)</div>
-      <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}><div style={{width:14,height:14,borderRadius:3,background:"#93C5FD"}}/> Holiday only</div>
-      <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}><div style={{width:14,height:14,borderRadius:3,background:"#C084FC"}}/> Holiday + Vacation</div>
-      <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}><div style={{width:14,height:14,borderRadius:3,background:th.sh}}/> Weekend</div>
+    <div className="tvp-hlegend" style={{color:th.t2}}>
+      <span><i className="tvp-hsw" style={{background:"#FECACA"}}/>{V("hmAway1")}</span>
+      {[2,3,4,5].map(n=><span key={n}><i className={"tvp-hsw tvp-burn h"+n}/>{V("hmAway",{n:n===5?"5+":n})}</span>)}
+      <span><i className="tvp-hsw" style={{background:"#93C5FD"}}/>{V("hmHol")}</span>
+      <span><i className="tvp-hsw" style={{background:"#C084FC"}}/>{V("hmHolVac")}</span>
+      <span><i className="tvp-hsw" style={{background:th.sh}}/>{V("hmWe")}</span>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
       {allMonths.map(month=>{
@@ -593,10 +593,16 @@ function HeatmapView({team,th,t,holSet}) {
               } else if(isHol){
                 bg="#93C5FD";color="#1E3A5F";fw=600;
                 title=holNameAny(key);
-              } else if(vacCount>0){
-                bg=`rgba(220,38,38,${.15+intensity*.7})`;
-                color=intensity>.5?"#fff":"#991B1B";fw=700;
-                title=`${vacCount} ${t.mbs} out`;
+              } else if(vacCount===1){
+                bg="#FECACA";color="#7F1D1D";fw=700;
+                title=V("hmAway1");
+              } else if(vacCount>1){
+                // Overlap: the day smoulders like burning paper, hotter with every extra person (see globals.css)
+                const lv=Math.min(5,vacCount);
+                return <div key={day} title={V("hmAway",{n:vacCount})} aria-label={day+" · "+V("hmAway",{n:vacCount})} className={"tvp-burn h"+lv}>
+                  <i className="tvp-char"/>{lv>=4&&<><i className="tvp-smoke"/><i className="tvp-smoke"/></>}
+                  <span className="tvp-hn">{day}</span><b className="tvp-hbadge">{vacCount}</b>
+                </div>;
               } else {
                 bg="transparent";color=th.tx;
               }
@@ -741,8 +747,8 @@ function ConflictAlerts({team,threshold,th,t}) {
   </div>;
 }
 
-function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging}){
-  const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const[h,setH]=useState(false);const dc=usedOf(m);const allow=m.pto?m.pto+(m.carry||0):0;
+function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0}){
+  const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const dc=usedOf(m);const allow=m.pto?m.pto+(m.carry||0):0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
 
@@ -755,63 +761,46 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
     {onGroupChange&&<input defaultValue={m.group||""} list="tvp-groups" maxLength={24} placeholder={X("groupPh")} aria-label={X("group")} onBlur={e=>{const v=e.target.value.trim();if(v!==(m.group||""))onGroupChange(v);}} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur();}} style={{padding:"6px 8px",borderRadius:6,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}/>}
   </div>;
 
-  return <div draggable={!locked} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} onFocus={()=>setH(true)} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget))setH(false);}} style={{padding:"6px 10px",opacity:isDragging?0.4:1,borderTop:isDragOver?"2px solid "+th.ac:"none",background:isActive?c.b:h?th.sh:"transparent",borderRadius:8,cursor:"pointer",border:isActive?`1.5px solid ${c.d}40`:"1.5px solid transparent",boxShadow:isActive?th.gwAc:"none",transition:"all .15s"}}>
-    <div style={{display:"flex",alignItems:"center",gap:8}}>
-    <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{m.name[0].toUpperCase()}</div>
-    <div role="button" tabIndex={0} aria-pressed={isActive} aria-label={m.name+" · "+(dc===0?t.nd:fmtDays(dc)+" "+(dc!==1?t.dys:t.dy))} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick();}}} style={{flex:1,minWidth:0,borderRadius:6}}>
-      <div style={{fontSize:13,fontWeight:600,color:isActive?c.t:th.tx,fontFamily:F,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",display:"flex",alignItems:"center",gap:4}}>{m.name}{isApprover&&<span title={t.approverLabel||"Approver"} style={{fontSize:11}}>👑</span>}</div>
-      <div style={{fontSize:11,color:th.t3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{co?co.f+" ":""}{m.group?<span style={{fontWeight:600}}>{m.group} · </span>:null}{dc===0?t.nd:`${fmtDays(dc)} ${dc!==1?t.dys:t.dy}`}{m.pto?<span style={{color:th.ac,fontWeight:600}}>{" / "+m.pto}{m.carry?<span title={X("carried")} style={{color:"#047857"}}>{" +"+m.carry}</span>:null}</span>:""}{approvalMode&&!isApprover?(m.approved?<span style={{color:"#10B981",fontWeight:700,fontSize:9}}>{" ✓"}</span>:<span style={{color:"#F59E0B",fontWeight:700,fontSize:9}}>{" ⏳"}</span>):""}</div>
-      {m.pto&&<div style={{height:3,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:dc>allow?"#EF4444":dc>allow*0.8?"#F59E0B":c.d,width:Math.min(100,Math.round(dc/allow*100))+"%",transition:"width .3s"}}/></div>}
-    {(function(){var yr2=typeof yr!=="undefined"?yr:CY;var mos=Array.from({length:12},function(_,mo){return(m.days||[]).filter(function(d){return d.startsWith(yr2+"-"+String(mo+1).padStart(2,"0"));}).length;});var mx=Math.max.apply(null,mos)||1;if(!(m.days||[]).length)return null;return <svg width="60" height="14" viewBox="0 0 60 14" style={{marginTop:3,opacity:.6}}>{mos.map(function(v,i){var h=Math.max(1,v/mx*12);return <rect key={i} x={i*5} y={14-h} width="4" height={h} rx="1" fill={c.d} opacity={v>0?.8:.15}/>;})}</svg>;})()}{(function(){var ds=(m.days||[]).filter(function(d){return d>dk(CY,CM,CD);}).sort();if(!ds.length)return null;var nd=ds[0].split("-");var diff=Math.ceil((new Date(+nd[0],+nd[1]-1,+nd[2])-new Date(CY,CM,CD))/864e5);if(diff<=0||diff>365)return null;return <div style={{fontSize:9,color:"#8B5CF6",fontWeight:600,marginTop:2,display:"flex",alignItems:"center",gap:3}}><span style={{fontSize:11}}>🏖️</span>{diff===1?(t.tomorrow||"Tomorrow!"):diff+" "+(t.daysUntil||"days until vacation")}</div>;})()}
-    </div>
-    {(h||isActive)&&!locked&&<div style={{display:"flex",gap:1,flexShrink:0}}>
-      {m.country&&<button onClick={e=>{e.stopPropagation();onOptimize();}} title={t.bestDays||"Suggest best days"} aria-label={(t.bestDays||"Suggest best days")+" "+m.name} style={{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex"}}><Ic n="sun" s={13} c="#F59E0B"/></button>}
-      <button onClick={e=>{e.stopPropagation();onExportICS();}} title={t.export} aria-label={"ICS · "+m.name} style={{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex"}}><Ic n="download" s={13} c={th.t3}/></button>
-      <button onClick={e=>{e.stopPropagation();onStartRename();}} aria-label={X("renameN",{n:m.name})} title={X("renameN",{n:m.name})} style={{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex"}}><Ic n="edit" s={13} c={th.t3}/></button>
-      <button onClick={e=>{e.stopPropagation();onDelete();}} aria-label={X("removeN",{n:m.name})} title={X("removeN",{n:m.name})} style={{background:"none",border:"none",cursor:"pointer",padding:6,display:"flex"}}><Ic n="trash" s={13} c={th.t3}/></button>
-    </div>}
-    </div>
-    {isActive&&m.region&&<div style={{fontSize:9,color:th.ac,fontWeight:600,marginTop:2,paddingLeft:36}}>{(REGIONS[m.country]||[]).reduce(function(a,r){return r.id===m.region?r.n:a;},"")} region</div>}
-    {isActive&&!isEditing&&<div style={{marginTop:6,paddingTop:6,borderTop:"1px solid "+th.gbd,display:"flex",flexDirection:"column",gap:5}}>
-      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
-        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>{t.pto||"PTO"}</span>
-        <input type="number" min="0" max="60" placeholder="—" value={m.pto||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onPtoChange(parseInt(e.target.value)||null);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11,fontFamily:FM,textAlign:"center"}}/>
-        <span style={{color:th.t3,fontSize:10}}>{t.dys}</span>
-        {m.pto&&<span style={{marginLeft:"auto",fontSize:10,color:dc>allow?"#EF4444":th.ac,fontWeight:700}}>{fmtDays(dc)}/{allow}</span>}
+  // Option A: slim row; the selected person glows (in their colour) and opens a drawer with labelled fields
+  const allowTxt=m.pto?fmtDays(dc)+" / "+allow:(dc===0?"—":fmtDays(dc));
+  const pct=allow?Math.min(100,Math.round(dc/allow*100)):0;
+  const barCol=dc>allow?"#EF4444":dc>allow*0.8?"#F59E0B":c.d;
+  return <div draggable={!locked} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}
+    className={"tvp-mrow"+(isActive?" on":"")} style={{"--mc":c.d,opacity:isDragging?0.4:1,borderTop:isDragOver?"2px solid "+th.ac:undefined}}>
+    <div className="tvp-mrow-top">
+      <span className="tvp-av" style={{background:c.d}}>{(m.name||"?")[0].toUpperCase()}{isApprover&&<span className="tvp-crown" title={t.approverLabel||"Approver"}>👑</span>}</span>
+      <div role="button" tabIndex={0} aria-pressed={isActive} aria-label={m.name+" · "+(dc===0?t.nd:fmtDays(dc)+" "+(dc!==1?t.dys:t.dy))} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick();}}} className="tvp-mrow-nm">
+        <b style={{color:isActive?c.t:th.tx}}>{m.name}{hasPin&&<span className="tvp-lock" aria-label="PIN" title="PIN">🔒</span>}</b>
+        <small style={{color:th.t3}}>{co?co.f+" ":""}{m.role||m.group||(co?co.n:"")}</small>
       </div>
-      {m.country&&REGIONS[m.country]&&<div style={{display:"flex",alignItems:"center",gap:6,fontSize:11}}>
-        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>{t.region||"Region"}</span>
-        <select value={m.region||""} onClick={function(e){e.stopPropagation();}} onChange={function(e){e.stopPropagation();onRegionChange(e.target.value||null);}} style={{flex:1,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:10,fontFamily:F,minWidth:0}}>
+      <span className="tvp-mrow-cnt" style={{color:th.tx}}>{allowTxt}<small style={{color:th.t3}}>{dc!==1?t.dys:t.dy}{m.carry?<span title={X("carried")} style={{color:"#047857"}}>{" +"+m.carry}</span>:null}</small></span>
+    </div>
+    {m.pto&&!isActive?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
+    {isActive&&!isEditing&&<div className="tvp-drawer" onClick={function(e){e.stopPropagation();}}>
+      <div className="tvp-two">
+        <label className="tvp-fld"><span style={{color:th.t3}}>{t.pto||"PTO"}<i className="tvp-tip" tabIndex={0} title={V("ptoHelp")} aria-label={V("ptoHelp")}>i</i></span>
+          <input type="number" min="0" max="366" placeholder="—" value={m.pto||""} onChange={function(e){onPtoChange(parseInt(e.target.value)||null);}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/></label>
+        <label className="tvp-fld"><span style={{color:th.t3}}>{V("jobRole")}</span>
+          {canEditRole?<input key={m.id+(m.role||"")} defaultValue={m.role||""} maxLength={40} placeholder={V("jobRolePh")} onBlur={function(e){const v=e.target.value.trim();if(v!==(m.role||""))onRoleChange(v);}} onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/>
+            :<em style={{color:th.tx}}>{m.role||"—"}</em>}</label>
+      </div>
+      {m.pto?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
+      {yr&&m.country&&<div className="tvp-meta" style={{color:th.t3}}>{workingDaysRemaining(m,yr)} {t.workDaysLeft||"work days left"} · {getAllHolidays(m,yr).length} {t.holCount||"holidays"}</div>}
+      {m.country&&REGIONS[m.country]&&<label className="tvp-fld"><span style={{color:th.t3}}>{t.region||"Region"}</span>
+        <select value={m.region||""} onChange={function(e){onRegionChange(e.target.value||null);}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}>
           <option value="">{defaultRegionName(m.country)?V("regDefault",{r:defaultRegionName(m.country)}):(t.natOnly||"National only")}</option>
           {REGIONS[m.country].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
-        </select>
-      </div>}
-      {yr&&m.country&&<div style={{fontSize:10,color:th.t3,display:"flex",justifyContent:"space-between"}}>
-        <span>{workingDaysRemaining(m,yr)} {t.workDaysLeft||"work days left"}</span>
-        <span>{getAllHolidays(m,yr).length} {t.holCount||"holidays"}</span>
-      </div>}
-      <div style={{display:"flex",alignItems:"center",gap:6,fontSize:11,marginTop:2}}>
-        <span style={{color:th.t3,fontWeight:600,width:42,flexShrink:0}}>{t.role||"Role"}</span>
-        <button onClick={function(e){e.stopPropagation();onSetApprover();}} style={{flex:1,padding:"4px 8px",borderRadius:6,border:isApprover?"1.5px solid #10B981":"1px solid "+th.gbd,background:isApprover?"#ECFDF5":"transparent",color:isApprover?"#059669":th.t3,fontSize:10,fontWeight:isApprover?700:500,cursor:"pointer",fontFamily:F,display:"flex",alignItems:"center",justifyContent:"center",gap:4,transition:"all .2s"}}>{isApprover?"👑 "+(t.approverLabel||"Approver"):(t.setApprover||"Set as Approver")}</button>
-      </div>
-      {isApprover&&approvalMode&&allMembers&&allMembers.length>1&&<div style={{marginTop:6,paddingTop:6,borderTop:"1px solid "+th.gbd}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-          <span style={{fontSize:10,fontWeight:700,color:th.t3,textTransform:"uppercase",letterSpacing:.5}}>{t.teamApproval||"Team Approval"}</span>
-          <button onClick={function(e){e.stopPropagation();onApproveAllMembers();}} style={{padding:"2px 10px",borderRadius:4,border:"none",background:"#10B981",color:"#fff",fontSize:9,fontWeight:700,cursor:"pointer",fontFamily:F}}>{t.approveAll||"Approve All"}</button>
-        </div>
-        {allMembers.filter(function(mm){return mm.id!==m.id;}).map(function(mm,idx){
-          var mc2=MC[allMembers.indexOf(mm)%MC.length];
-          var dayCount2=(mm.days||[]).length;
-          var isAppr=mm.approved===true;
-          return <div key={mm.id} onClick={function(e){e.stopPropagation();}} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 6px",borderRadius:6,marginBottom:2,background:isAppr?"#F0FDF4":"transparent",border:"1px solid "+(isAppr?"#BBF7D0":th.gbd),transition:"all .2s"}}>
-            <div style={{width:6,height:6,borderRadius:"50%",background:mc2.d,flexShrink:0}}/>
-            <span style={{flex:1,fontSize:10,fontWeight:600,color:th.tx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{mm.name}</span>
-            <span style={{fontSize:9,color:th.t3,fontFamily:FM,minWidth:20,textAlign:"right"}}>{dayCount2}d</span>
-            <button onClick={function(e){e.stopPropagation();onToggleMemberApproval(mm.id);}} style={{width:32,height:16,borderRadius:8,border:"none",cursor:"pointer",background:isAppr?"#10B981":"#D1D5DB",position:"relative",transition:"background .2s",flexShrink:0}}>
-              <div style={{width:12,height:12,borderRadius:"50%",background:"#fff",position:"absolute",top:2,left:isAppr?18:2,transition:"left .2s",boxShadow:"0 1px 2px rgba(0,0,0,.2)"}}/>
-            </button>
-          </div>;
-        })}
+        </select></label>}
+      <button type="button" role="switch" aria-checked={!!isApprover} className="tvp-switch" onClick={function(){onSetApprover();}} style={{borderColor:th.gbd,background:th.sf}}>
+        <span><b style={{color:th.tx}}>{t.approverLabel||"Approver"}</b><small style={{color:th.t3}}>{V("apSwitchSub")}</small></span><i className={isApprover?"":"off"}/>
+      </button>
+      {isApprover&&approvalMode&&onOpenApprovals&&<button type="button" className="tvp-mini" onClick={onOpenApprovals}>✓ {V("inbox")}{pendN>0&&<b>{pendN}</b>}</button>}
+      {!hasPin&&onSetPin&&!locked&&<button type="button" className="tvp-mini tvp-mini-pin" onClick={onSetPin}><Ic n="lock" s={12} c="#92400E"/> {X("setPin")}</button>}
+      {!locked&&<div className="tvp-acts">
+        <button type="button" onClick={onStartRename} style={{borderColor:th.gbd,color:th.tx}}><Ic n="edit" s={13} c={th.t2}/>{X("renameN",{n:""}).trim()}</button>
+        {m.country&&<button type="button" onClick={onOptimize} title={t.bestDays||"Suggest best days"} aria-label={(t.bestDays||"Suggest best days")+" "+m.name} style={{borderColor:th.gbd}}><Ic n="sun" s={13} c="#F59E0B"/></button>}
+        <button type="button" onClick={onExportICS} title={t.export} aria-label={"ICS · "+m.name} style={{borderColor:th.gbd}}><Ic n="download" s={13} c={th.t2}/></button>
+        <button type="button" onClick={onDelete} title={X("removeN",{n:m.name})} aria-label={X("removeN",{n:m.name})} style={{borderColor:th.gbd}}><Ic n="trash" s={13} c="#B91C1C"/></button>
       </div>}
     </div>}
   </div>;
@@ -1224,6 +1213,12 @@ function TeamLogo({team,th,size=30,editable=false,onChange=null,locked=false}){
   const pick=async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f||!onChange)return;setBusy(true);try{onChange(await cropLogo(f));}catch(err){alert(X("logoBad"));}finally{setBusy(false);}};
   const face=<span style={{width:size,height:size,borderRadius:"50%",overflow:"hidden",display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:logo?"#fff":th.al,color:th.ac,fontWeight:800,fontSize:Math.round(size*0.45),border:"1px solid "+th.bd,opacity:busy?.5:1}}>{logo?<img src={logo} alt="" width={size} height={size} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:initial}</span>;
   if(!editable||locked)return face;
+  // No logo yet: the letter is just a picture; a visible text button next to it opens the upload
+  if(!logo)return <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
+    {face}
+    <button type="button" className="tvp-addlogo" onClick={()=>ref.current&&ref.current.click()} disabled={busy} title={X("logoAdd")}>＋ {V("addLogo")}</button>
+    <input ref={ref} type="file" accept="image/*" onChange={pick} style={{display:"none"}}/>
+  </span>;
   return <span style={{position:"relative",display:"inline-flex"}}>
     <button type="button" onClick={()=>logo?setMenu(m=>!m):ref.current&&ref.current.click()} aria-label={logo?X("logoMenu"):X("logoAdd")} title={logo?X("logoMenu"):X("logoAdd")} style={{padding:0,border:0,background:"none",cursor:"pointer",borderRadius:"50%",display:"inline-flex",position:"relative"}}>
       {face}
@@ -1480,6 +1475,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     const c={...(team.comments||{})};c[day]=[...(c[day]||[]),{by,at:new Date().toISOString(),t:String(text).slice(0,280)}];
     updateWithHistory({...team,comments:c,log:addLogEntry(team,`${by} commented on ${day}`)});setCommentText("");
   };
+  // Job titles: set by the team creator/owner (teams without an owner: anyone)
+  const canEditRoles=!team.hasOwner||!!getOwner(team.id);
+  const setRole=(id,val)=>{const cur=teamRef.current;updateWithHistory({...cur,members:cur.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.role=String(val).slice(0,40);else delete nx.role;return nx;})});};
   const setGroup=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.group=val.slice(0,24);else delete nx.group;return nx;})});};
   const setRegion=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
   const tog=(y,m,d)=>{
@@ -1674,14 +1672,13 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
 
     <div style={{display:"flex",flex:1,overflow:"clip"}}>
       {sb&&<aside aria-label="Team members" style={{width:mob?"100%":240,minWidth:mob?"100%":240,background:th.gbg,borderInlineEnd:mob?"none":`1px solid ${th.gbd}`,display:"flex",flexDirection:"column",position:mob?"fixed":"relative",backdropFilter:G.blur,WebkitBackdropFilter:G.blur,top:mob?56:0,insetInlineStart:0,bottom:0,zIndex:mob?90:1,boxShadow:mob?"4px 0 24px rgba(0,0,0,.1)":"none"}}>
-        <div style={{padding:"12px 12px 4px",display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,fontWeight:700,color:th.t3,textTransform:"uppercase",letterSpacing:1}}>{t.tm}</span><span style={{fontSize:10,color:th.t3,fontFamily:FM}}>{team.members.length}/25</span></div>
-        {/* Add Member button — TOP of sidebar */}
-        <div style={{padding:"4px 8px 6px",display:"flex",flexDirection:"column",gap:4}}>
-          {!locked&&!adding&&<Btn th={th} sz="sm" icon="plus" onClick={startAdd} disabled={team.members.length>=50} style={{width:"100%",justifyContent:"center"}}>{t.am}</Btn>}
-          {!locked&&!adding&&team.members.length<50&&<button onClick={()=>setShowCSVImport(true)} style={{width:"100%",marginTop:4,padding:"6px 8px",border:"none",background:"none",color:th.t2,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}}>{X("several")}</button>}
-          {(()=>{const am=team.members.find(x=>x.id===aId);if(!am||hasPinOf(am))return null;return <button onClick={()=>{setSetPinFor(am.id);setNewPinInput("");setConfirmPinInput("");}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"1.5px solid #F59E0B",background:"rgba(254,243,199,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#92400E",marginTop:4}}><Ic n="lock" s={12} c="#92400E"/> Set PIN to protect</button>;})()}
-          <button onClick={function(){setHolBr(true);if(mob)setSb(false);}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #EF4444)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(245,158,11,0.3)"}}><Ic n="flag" s={12} c="#fff"/> {t.ch}</button>
+        {/* Toolbar (option A): add one person, add several, country holidays */}
+        <div className="tvp-tools">
+          {!locked&&!adding&&<button type="button" className="tvp-add" onClick={startAdd} disabled={team.members.length>=50}><Ic n="plus" s={14} c="#fff"/>{t.am}</button>}
+          {!locked&&!adding&&team.members.length<50&&<button type="button" className="tvp-ico" onClick={()=>setShowCSVImport(true)} title={X("several")} aria-label={X("several")}><Ic n="users" s={15} c={th.ac}/></button>}
+          <button type="button" className="tvp-ico tvp-ico-hol" onClick={function(){setHolBr(true);if(mob)setSb(false);}} title={t.ch} aria-label={t.ch}><Ic n="flag" s={15} c="#EA580C"/></button>
         </div>
+        <div className="tvp-side-head"><span>{t.tm}</span><span>{team.members.length}/25</span></div>
         <div style={{flex:1,overflowY:"auto",padding:"2px 8px 8px",display:"flex",flexDirection:"column",gap:1}}>
           {adding&&<div style={{padding:"6px 2px",display:"flex",flexDirection:"column",gap:5,marginBottom:6}}>
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:th.al,borderRadius:8,border:`1.5px solid ${th.ac}`}}>
@@ -1705,7 +1702,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
               if(hasPinOf(m)&&unlockedId!==m.id&&!meIsAppr){setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
               setAId(m.id);
               if(mob)setSb(false);
-            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
+            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>setView("approvals"):null} pendN={pendN}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}

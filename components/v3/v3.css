@@ -244,3 +244,7 @@
 .v3-ap-tab[aria-pressed="true"] { background: #16A34A; color: #fff; }
 .v3-ap-tab b { min-width: 18px; height: 18px; border-radius: 99px; background: #DC2626; color: #fff; font-size: 10px; display: grid; place-items: center; padding: 0 5px; }
 @media (max-width: 760px) { .v3-ap-grid { grid-template-columns: 1fr; } .v3-ap-pane { position: static; order: -1; } }
+
+.v3-ap-tabs { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(124, 58, 237, .08); gap: 2px; }
+.v3-ap-tabs button { border: 0; background: transparent; border-radius: 999px; min-height: 34px; padding: 0 14px; font: 700 13px inherit; font-family: inherit; color: #6D5BA8; cursor: pointer; }
+.v3-ap-tabs button[aria-selected="true"] { background: #fff; color: #6D28D9; box-shadow: 0 1px 5px rgba(76, 29, 149, .22); }

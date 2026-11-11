@@ -5,6 +5,9 @@ import { textLang } from "./extraText";
 
 type T = Record<string, string>;
 const en: T = {
+  addLogo: "Add logo",
+  apSwitchSub: "Approves everyone else's days",
+  hmAway1: "1 person away", hmAway: "{n} away", hmHol: "Public holiday", hmHolVac: "Holiday + vacation", hmWe: "Weekend",
   apOffT: "Approvals are off for this team", apOffD: "Choose who approves. Everyone else's days then show as waiting until they are approved.", apPick: "Choose the approver", apTurnOn: "Turn on approvals", apApprovedN: "Approved: {n}", apOneByOne: "One by one", apBulk: "Approve all without clashes ({n})", apTabWait: "Waiting", apTabOk: "Approved", apNoneOk: "Nothing approved yet.", apRevoke: "Withdraw approval", apKeys: "Keys: A approve · R ask for changes · J / K move", jobRole: "Job title", jobRolePh: "e.g. Designer (optional)", ptoHelp: "PTO = paid time off: the vacation days this person gets per year. The days they book count against it.",
   creatorHint: "Add yourself first: you'll be this team's approver, and only you can change your PIN.", pinReq: "6-digit PIN (required for you)", pinOpt: "6-digit PIN (optional)",
   visitsLbl: "visits",
@@ -36,6 +39,9 @@ const en: T = {
   celebrate: "{n} days off in a row. Enjoy!",
 };
 const ro: T = {
+  addLogo: "Adaugă logo",
+  apSwitchSub: "Aprobă zilele celorlalți",
+  hmAway1: "1 persoană absentă", hmAway: "{n} absenți", hmHol: "Sărbătoare legală", hmHolVac: "Sărbătoare + concediu", hmWe: "Weekend",
   apOffT: "Aprobările sunt oprite pentru această echipă", apOffD: "Alege cine aprobă. Zilele celorlalți apar apoi ca „în așteptare” până sunt aprobate.", apPick: "Alege aprobatorul", apTurnOn: "Pornește aprobările", apApprovedN: "Aprobate: {n}", apOneByOne: "Una câte una", apBulk: "Aprobă tot fără suprapuneri ({n})", apTabWait: "În așteptare", apTabOk: "Aprobate", apNoneOk: "Nimic aprobat încă.", apRevoke: "Retrage aprobarea", apKeys: "Taste: A aprobă · R cere modificări · J / K navighează", jobRole: "Funcție", jobRolePh: "ex. Designer (opțional)", ptoHelp: "PTO = concediu de odihnă plătit: zilele de concediu pe care le are persoana pe an. Zilele pe care le alege se scad din ele.",
   creatorHint: "Adaugă-te mai întâi pe tine: vei fi aprobatorul echipei și doar tu îți poți schimba PIN-ul.", pinReq: "PIN din 6 cifre (obligatoriu pentru tine)", pinOpt: "PIN din 6 cifre (opțional)",
   visitsLbl: "vizite",
@@ -67,6 +73,9 @@ const ro: T = {
   celebrate: "{n} zile libere la rând. Distracție plăcută!",
 };
 const fr: T = {
+  addLogo: "Ajouter un logo",
+  apSwitchSub: "Valide les jours des autres",
+  hmAway1: "1 personne absente", hmAway: "{n} absents", hmHol: "Jour férié", hmHolVac: "Férié + congé", hmWe: "Week-end",
   apOffT: "Les validations sont désactivées pour cette équipe", apOffD: "Choisissez qui valide. Les jours des autres apparaissent alors « en attente » jusqu'à validation.", apPick: "Choisir le validateur", apTurnOn: "Activer les validations", apApprovedN: "Validés : {n}", apOneByOne: "Un par un", apBulk: "Tout valider sans chevauchement ({n})", apTabWait: "En attente", apTabOk: "Validés", apNoneOk: "Rien n'est encore validé.", apRevoke: "Retirer la validation", apKeys: "Touches : A valider · R demander des changements · J / K naviguer", jobRole: "Poste", jobRolePh: "ex. Designer (facultatif)", ptoHelp: "PTO = congés payés : les jours de congé auxquels la personne a droit chaque année. Les jours posés sont décomptés.",
   creatorHint: "Ajoutez-vous d'abord : vous serez l'approbateur de l'équipe, et vous seul pourrez changer votre PIN.", pinReq: "PIN à 6 chiffres (obligatoire pour vous)", pinOpt: "PIN à 6 chiffres (facultatif)",
   visitsLbl: "visites",
@@ -98,6 +107,9 @@ const fr: T = {
   celebrate: "{n} jours de repos d'affilée. Profitez-en !",
 };
 const de: T = {
+  addLogo: "Logo hinzufügen",
+  apSwitchSub: "Genehmigt die Tage der anderen",
+  hmAway1: "1 Person abwesend", hmAway: "{n} abwesend", hmHol: "Feiertag", hmHolVac: "Feiertag + Urlaub", hmWe: "Wochenende",
   apOffT: "Genehmigungen sind für dieses Team aus", apOffD: "Wählen Sie, wer genehmigt. Die Tage aller anderen erscheinen dann als offen, bis sie genehmigt sind.", apPick: "Genehmiger wählen", apTurnOn: "Genehmigungen einschalten", apApprovedN: "Genehmigt: {n}", apOneByOne: "Einzeln prüfen", apBulk: "Alle ohne Überschneidung genehmigen ({n})", apTabWait: "Offen", apTabOk: "Genehmigt", apNoneOk: "Noch nichts genehmigt.", apRevoke: "Genehmigung zurückziehen", apKeys: "Tasten: A genehmigen · R Änderung anfragen · J / K wechseln", jobRole: "Position", jobRolePh: "z. B. Designer (optional)", ptoHelp: "PTO = bezahlter Urlaub: die Urlaubstage, die diese Person pro Jahr hat. Gebuchte Tage werden davon abgezogen.",
   creatorHint: "Fügen Sie sich zuerst hinzu: Sie werden Genehmiger des Teams, und nur Sie können Ihre PIN ändern.", pinReq: "6-stellige PIN (für Sie erforderlich)", pinOpt: "6-stellige PIN (optional)",
   visitsLbl: "Besuche",
@@ -129,6 +141,9 @@ const de: T = {
   celebrate: "{n} freie Tage am Stück. Viel Spaß!",
 };
 const es: T = {
+  addLogo: "Añadir logo",
+  apSwitchSub: "Aprueba los días de los demás",
+  hmAway1: "1 persona ausente", hmAway: "{n} ausentes", hmHol: "Festivo", hmHolVac: "Festivo + vacaciones", hmWe: "Fin de semana",
   apOffT: "Las aprobaciones están desactivadas en este equipo", apOffD: "Elige quién aprueba. Los días de los demás aparecerán como pendientes hasta que se aprueben.", apPick: "Elige quién aprueba", apTurnOn: "Activar aprobaciones", apApprovedN: "Aprobados: {n}", apOneByOne: "Uno a uno", apBulk: "Aprobar todo sin solapes ({n})", apTabWait: "Pendientes", apTabOk: "Aprobados", apNoneOk: "Aún no hay nada aprobado.", apRevoke: "Retirar aprobación", apKeys: "Teclas: A aprobar · R pedir cambios · J / K moverse", jobRole: "Puesto", jobRolePh: "p. ej. Diseñador (opcional)", ptoHelp: "PTO = vacaciones pagadas: los días de vacaciones que tiene la persona al año. Los días que reserva se descuentan.",
   creatorHint: "Añádete primero: serás quien aprueba en el equipo, y solo tú podrás cambiar tu PIN.", pinReq: "PIN de 6 dígitos (obligatorio para ti)", pinOpt: "PIN de 6 dígitos (opcional)",
   visitsLbl: "visitas",
@@ -160,6 +175,9 @@ const es: T = {
   celebrate: "{n} días libres seguidos. ¡Disfruta!",
 };
 const pt: T = {
+  addLogo: "Adicionar logótipo",
+  apSwitchSub: "Aprova os dias dos outros",
+  hmAway1: "1 pessoa ausente", hmAway: "{n} ausentes", hmHol: "Feriado", hmHolVac: "Feriado + férias", hmWe: "Fim de semana",
   apOffT: "As aprovações estão desligadas nesta equipa", apOffD: "Escolha quem aprova. Os dias dos restantes aparecem como pendentes até serem aprovados.", apPick: "Escolha o aprovador", apTurnOn: "Ligar aprovações", apApprovedN: "Aprovados: {n}", apOneByOne: "Um a um", apBulk: "Aprovar tudo sem sobreposições ({n})", apTabWait: "Pendentes", apTabOk: "Aprovados", apNoneOk: "Ainda nada aprovado.", apRevoke: "Retirar aprovação", apKeys: "Teclas: A aprovar · R pedir alterações · J / K mover", jobRole: "Função", jobRolePh: "ex. Designer (opcional)", ptoHelp: "PTO = férias pagas: os dias de férias a que a pessoa tem direito por ano. Os dias marcados são descontados.",
   creatorHint: "Adicione-se primeiro: será o aprovador da equipa, e só você poderá mudar o seu PIN.", pinReq: "PIN de 6 dígitos (obrigatório para si)", pinOpt: "PIN de 6 dígitos (opcional)",
   visitsLbl: "visitas",
@@ -191,6 +209,9 @@ const pt: T = {
   celebrate: "{n} dias de folga seguidos. Aproveite!",
 };
 const hu: T = {
+  addLogo: "Logó hozzáadása",
+  apSwitchSub: "Jóváhagyja a többiek napjait",
+  hmAway1: "1 fő távol", hmAway: "{n} fő távol", hmHol: "Ünnepnap", hmHolVac: "Ünnep + szabadság", hmWe: "Hétvége",
   apOffT: "A jóváhagyás ki van kapcsolva ennél a csapatnál", apOffD: "Válaszd ki, ki hagy jóvá. A többiek napjai ezután várakozóként jelennek meg, amíg jóvá nem hagyják őket.", apPick: "Jóváhagyó kiválasztása", apTurnOn: "Jóváhagyás bekapcsolása", apApprovedN: "Jóváhagyva: {n}", apOneByOne: "Egyenként", apBulk: "Mindet jóváhagyja ütközés nélkül ({n})", apTabWait: "Várakozik", apTabOk: "Jóváhagyva", apNoneOk: "Még nincs jóváhagyás.", apRevoke: "Jóváhagyás visszavonása", apKeys: "Billentyűk: A jóváhagy · R módosítást kér · J / K lépés", jobRole: "Beosztás", jobRolePh: "pl. Designer (nem kötelező)", ptoHelp: "PTO = fizetett szabadság: az évi szabadnapok száma. A lefoglalt napok ebből vonódnak le.",
   creatorHint: "Először magadat add hozzá: te leszel a csapat jóváhagyója, és csak te módosíthatod a PIN-edet.", pinReq: "6 számjegyű PIN (neked kötelező)", pinOpt: "6 számjegyű PIN (nem kötelező)",
   visitsLbl: "látogatás",
@@ -222,6 +243,9 @@ const hu: T = {
   celebrate: "{n} szabadnap egyhuzamban. Jó pihenést!",
 };
 const sv: T = {
+  addLogo: "Lägg till logga",
+  apSwitchSub: "Godkänner allas andras dagar",
+  hmAway1: "1 person borta", hmAway: "{n} borta", hmHol: "Helgdag", hmHolVac: "Helgdag + semester", hmWe: "Helg",
   apOffT: "Godkännanden är avstängda för det här teamet", apOffD: "Välj vem som godkänner. Allas andras dagar visas sedan som väntande tills de godkänts.", apPick: "Välj godkännare", apTurnOn: "Slå på godkännanden", apApprovedN: "Godkända: {n}", apOneByOne: "En i taget", apBulk: "Godkänn alla utan krockar ({n})", apTabWait: "Väntar", apTabOk: "Godkända", apNoneOk: "Inget godkänt än.", apRevoke: "Dra tillbaka godkännandet", apKeys: "Tangenter: A godkänn · R be om ändringar · J / K flytta", jobRole: "Befattning", jobRolePh: "t.ex. Designer (valfritt)", ptoHelp: "PTO = betald ledighet: de semesterdagar personen har per år. Bokade dagar räknas av från dem.",
   creatorHint: "Lägg till dig själv först: du blir teamets godkännare, och bara du kan ändra din PIN.", pinReq: "6-siffrig PIN (krävs för dig)", pinOpt: "6-siffrig PIN (valfri)",
   visitsLbl: "besök",
@@ -253,6 +277,9 @@ const sv: T = {
   celebrate: "{n} lediga dagar i rad. Njut!",
 };
 const it: T = {
+  addLogo: "Aggiungi logo",
+  apSwitchSub: "Approva i giorni degli altri",
+  hmAway1: "1 persona assente", hmAway: "{n} assenti", hmHol: "Festività", hmHolVac: "Festività + ferie", hmWe: "Fine settimana",
   apOffT: "Le approvazioni sono disattivate per questo team", apOffD: "Scegli chi approva. I giorni degli altri appariranno in attesa finché non vengono approvati.", apPick: "Scegli chi approva", apTurnOn: "Attiva le approvazioni", apApprovedN: "Approvati: {n}", apOneByOne: "Uno alla volta", apBulk: "Approva tutto senza sovrapposizioni ({n})", apTabWait: "In attesa", apTabOk: "Approvati", apNoneOk: "Ancora nulla di approvato.", apRevoke: "Ritira l'approvazione", apKeys: "Tasti: A approva · R chiedi modifiche · J / K sposta", jobRole: "Ruolo", jobRolePh: "es. Designer (facoltativo)", ptoHelp: "PTO = ferie retribuite: i giorni di ferie che la persona ha ogni anno. I giorni prenotati vengono scalati.",
   creatorHint: "Aggiungi prima te stesso: sarai l'approvatore del team, e solo tu potrai cambiare il tuo PIN.", pinReq: "PIN di 6 cifre (obbligatorio per te)", pinOpt: "PIN di 6 cifre (facoltativo)",
   visitsLbl: "visite",
@@ -284,6 +311,9 @@ const it: T = {
   celebrate: "{n} giorni liberi di fila. Goditeli!",
 };
 const bg: T = {
+  addLogo: "Добавете лого",
+  apSwitchSub: "Одобрява дните на останалите",
+  hmAway1: "1 отсъстващ", hmAway: "{n} отсъстващи", hmHol: "Официален празник", hmHolVac: "Празник + отпуск", hmWe: "Уикенд",
   apOffT: "Одобренията са изключени за този екип", apOffD: "Изберете кой одобрява. Дните на останалите ще се показват като чакащи, докато не бъдат одобрени.", apPick: "Изберете одобряващ", apTurnOn: "Включете одобренията", apApprovedN: "Одобрени: {n}", apOneByOne: "Един по един", apBulk: "Одобрете всички без застъпвания ({n})", apTabWait: "Чакащи", apTabOk: "Одобрени", apNoneOk: "Все още няма одобрени.", apRevoke: "Оттеглете одобрението", apKeys: "Клавиши: A одобряване · R искане на промени · J / K преместване", jobRole: "Длъжност", jobRolePh: "напр. Дизайнер (по желание)", ptoHelp: "PTO = платен отпуск: дните отпуск, които човекът има за година. Избраните дни се приспадат от тях.",
   creatorHint: "Първо добавете себе си: ще бъдете одобряващ на екипа и само Вие ще можете да сменяте своя ПИН.", pinReq: "6-цифрен ПИН (задължителен за Вас)", pinOpt: "6-цифрен ПИН (по желание)",
   visitsLbl: "посещения",
@@ -315,6 +345,9 @@ const bg: T = {
   celebrate: "{n} поредни почивни дни. Приятна почивка!",
 };
 const ar: T = {
+  addLogo: "إضافة شعار",
+  apSwitchSub: "يوافق على أيام الآخرين",
+  hmAway1: "غياب شخص واحد", hmAway: "غياب {n}", hmHol: "عطلة رسمية", hmHolVac: "عطلة + إجازة", hmWe: "عطلة نهاية الأسبوع",
   apOffT: "الموافقات متوقفة لهذا الفريق", apOffD: "اختر من يوافق. ستظهر أيام الآخرين بعد ذلك كطلبات بانتظار الموافقة.", apPick: "اختر الموافق", apTurnOn: "تشغيل الموافقات", apApprovedN: "تمت الموافقة: {n}", apOneByOne: "واحداً تلو الآخر", apBulk: "الموافقة على الكل بلا تداخل ({n})", apTabWait: "بالانتظار", apTabOk: "تمت الموافقة", apNoneOk: "لا توجد موافقات بعد.", apRevoke: "سحب الموافقة", apKeys: "المفاتيح: A موافقة · R طلب تعديلات · J / K تنقّل", jobRole: "المسمى الوظيفي", jobRolePh: "مثال: مصمم (اختياري)", ptoHelp: "PTO = الإجازة المدفوعة: أيام الإجازة السنوية لهذا الشخص. تُخصم منها الأيام التي يحجزها.",
   creatorHint: "أضف نفسك أولاً: ستكون الموافق في الفريق، ولن يغيّر رمزك سواك.", pinReq: "رمز من 6 أرقام (إلزامي لك)", pinOpt: "رمز من 6 أرقام (اختياري)",
   visitsLbl: "زيارات",

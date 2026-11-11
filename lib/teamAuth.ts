@@ -177,6 +177,8 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   if (creatorId) doc.creatorId = creatorId;
   else if (!((!stored || (owner && storedMembers.length === 0)) && typeof incoming.creatorId === "string" && inById.has(incoming.creatorId))) delete doc.creatorId;
 
+  // Job titles: only the owner or the creator (with their PIN session) may set them; teams without an owner as before
+  const mayRoles = !stored || !stored.ownerHash || owner || (creatorId ? await self(creatorId) : false);
   const out: Member[] = [];
   for (const m of Array.isArray(incoming.members) ? incoming.members : []) {
     if (!m || typeof m !== "object" || typeof m.id !== "string") continue;
@@ -187,6 +189,7 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
     else if (!old && legacyOk && typeof m.pinHash === "string" && LEGACY_HASH.test(m.pinHash)) next.pinHash = m.pinHash;
     // isApprover flag follows the same rule as the team approver field
     if (stored && !mayManage) { if (old && "isApprover" in old) next.isApprover = old.isApprover; else delete next.isApprover; }
+    if (!mayRoles) { if (old && "role" in old) next.role = old.role; else delete next.role; }
     if (old?.pinHash && strip(old) !== strip(next) && !(await full(m.id))) {
       // Approver may change only approval fields of other members
       if (await approver() && without(old, APPROVAL_FIELDS) === without(next, APPROVAL_FIELDS)) { out.push(next); continue; }
