@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import qrcode from "qrcode-generator";
+import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
+import { buildSheets } from "@/lib/xlsxSheets";
 
 // ─── PIN hashing (SHA-256) ──────────────────────────────────────────
 const hashPin = async (pin) => {
@@ -578,6 +580,9 @@ const pk=k=>{const[y,m,d]=k.split("-").map(Number);return{y,m:m-1,d};};
 const isWe=(y,m,d)=>{const w=new Date(y,m,d).getDay();return w===0||w===6;};
 const N=new Date(),CY=N.getFullYear(),CM=N.getMonth(),CD=N.getDate();
 
+// Team links arrive as #team=ID (app) or ?team=ID (widget/embed); read both
+const linkParams=()=>{try{return (window.location.hash||"")+"&"+(window.location.search||"").replace(/^\?/,"");}catch(e){return "";}};
+
 // ─── Year switching ──────────────────────────────────────────────
 // A team is stored once, with every year's days in the same record (days are full dates).
 // The workspace always works on a one-year "view" of it; mergeYearView folds an edited
@@ -673,6 +678,34 @@ const db={
   }
 };
 
+// Safe file name from a team name: no path or reserved characters, max 60 chars
+function fileBase(name){var b=String(name||"team").replace(/<[^>]*>/g,"").replace(/[\\/:*?"<>|#%&{}$!'`@+=]+/g,"").replace(/\s+/g,"_").replace(/_+/g,"_").replace(/^[_.]+|[_.]+$/g,"").slice(0,60);return b||"team";}
+
+// Shows a progress cursor while an export runs
+function withBusy(p){try{document.body.style.cursor="progress";}catch(e){}return Promise.resolve(p).finally(function(){try{document.body.style.cursor="";}catch(e){}});}
+
+// ─── Excel export (.xlsx) ────────────────────────────────────────
+function exportXLSX(team, t){
+  var yr = team.year || CY;
+  var hols = new Set<string>(); team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){hols.add(h);}); });
+  var name = fileBase(team.name)+"_"+yr+".xlsx";
+  return withBusy((async function(){
+    var mod = await import("write-excel-file/universal");
+    var sheets = buildSheets({
+      teamName: team.name||"", year: yr, members: team.members, holidays: hols,
+      colors: MC.map(function(c){return c.d;}),
+      countryName: function(cc){ var co = cc ? EU_C.find(function(c){return c.c===cc;}) : null; return co ? co.n : ""; },
+      months: t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"],
+      dayLabels: [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"],
+      generated: new Date().toLocaleDateString(),
+    });
+    var blob = await mod.default(sheets).toBlob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a"); a.href = url; a.download = name; a.click();
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  })().catch(function(e){ console.warn("xlsx failed, using legacy .xls", e); exportXLSLegacy(team, t); }));
+}
+
 // ─── ICS Export ──────────────────────────────────────────────────
 function generateICS(member, teamName) {
   const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TeamVacationPlanner//EN","CALSCALE:GREGORIAN"];
@@ -691,7 +724,7 @@ function downloadICS(member, teamName) {
   const ics = generateICS(member, teamName);
   const blob = new Blob([ics], { type: "text/calendar" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = `${member.name.replace(/\s+/g,"_")}_vacation.ics`; a.click();
+  const a = document.createElement("a"); a.href = url; a.download = `${fileBase(member.name)}_vacation.ics`; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -858,7 +891,7 @@ function generatePDFReport(team, t) {
     html += '<div class="tl-title">'+(t.overlapDays||'Overlap Days')+' ('+overlaps.length+')</div>';
     html += '<table><tr><th>Date</th><th>Members Out</th></tr>';
     overlaps.forEach(function(e){
-      html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+e[1].join(', ')+'</td></tr>';
+      html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+(e[1] as string[]).map(esc).join(', ')+'</td></tr>';
     });
     html += '</table>';
   }
@@ -866,10 +899,14 @@ function generatePDFReport(team, t) {
   html += '<div class="footer">Team Vacation Planner &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString()+'</div>';
   html += '</body></html>';
 
-  var blob = new Blob([html], { type: "text/html" });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a"); a.href = url; a.download = team.name.replace(/\s+/g,"_")+"_"+yr+"_report.html"; a.click();
-  URL.revokeObjectURL(url);
+  var base = fileBase(team.name)+"_"+yr+"_report";
+  var fallback = function(){
+    var blob = new Blob([html], { type: "text/html" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a"); a.href = url; a.download = base+".html"; a.click();
+    setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  };
+  return withBusy(downloadHtmlAsPdf(html, base+".pdf").catch(function(e){ console.warn("PDF failed, downloading HTML instead", e); fallback(); }));
 }
 
 function generateApprovedPDF(team, t) {
@@ -1044,7 +1081,11 @@ function generateApprovedPDF(team, t) {
   h+='<div class="wm">vacationplanner.team · '+ds+'</div>';
   h+='</body></html>';
 
-  var w2=window.open("","_blank");w2.document.write(h);w2.document.close();w2.focus();setTimeout(function(){w2.print();},500);
+  var fname=fileBase(team.name)+"_"+yr+"_approved.pdf";
+  return withBusy(downloadHtmlAsPdf(h, fname).catch(function(e){
+    console.warn("PDF failed, opening print view instead", e);
+    var w2=window.open("","_blank");if(!w2)return;w2.document.write(h);w2.document.close();w2.focus();setTimeout(function(){w2.print();},500);
+  }));
 }
 
 function _fd(d,mo){var p=d.split("-");return parseInt(p[2])+" "+mo[parseInt(p[1])-1];}
@@ -1205,7 +1246,7 @@ function printReport(team, t) {
   if(overlaps.length){
     html += '<div class="tl-title">Overlap Days ('+overlaps.length+')</div>';
     html += '<table><tr><th>Date</th><th>Members Out</th></tr>';
-    overlaps.forEach(function(e){html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+e[1].join(', ')+'</td></tr>';});
+    overlaps.forEach(function(e){html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+(e[1] as string[]).map(esc).join(', ')+'</td></tr>';});
     html += '</table>';
   }
 
@@ -1257,7 +1298,7 @@ function downloadTeamICS(team) {
   const ics = generateTeamICS(team);
   const blob = new Blob([ics], { type: "text/calendar" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = `${team.name.replace(/\s+/g, "_")}_team_calendar.ics`; a.click();
+  const a = document.createElement("a"); a.href = url; a.download = `${fileBase(team.name)}_team_calendar.ics`; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -1490,7 +1531,7 @@ function exportCSV(team, t) {
   });
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = `${team.name.replace(/\s+/g, "_")}_${yr}.csv`; a.click();
+  const a = document.createElement("a"); a.href = url; a.download = `${fileBase(team.name)}_${yr}.csv`; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -1528,11 +1569,16 @@ function BadgeView({ team, th, t }) {
   // Next person going on vacation
   let nextVac = null;
   const future = [];
+  // Next vacation = the first future day that starts a run (the day before is not a vacation day)
+  const prevDay = (d) => { const p = pk(d); const x = new Date(p.y, p.m, p.d - 1); return dk(x.getFullYear(), x.getMonth(), x.getDate()); };
   team.members.forEach(m => {
-    (m.days || []).forEach(d => {
-      if (d > today) future.push({ name: m.name, date: d });
+    const set = new Set(m.days || []);
+    set.forEach(d => {
+      if (typeof d === "string" && d > today && !set.has(prevDay(d))) future.push({ name: m.name, date: d });
     });
   });
+  // Office screens keep the widget open all day: reload every 30 minutes
+  useEffect(() => { const id = setTimeout(() => { try { window.location.reload(); } catch (e) {} }, 30 * 60 * 1000); return () => clearTimeout(id); }, []);
   future.sort((a, b) => a.date.localeCompare(b.date));
   if (future.length) nextVac = future[0];
 
@@ -1725,7 +1771,7 @@ function ChangeLogView({ team, th, t }) {
 }
 
 // ─── XLSX Export (rich SpreadsheetML with calendar grid, timeline, stats) ────
-function exportXLSX(team, t) {
+function exportXLSLegacy(team, t) {
   var yr = team.year || CY;
   var months = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
@@ -1773,7 +1819,7 @@ function exportXLSX(team, t) {
   xml += '<Worksheet ss:Name="Dashboard"><Table ss:DefaultColumnWidth="65">\n';
   xml += '<Column ss:Width="120"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="100"/>\n';
   // Title
-  xml += '<Row ss:Height="30"><Cell ss:StyleID="title"><Data ss:Type="String">'+team.name+'</Data></Cell></Row>\n';
+  xml += '<Row ss:Height="30"><Cell ss:StyleID="title"><Data ss:Type="String">'+esc(team.name)+'</Data></Cell></Row>\n';
   xml += '<Row><Cell ss:StyleID="sub"><Data ss:Type="String">'+yr+' | '+team.members.length+' members | Generated '+new Date().toLocaleDateString()+'</Data></Cell></Row>\n';
   xml += '<Row></Row>\n';
   // Stats
@@ -1792,14 +1838,14 @@ function exportXLSX(team, t) {
       while(ri+1<sorted.length){var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;if(diff<=3){ri++;end=sorted[ri];}else break;}
       if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
     }
-    xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+m.name+'</Data></Cell><Cell><Data ss:Type="String">'+(co?co.n:'')+'</Data></Cell><Cell><Data ss:Type="Number">'+sorted.length+'</Data></Cell><Cell><Data ss:Type="String">'+ranges.join(', ')+'</Data></Cell></Row>\n';
+    xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+esc(m.name)+'</Data></Cell><Cell><Data ss:Type="String">'+(co?co.n:'')+'</Data></Cell><Cell><Data ss:Type="Number">'+sorted.length+'</Data></Cell><Cell><Data ss:Type="String">'+ranges.join(', ')+'</Data></Cell></Row>\n';
   });
   // Overlaps
   if(overlaps.length){
     xml += '<Row></Row><Row><Cell ss:StyleID="sect" ss:MergeAcross="3"><Data ss:Type="String">Overlap Days ('+overlaps.length+')</Data></Cell></Row>\n';
     xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">Date</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Members Out</Data></Cell></Row>\n';
     overlaps.forEach(function(e){
-      xml += '<Row><Cell ss:StyleID="overlap"><Data ss:Type="String">'+e[0]+'</Data></Cell><Cell><Data ss:Type="String">'+e[1].join(', ')+'</Data></Cell></Row>\n';
+      xml += '<Row><Cell ss:StyleID="overlap"><Data ss:Type="String">'+e[0]+'</Data></Cell><Cell><Data ss:Type="String">'+(e[1] as string[]).map(esc).join(', ')+'</Data></Cell></Row>\n';
     });
   }
   xml += '</Table></Worksheet>\n';
@@ -1840,7 +1886,7 @@ function exportXLSX(team, t) {
         var sty = 'day';
         if(isWe2) sty = 'we';
         if(isHol2) sty = 'hol';
-        if(who.length===1) sty = 'v'+who[0];
+        if(who.length===1) sty = 'v'+(who[0]%25);
         else if(who.length>=2) sty = 'overlap';
         xml += '<Cell ss:StyleID="'+sty+'"><Data ss:Type="Number">'+d+'</Data></Cell>';
       });
@@ -1869,7 +1915,7 @@ function exportXLSX(team, t) {
     xml += '</Row>\n';
     // Member Gantt bars
     team.members.forEach(function(m,i){
-      xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+m.name+'</Data></Cell>';
+      xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+esc(m.name)+'</Data></Cell>';
       for(var d3=1;d3<=daysInMo2;d3++){
         var key2 = dk(yr,mo2,d3);
         var has = (m.days||[]).indexOf(key2)>=0;
@@ -1887,7 +1933,7 @@ function exportXLSX(team, t) {
   xml += '</Workbook>';
   var blob = new Blob([xml], { type: "application/vnd.ms-excel" });
   var url = URL.createObjectURL(blob);
-  var a = document.createElement("a"); a.href = url; a.download = team.name.replace(/\s+/g,"_")+"_"+yr+".xls"; a.click();
+  var a = document.createElement("a"); a.href = url; a.download = fileBase(team.name)+"_"+yr+".xls"; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -3614,7 +3660,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
           <button onClick={function(){downloadTeamICS(team)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Team .ics</button>
           <button onClick={function(){exportXLSX(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Excel</button>
           <button onClick={function(){exportCSV(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>CSV</button>
-          <button onClick={function(){var tsv=generateTSV(team,t);var blob=new Blob([tsv],{type:"text/tab-separated-values"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=team.name.replace(/\s/g,"_")+"_vacations.tsv";a.click();URL.revokeObjectURL(url);}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>TSV</button>
+          <button onClick={function(){var tsv=generateTSV(team,t);var blob=new Blob([tsv],{type:"text/tab-separated-values"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=fileBase(team.name)+"_vacations.tsv";a.click();URL.revokeObjectURL(url);}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>TSV</button>
           <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>Share / QR</button>
           <button onClick={function(){printReport(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
           <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Import</button>
@@ -3781,7 +3827,7 @@ export default function App(){
 
   const[screen,setScreen]=useState("home");const[team,setTeamRaw]=useState(null);const[viewYear,setViewYear]=useState(null);
   // Opening a team picks its year: "year=YYYY" in the link if present, else the default
-  const setTeam=tm=>{let y=null;try{const ym=window.location.hash.match(/[#&]year=(\d{4})/);if(tm&&ym&&window.location.hash.indexOf("team="+tm.id)>=0)y=clampYear(parseInt(ym[1]));}catch(e){}setViewYear(y);setTeamRaw(tm);};const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState("en");const[theme,setTheme]=useState("light");
+  const setTeam=tm=>{let y=null;try{const lp=linkParams();const ym=lp.match(/[#&?]year=(\d{4})/);if(tm&&ym&&lp.indexOf("team="+tm.id)>=0)y=clampYear(parseInt(ym[1]));}catch(e){}setViewYear(y);setTeamRaw(tm);};const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState("en");const[theme,setTheme]=useState("light");
   const th=TH[theme];const t=TX[lang];
 
   useEffect(()=>{(async()=>{
@@ -3826,7 +3872,7 @@ export default function App(){
     setMyTeams(valid);
 
     // Link-only access: check URL hash
-    const hash=window.location.hash;const match=hash.match(/team=([a-z0-9]+)/i);
+    const hash=linkParams();const match=hash.match(/team=([a-z0-9]+)/i);
     if(match){const ld=await db.ld(`team:${match[1]}`,true);if(ld){
       // Check TTL
       if(ld.createdAt){const age=now-new Date(ld.createdAt).getTime();if(age>=TTL){setScreen("home");return;}}
@@ -3854,7 +3900,7 @@ export default function App(){
   if(screen==="ws"&&team) {
     const tv=teamForYear(team,vy);
     // Check for special view modes via hash params
-    const hash = window.location.hash;
+    const hash = linkParams();
     const viewMatch = hash.match(/view=(badge|json|print|tsv)/i);
     if (viewMatch) {
       const vw = viewMatch[1].toLowerCase();
