@@ -3038,7 +3038,7 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
               <button className="no" onClick={()=>setConfirmDel(null)}>{L.cancel}</button>
             </Fragment>:<Fragment>
               <button className="open" onClick={()=>onOpenTeam(tm.id)}>
-                <span className="stack"><b style={{background:MC[(tm.name||"?").charCodeAt(0)%MC.length].b,color:MC[(tm.name||"?").charCodeAt(0)%MC.length].t}}>{tm.logo?<img src={tm.logo} alt=""/>:(tm.name||"?").trim().charAt(0).toUpperCase()}</b></span>
+                <span className="stack"><b style={{background:MC[(tm.name||"?").charCodeAt(0)%MC.length].b,color:MC[(tm.name||"?").charCodeAt(0)%MC.length].t}}>{safeLogo(tm.logo)?<img src={safeLogo(tm.logo)} alt=""/>:(tm.name||"?").trim().charAt(0).toUpperCase()}</b></span>
                 <span><span className="t">{tm.name}</span><br/><span className="m">{tm.year||"—"} · {tm.mc||0} {(tm.mc||0)!==1?t.mbs:t.mb}</span></span>
               </button>
               <button className="x" aria-label={L.remove+": "+(tm.name||"")} onClick={()=>setConfirmDel(tm.id)}><FpIcon n="x"/></button>
@@ -3425,6 +3425,43 @@ function YearNav({yr,onYear,th,small=false}){
     {yr<YEAR_MAX&&<button onClick={()=>onYear(yr+1)} title={String(yr+1)} aria-label={"Go to "+(yr+1)} style={bs(true)}>{small?"›":(yr+1)+" ›"}</button>}
   </span>;
 }
+// ─── Team logo: any image, centre-cropped to a 128px square in the browser, shown as a circle ───
+const LOGO_RX=/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
+const safeLogo=v=>typeof v==="string"&&v.length<60000&&LOGO_RX.test(v)?v:null;
+async function cropLogo(file){
+  if(!file||!/^image\//.test(file.type))throw new Error("not an image");
+  if(file.size>15*1024*1024)throw new Error("too big");
+  const url=URL.createObjectURL(file);
+  try{
+    const img=new Image();img.decoding="async";img.src=url;await img.decode();
+    const side=Math.min(img.naturalWidth,img.naturalHeight);if(!side)throw new Error("empty");
+    const sx=(img.naturalWidth-side)/2,sy=(img.naturalHeight-side)/2;
+    const c=document.createElement("canvas");c.width=c.height=128;const g=c.getContext("2d");
+    g.imageSmoothingQuality="high";g.fillStyle="#fff";g.fillRect(0,0,128,128);g.drawImage(img,sx,sy,side,side,0,0,128,128);
+    let out=c.toDataURL("image/webp",0.82);if(!out.startsWith("data:image/webp"))out=c.toDataURL("image/jpeg",0.85);
+    if(!safeLogo(out))throw new Error("encode");
+    return out;
+  }finally{URL.revokeObjectURL(url);}
+}
+function TeamLogo({team,th,size=30,editable=false,onChange=null,locked=false}){
+  const ref=useRef(null);const[busy,setBusy]=useState(false);const[menu,setMenu]=useState(false);
+  const logo=safeLogo(team.logo);const initial=(team.name||"?").trim().charAt(0).toUpperCase();
+  const pick=async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f||!onChange)return;setBusy(true);try{onChange(await cropLogo(f));}catch(err){alert("That image could not be used. Try a PNG or JPG.");}finally{setBusy(false);}};
+  const face=<span style={{width:size,height:size,borderRadius:"50%",overflow:"hidden",display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:logo?"#fff":th.al,color:th.ac,fontWeight:800,fontSize:Math.round(size*0.45),border:"1px solid "+th.bd,opacity:busy?.5:1}}>{logo?<img src={logo} alt="" width={size} height={size} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:initial}</span>;
+  if(!editable||locked)return face;
+  return <span style={{position:"relative",display:"inline-flex"}}>
+    <button type="button" onClick={()=>logo?setMenu(m=>!m):ref.current&&ref.current.click()} aria-label={logo?"Team logo: change or remove":"Add a team logo"} title={logo?"Change or remove the team logo":"Add a team logo"} style={{padding:0,border:0,background:"none",cursor:"pointer",borderRadius:"50%",display:"inline-flex",position:"relative"}}>
+      {face}
+      {!logo&&<span aria-hidden="true" style={{position:"absolute",right:-2,bottom:-2,width:13,height:13,borderRadius:"50%",background:th.ac,color:"#fff",fontSize:11,lineHeight:"13px",textAlign:"center",fontWeight:800,border:"1.5px solid #fff"}}>+</span>}
+    </button>
+    <input ref={ref} type="file" accept="image/*" onChange={pick} style={{display:"none"}}/>
+    {menu&&<span role="menu" style={{position:"absolute",top:size+6,left:0,zIndex:60,background:th.sf,border:"1px solid "+th.bd,borderRadius:12,boxShadow:"0 8px 24px rgba(30,27,75,.16)",padding:4,display:"flex",flexDirection:"column",minWidth:150}}>
+      <button role="menuitem" type="button" onClick={()=>{setMenu(false);ref.current&&ref.current.click();}} style={{textAlign:"start",padding:"8px 10px",border:0,background:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:th.tx,borderRadius:8,fontFamily:F}}>Change logo</button>
+      <button role="menuitem" type="button" onClick={()=>{setMenu(false);onChange&&onChange(null);}} style={{textAlign:"start",padding:"8px 10px",border:0,background:"none",cursor:"pointer",fontSize:13,fontWeight:600,color:"#DC2626",borderRadius:8,fontFamily:F}}>Remove logo</button>
+    </span>}
+  </span>;
+}
+
 function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members||[]).filter(function(m){return(m.days||[]).indexOf(today)>=0;});if(!out.length)return <div style={{padding:"8px 14px",background:"rgba(16,185,129,.08)",borderRadius:10,border:"1px solid rgba(16,185,129,.15)",marginBottom:10,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,color:"#059669"}}><span>✅</span>{t.fullTeam||"Full team in today!"}</div>;return <div style={{padding:"8px 14px",background:out.length>=3?"rgba(239,68,68,.06)":"rgba(245,158,11,.06)",borderRadius:10,border:"1px solid "+(out.length>=3?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)"),marginBottom:10}}><div style={{fontSize:10,fontWeight:700,color:out.length>=3?"#DC2626":"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{t.outToday||"Out today"} ({out.length})</div><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{out.map(function(m){var mc=MC[team.members.indexOf(m)%MC.length];return <span key={m.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:8,background:mc.b,fontSize:11,fontWeight:600,color:mc.t}}><span style={{width:6,height:6,borderRadius:"50%",background:mc.d}}></span>{m.name}</span>;})}</div></div>;}
 function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
@@ -3642,6 +3679,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
         {mob&&<button onClick={()=>setSb(!sb)} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><Ic n="users" s={18} c={th.t2}/></button>}
         <div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <TeamLogo team={team} th={th} size={26} editable locked={locked} onChange={v=>{const nt={...team,log:addLogEntry(team,v?"Team logo updated":"Team logo removed")};if(v)nt.logo=v;else delete nt.logo;updateWithHistory(nt);}}/>
             <h1 style={{margin:0,fontSize:15,fontWeight:700,color:th.tx,letterSpacing:-.3}}>{team.name}</h1>
             {locked&&<Ic n="lock" s={13} c={th.wm}/>}
           </div>
@@ -4023,7 +4061,7 @@ export default function App(){
   const vy=team?(viewYear||defaultViewYear(team)):CY;
   const changeYear=y=>{if(!team)return;const ny=clampYear(y);setViewYear(ny);try{window.history.replaceState(null,"","#team="+team.id+(ny===defaultViewYear(team)?"":"&year="+ny));}catch(e){}};
 
-  const update=u0=>{const u=mergeYearView(u0,team);setTeamRaw(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>x.id===u.id?{...x,name:u.name,year:u.year,mc:u.members.length}:x);setMyTeams(ut);db.sv("my-teams",ut);};
+  const update=u0=>{const u=mergeYearView(u0,team);setTeamRaw(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>{if(x.id!==u.id)return x;const nx={...x,name:u.name,year:u.year,mc:u.members.length};const lg=safeLogo(u.logo);if(lg)nx.logo=lg;else delete nx.logo;return nx;});setMyTeams(ut);db.sv("my-teams",ut);};
 
   const goHome=()=>{setTeam(null);setScreen("home");window.location.hash="";};
 
