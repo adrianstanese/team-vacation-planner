@@ -97,3 +97,51 @@ body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 @media (max-width: 560px) { .fp .tvp-cof-top { width: 34px; padding: 0; justify-content: center; } .fp .tvp-cof-l { display: none; } }
 @media (prefers-reduced-motion: reduce) { .tvp-cof-top, .tvp-cof-top:hover { transition: none; transform: none; } .tvp-cof-top::after { animation: none; display: none; } }
 @media print { .tvp-cof-top { display: none; } }
+
+/* ── v3 motion: view transitions (#11), scroll-linked motion (#12), popover (#13), micro-interactions (#17) ── */
+.tvp-main { view-transition-name: tvp-main; }
+.tvp-vt .tvp-fade { animation: none !important; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .28s; }
+::view-transition-old(tvp-main) { animation: tvp-vt-out .2s cubic-bezier(.4, 0, 1, 1) both; }
+::view-transition-new(tvp-main) { animation: tvp-vt-in .34s cubic-bezier(0, 0, .2, 1) both; }
+html[data-vt="next"]::view-transition-old(tvp-main) { animation-name: tvp-vt-out-l; }
+html[data-vt="next"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-r; }
+html[data-vt="prev"]::view-transition-old(tvp-main) { animation-name: tvp-vt-out-r; }
+html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-l; }
+::view-transition-group(tvp-team-name) { animation-duration: .45s; animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+@keyframes tvp-vt-in { from { opacity: 0; transform: translateY(12px) scale(.99); } }
+@keyframes tvp-vt-out { to { opacity: 0; transform: translateY(-6px); } }
+@keyframes tvp-vt-in-r { from { opacity: 0; transform: translateX(48px); } }
+@keyframes tvp-vt-in-l { from { opacity: 0; transform: translateX(-48px); } }
+@keyframes tvp-vt-out-l { to { opacity: 0; transform: translateX(-48px); } }
+@keyframes tvp-vt-out-r { to { opacity: 0; transform: translateX(48px); } }
+[dir="rtl"] { --tvp-dir: -1; }
+
+.tvp-hdr .tvp-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; transform-origin: 0 50%; transform: scaleX(0); opacity: 0; pointer-events: none; }
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .tvp-hdr { animation: tvp-hdr-lift linear both; animation-timeline: scroll(root); animation-range: 0 140px; }
+    .tvp-hdr .tvp-progress { opacity: 1; animation: tvp-grow-x linear both; animation-timeline: scroll(root); }
+    .tvp-month { animation: tvp-rise linear both !important; animation-timeline: view() !important; animation-range: entry 0% entry 70% !important; }
+    .fp main > section:not(:first-child) { animation: tvp-rise linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+  }
+}
+@keyframes tvp-hdr-lift { to { box-shadow: 0 10px 30px rgba(60, 30, 140, .14); } }
+@keyframes tvp-grow-x { to { transform: scaleX(1); } }
+@keyframes tvp-rise { from { opacity: .15; transform: translateY(34px) scale(.965); } to { opacity: 1; transform: none; } }
+
+/* Holiday card as a native popover: entry animation with @starting-style */
+.tvp-pop { transition: opacity .16s ease, transform .2s cubic-bezier(.2, .9, .3, 1.2), overlay .2s allow-discrete, display .2s allow-discrete; opacity: 1; transform: none; }
+@starting-style { .tvp-pop:popover-open { opacity: 0; transform: translateY(6px) scale(.97); } }
+.tvp-pop::backdrop { display: none; }
+
+/* Day toggle pop (calendar cells) and the celebration burst */
+[data-day][aria-pressed="true"] { animation: tvp-day-pop .34s cubic-bezier(.2, 1.8, .4, 1); }
+@keyframes tvp-day-pop { 0% { transform: scale(.82); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.tvp-confetti { position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; }
+.tvp-confetti i { position: fixed; width: 8px; height: 12px; border-radius: 2px; will-change: transform, opacity; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  [data-day][aria-pressed="true"] { animation: none; }
+  .tvp-pop { transition: none; }
+}

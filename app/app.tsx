@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import qrcode from "qrcode-generator";
 import Link from "next/link";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import BottomDuo from "@/components/WorkoseniePromo";
 import CoffeeButton from "@/components/CoffeeButton";
 import nextDynamic from "next/dynamic";
 import TodayTiles from "@/components/v3/TodayTiles";
 import { V } from "@/lib/v3Text";
-import { pendingApprovals } from "@/lib/v3Util";
+import { pendingApprovals, streaksOf } from "@/lib/v3Util";
+import { withTransition, celebrate, buzz } from "@/lib/motion";
 // Loaded only when first opened (keeps the first page load small)
 const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr:false});
 const TimeTravel=nextDynamic(()=>import("@/components/v3/TimeTravel"),{ssr:false});
@@ -2208,6 +2209,8 @@ function holidayInfo(key,members,year,names){
 }
 function HolidayCard({info,dateKey,rect,lang,th,onClose,onHover=null}){
   const ref=useRef(null);
+  // Native popover: shown in the browser's top layer (above dialogs and blurred cards), entry animation in CSS
+  const popRef=useCallback(el=>{ref.current=el;if(el&&el.showPopover&&!el.matches(":popover-open")){try{el.showPopover();}catch(e){}}},[]);
   const L=HC_TX[lang]||HC_TX.en;
   useEffect(()=>{
     const esc=e=>{if(e.key==="Escape")onClose();};
@@ -2225,7 +2228,7 @@ function HolidayCard({info,dateKey,rect,lang,th,onClose,onHover=null}){
   let when="";try{when=dt.toLocaleDateString(lang==="en"?"en-GB":lang,{weekday:"long",day:"numeric",month:"long",year:"numeric"});}catch(e){when=dateKey;}
   const weekend=dt.getDay()===0||dt.getDay()===6;
   // Portal to <body>: the month cards use backdrop-filter, which would trap and clip a fixed-position card
-  return createPortal(<div ref={ref} role="tooltip" aria-label={L.ph} onMouseEnter={()=>onHover&&onHover(true)} onMouseLeave={()=>onHover&&onHover(false)} dir={lang==="ar"?"rtl":"ltr"} style={{position:"fixed",left,width:W,...pos,zIndex:400,background:th.sf,border:"1px solid "+th.bd,borderRadius:14,boxShadow:"0 12px 32px rgba(30,27,75,.18)",padding:"12px 14px",fontFamily:F,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,animation:"popIn .15s ease-out"}}>
+  return createPortal(<div ref={popRef} popover="manual" className="tvp-pop" role="tooltip" aria-label={L.ph} onMouseEnter={()=>onHover&&onHover(true)} onMouseLeave={()=>onHover&&onHover(false)} dir={lang==="ar"?"rtl":"ltr"} style={{position:"fixed",top:"auto",right:"auto",bottom:"auto",margin:0,left,width:W,...pos,zIndex:400,background:th.sf,border:"1px solid "+th.bd,borderRadius:14,boxShadow:"0 12px 32px rgba(30,27,75,.18)",padding:"12px 14px",fontFamily:F,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,animation:"popIn .15s ease-out"}}>
     <div style={{fontSize:13,fontWeight:700,color:th.tx,marginBottom:2,textTransform:"capitalize"}}>{when}</div>
     <div style={{fontSize:11,color:th.t3,marginBottom:8}}>{L.ph}{weekend?" · "+L.wk:""}</div>
     {info.map(g=><div key={g.cc} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"6px 0",borderTop:"1px solid "+th.bl}}>
@@ -2293,7 +2296,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
     return()=>{el.removeEventListener("touchstart",start);el.removeEventListener("touchmove",move);el.removeEventListener("touchend",end);el.removeEventListener("touchcancel",end);};
   },[]);
 
-  return <div style={{background:th.gbg,borderRadius:G.rSm,border:`1px solid ${th.gbd}`,overflow:"hidden",animation:"popIn .3s ease-out",boxShadow:th.sd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+  return <div className="tvp-month" data-ym={year+"-"+month} style={{background:th.gbg,borderRadius:G.rSm,border:`1px solid ${th.gbd}`,overflow:"hidden",animation:"popIn .3s ease-out",boxShadow:th.sd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
     <div style={{padding:compact?"8px 12px":"12px 16px",borderBottom:`1px solid ${th.bl}`,background:month>=5&&month<=7?"rgba(245,158,11,.035)":month===11||month<=1?"rgba(99,102,241,.035)":month>=2&&month<=4?"rgba(16,185,129,.03)":"rgba(249,115,22,.025)",display:"flex",justifyContent:"space-between"}}>
       <span style={{fontSize:compact?13:15,fontWeight:650,color:th.tx,fontFamily:F}}>{t.M[month]}</span>
     </div>
@@ -3892,6 +3895,10 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       if(mm.id!==aId)return mm;
       const nm={...mm,days:nd};if(nh.length||mm.half)nm.half=nh;return nm;
     }),log:addLogEntry(team,(member.name||"Member")+what+key)});
+    buzz();
+    if(!has){try{const hol=holSetOf(member,y);const before=streaksOf({...member,days:ds},y,hol,!!team.w7).find(st=>st.start<=key&&st.end>=key);
+      const after=streaksOf({...member,days:nd},y,hol,!!team.w7).find(st=>st.start<=key&&st.end>=key);
+      if(after&&after.leave>=5&&!(before&&before.leave>=5)){const cell=document.querySelector('[data-ym="'+y+"-"+m+'"] [data-day="'+d+'"]');celebrate(cell);flash("🎉 "+V("celebrate",{n:after.length}));}}catch(e){}}
   };
   const setApprover=function(memberId){
     updateWithHistory({...team,approver:memberId||null});
@@ -3992,14 +3999,14 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   ) : null;
 
   return <div style={{minHeight:"100vh",background:th.bg,fontFamily:F,display:"flex",flexDirection:"column"}}>
-    <header style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"0 12px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+    <header className="tvp-hdr" style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"0 12px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <button onClick={onGoHome} aria-label="Home" style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><Ic n="home" s={18} c={th.t2}/></button>
         {mob&&<button onClick={()=>setSb(!sb)} aria-label="Team members" aria-expanded={sb} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><Ic n="users" s={18} c={th.t2}/></button>}
         <div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <TeamLogo team={team} th={th} size={26} editable locked={locked} onChange={v=>{const nt={...team,log:addLogEntry(team,v?"Team logo updated":"Team logo removed")};if(v)nt.logo=v;else delete nt.logo;updateWithHistory(nt);}}/>
-            <h1 style={{margin:0,fontSize:15,fontWeight:700,color:th.tx,letterSpacing:-.3}}>{team.name}</h1>
+            <h1 style={{margin:0,fontSize:15,fontWeight:700,color:th.tx,letterSpacing:-.3,viewTransitionName:"tvp-team-name"}}>{team.name}</h1>
             {locked&&<Ic n="lock" s={13} c={th.wm}/>}
           </div>
           <div style={{fontSize:10,color:th.t3,display:"flex",alignItems:"center",gap:4}}><YearNav yr={yr} onYear={onYear} th={th} small/><span>· {team.members.length} {team.members.length!==1?t.mbs:t.mb}</span></div>
@@ -4016,6 +4023,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         <CoffeeButton lang={lang} iconOnly={mob}/>
 
       </div>
+      <i className="tvp-progress" aria-hidden="true" style={{background:th.ac}}/>
     </header>
 
     {settings&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"8px 14px",display:"flex",gap:10,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,flexWrap:"wrap",justifyContent:"center",alignItems:"center"}}>
@@ -4051,10 +4059,10 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
 
     {/* View tabs */}
     {!mob&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"6px 14px",display:"flex",gap:3,overflowX:"auto",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      {views.map(v=> <button key={v.k} onClick={()=>{setView(v.k);setVk(function(p){return p+1;});}} style={{padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?(v.k==="trips"?"1.5px solid #D97706":`1.5px solid ${th.ac}`):`1px solid transparent`,background:v.k===view?(v.k==="trips"?"#FAEEDA":th.al):"transparent",color:v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3}/>{v.l}</button>)}
+      {views.map(v=> <button key={v.k} onClick={()=>{if(v.k===view)return;withTransition(()=>flushSync(()=>{setView(v.k);setVk(function(p){return p+1;});}));}} style={{padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?(v.k==="trips"?"1.5px solid #D97706":`1.5px solid ${th.ac}`):`1px solid transparent`,background:v.k===view?(v.k==="trips"?"#FAEEDA":th.al):"transparent",color:v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3}/>{v.l}</button>)}
     </div>}
 
-    <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+    <div style={{display:"flex",flex:1,overflow:"clip"}}>
       {sb&&<aside aria-label="Team members" style={{width:mob?"100%":240,minWidth:mob?"100%":240,background:th.gbg,borderInlineEnd:mob?"none":`1px solid ${th.gbd}`,display:"flex",flexDirection:"column",position:mob?"fixed":"relative",backdropFilter:G.blur,WebkitBackdropFilter:G.blur,top:mob?56:0,insetInlineStart:0,bottom:0,zIndex:mob?90:1,boxShadow:mob?"4px 0 24px rgba(0,0,0,.1)":"none"}}>
         <div style={{padding:"12px 12px 4px",display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,fontWeight:700,color:th.t3,textTransform:"uppercase",letterSpacing:1}}>{t.tm}</span><span style={{fontSize:10,color:th.t3,fontFamily:FM}}>{team.members.length}/25</span></div>
         {/* Add Member button — TOP of sidebar */}
@@ -4091,7 +4099,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         </div>
       </aside>}
 
-      <main key={view} className="tvp-fade" style={{flex:1,overflow:"auto",padding:mob?"14px 10px 80px":"20px 28px"}}>
+      <main key={view} className="tvp-fade tvp-main" style={{flex:1,overflow:view==="cal"?"visible":"auto",minWidth:0,padding:mob?"14px 10px 80px":"20px 28px"}}>
         {/* Mobile action strip — visible only on portrait mobile */}
         {mob&&!sb&&<div style={{marginBottom:10,display:"flex",flexDirection:"column",gap:6}}>
           <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
@@ -4146,7 +4154,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         })()}
 
         <NextYearPrompt team={team} yr={yr} onYear={onYear} th={th} lang={lang}/>
-        <WhosOutBanner team={rawTeam||team} th={th} t={t}/>
+        {!(view==="cal"&&yr===CY)&&<WhosOutBanner team={rawTeam||team} th={th} t={t}/>}
         <ComingUp team={rawTeam||team} th={th} lang={lang}/>
         {view==="cal"&&!am&&team.members.length>0&&!locked&&<div style={{background:th.al,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:th.ac,fontWeight:500}}>{t.sel}</div>}
         {view==="cal"&&locked&&<div style={{background:th.wl,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#92400E",fontWeight:500,display:"flex",alignItems:"center",gap:6}}><Ic n="lock" s={14} c="#92400E"/>{t.locked}</div>}
@@ -4217,7 +4225,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
     {showSh&&<ShareModal teamId={team.id} teamName={team.name} onClose={()=>setShowSh(false)} th={th} t={t}/>}
     
     {mob&&<div className="tvp-botnav" style={{background:th.gbg,borderTop:"1px solid "+th.gbd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      {views.map(function(v){return <button key={v.k} onClick={function(){setView(v.k);}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 8px",minWidth:48}}>
+      {views.map(function(v){return <button key={v.k} onClick={function(){if(v.k===view)return;withTransition(function(){flushSync(function(){setView(v.k);});});}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 8px",minWidth:48}}>
         <Ic n={v.i} s={18} c={v.k===view?th.ac:th.t3}/>
         <span style={{fontSize:9,fontWeight:v.k===view?700:500,color:v.k===view?th.ac:th.t3,fontFamily:F}}>{v.l}</span>
       </button>;})}
@@ -4456,14 +4464,14 @@ export default function App(){
 
   const join=async(code,onErr)=>{let id=code;const m=code.match(/team=([a-z0-9]+)/i);if(m)id=m[1];id=id.replace(/[^a-z0-9]/gi,"");const ld=await db.ld(`team:${id}`,true);if(ld){setTeam(ld);setScreen("ws");window.location.hash=`team=${id}`;if(!myTeams.find(x=>x.id===id)){const u=[...myTeams,{id,name:ld.name,year:ld.year,mc:ld.members.length}];setMyTeams(u);db.sv("my-teams",u);}}else onErr(t.nf);};
 
-  const open=async id=>{const ld=await db.ld(`team:${id}`,true);if(ld){setTeam(ld);setScreen("ws");window.location.hash=`team=${id}`;}else{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);}};
+  const open=async id=>{const ld=await db.ld(`team:${id}`,true);if(ld){withTransition(()=>flushSync(()=>{setTeam(ld);setScreen("ws");}),"open");window.location.hash=`team=${id}`;}else{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);}};
 
   const vy=team?(viewYear||defaultViewYear(team)):CY;
-  const changeYear=y=>{if(!team)return;const ny=clampYear(y);setViewYear(ny);try{window.history.replaceState(null,"","#team="+team.id+(ny===defaultViewYear(team)?"":"&year="+ny));}catch(e){}};
+  const changeYear=y=>{if(!team)return;const ny=clampYear(y);const cur=viewYear||defaultViewYear(team);withTransition(()=>flushSync(()=>setViewYear(ny)),ny>cur?"next":ny<cur?"prev":"");try{window.history.replaceState(null,"","#team="+team.id+(ny===defaultViewYear(team)?"":"&year="+ny));}catch(e){}};
 
   const update=u0=>{const u=mergeYearView(u0,team);setTeamRaw(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>{if(x.id!==u.id)return x;const nx={...x,name:u.name,year:u.year,mc:u.members.length};const lg=safeLogo(u.logo);if(lg)nx.logo=lg;else delete nx.logo;return nx;});setMyTeams(ut);db.sv("my-teams",ut);};
 
-  const goHome=()=>{setTeam(null);setScreen("home");window.location.hash="";};
+  const goHome=()=>{withTransition(()=>flushSync(()=>{setTeam(null);setScreen("home");}),"home");window.location.hash="";};
 
   // Saves that had to be merged with someone else's edits come back here
   useEffect(()=>{const fn=(id,doc)=>{setTeamRaw(cur=>cur&&cur.id===id?doc:cur);};SYNC.listeners.add(fn);return()=>{SYNC.listeners.delete(fn);};},[]);

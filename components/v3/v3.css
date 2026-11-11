@@ -203,3 +203,12 @@
 .w-lime .w-personas li, .w-gold .w-personas li, .w-lime .w-sum div, .w-gold .w-sum div { background: rgba(255, 255, 255, .5); }
 .w-lime .w-chart i, .w-gold .w-chart i { background: rgba(0, 0, 0, .2); }
 .w-lime .w-chart i.w-hot, .w-gold .w-chart i.w-hot { background: #1A2E05; box-shadow: none; }
+
+@media (max-width: 640px) {
+  .v3-tiles { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .v3-tile { min-height: 0; padding: 10px 12px; border-radius: 16px; }
+  .v3-t-out, .v3-t-wrap { grid-column: 1 / -1; }
+  .v3-t-big { font-size: 18px !important; }
+  .v3-t-wrap { padding: 12px 14px; }
+  .v3-ring { width: 38px; height: 38px; }
+}

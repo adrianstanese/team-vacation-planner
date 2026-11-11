@@ -5,7 +5,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import "./v3.css";
 
-type Th = { tx: string; t2: string; t3: string; ac: string; sf: string; bd: string; gbg?: string; gbd?: string };
+type Th = { tx: string; t2: string; t3: string; ac: string; sf: string; bd: string; gbg?: string; gbd?: string; bg?: string };
 
 export default function Sheet({ open, onClose, title, th, children, wide = false, dark = false, label }: {
   open: boolean; onClose: () => void; title?: ReactNode; th: Th; children: ReactNode; wide?: boolean; dark?: boolean; label?: string;
@@ -40,7 +40,7 @@ export default function Sheet({ open, onClose, title, th, children, wide = false
     if (far) onClose();
   };
   return <dialog ref={ref} className={`v3-sheet${wide ? " v3-wide" : ""}${dark ? " v3-dark" : ""}`} aria-label={label} onClick={onBackdrop}
-    style={dark ? undefined : { background: th.sf, color: th.tx, borderColor: th.gbd || th.bd }}>
+    style={dark ? undefined : { background: `linear-gradient(${th.sf}, ${th.sf}), ${th.bg || "#fff"}`, color: th.tx, borderColor: th.gbd || th.bd }}>
     {open && <div className="v3-sheet-in">
       <div className="v3-handle" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} aria-hidden="true"><i /></div>
       {title != null && <div className="v3-sheet-h">
