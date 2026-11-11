@@ -33,7 +33,7 @@ export default function Privacy() {
       <p>To run the planner you asked for (GDPR Art. 6(1)(b)). Colleagues added by someone else are processed for our and the team&apos;s legitimate interest in planning absences (Art. 6(1)(f)). The same basis covers security logs and site administration.</p>
 
       <h2 style={h2}>Who can see it</h2>
-      <p>Anyone with the team link can see the team, including through the calendar and spreadsheet exports. A PIN only stops others from changing a member&apos;s days. The site administrator can see and manage all teams to give support, deal with abuse and handle deletion requests; admin actions are logged. We do not sell data and do not use ad networks or trackers. The planner shows a link to Workoșenie, another tool by the same maker.</p>
+      <p>Anyone with the team link can see the team, including through the calendar and spreadsheet exports. A PIN only stops others from changing a member&apos;s days. The site administrator can see and manage all teams to give support, deal with abuse and handle deletion requests; admin actions are logged. We do not sell data and do not use ad networks or trackers. The planner shows a link to Workoșenie, another tool by the same maker, and a plain link to Buy Me a Coffee (no script or tracking is loaded from it).</p>
 
       <h2 style={h2}>Your browser</h2>
       <p>We keep your preferences, your list of teams, team owner keys and temporary PIN sessions in your browser&apos;s storage. They stay on your device and are used only to make the tool work. No cookies are used, except a sign-in cookie for the site administrator.</p>
