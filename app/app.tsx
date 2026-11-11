@@ -7,6 +7,7 @@ import "./frontpage.css";
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { buildSheets } from "@/lib/xlsxSheets";
 import { mergeTeam } from "@/lib/merge";
+import { planImport } from "@/lib/importPlan";
 
 // ─── PIN hashing (SHA-256) ──────────────────────────────────────────
 const hashPin = async (pin) => {
@@ -3514,6 +3515,44 @@ function TeamLogo({team,th,size=30,editable=false,onChange=null,locked=false}){
   </span>;
 }
 
+// ─── Coming up: who is away in the next 14 days, with a copyable summary ───
+const UP_TX={
+  en:{t:"Next 2 weeks",none:"Nobody is away in the next 2 weeks.",copy:"Copy summary",copied:"Copied",head:"who is away"},
+  fr:{t:"2 prochaines semaines",none:"Personne n'est absent dans les 2 prochaines semaines.",copy:"Copier le résumé",copied:"Copié",head:"qui est absent"},
+  de:{t:"Nächste 2 Wochen",none:"In den nächsten 2 Wochen ist niemand weg.",copy:"Zusammenfassung kopieren",copied:"Kopiert",head:"wer ist weg"},
+  es:{t:"Próximas 2 semanas",none:"Nadie está fuera en las próximas 2 semanas.",copy:"Copiar resumen",copied:"Copiado",head:"quién está fuera"},
+  pt:{t:"Próximas 2 semanas",none:"Ninguém está ausente nas próximas 2 semanas.",copy:"Copiar resumo",copied:"Copiado",head:"quem está ausente"},
+  ro:{t:"Următoarele 2 săptămâni",none:"Nimeni nu e plecat în următoarele 2 săptămâni.",copy:"Copiază rezumatul",copied:"Copiat",head:"cine lipsește"},
+  hu:{t:"Következő 2 hét",none:"A következő 2 hétben senki sincs távol.",copy:"Összefoglaló másolása",copied:"Másolva",head:"ki van távol"},
+  sv:{t:"Kommande 2 veckor",none:"Ingen är borta de kommande 2 veckorna.",copy:"Kopiera sammanfattning",copied:"Kopierad",head:"vem är borta"},
+  it:{t:"Prossime 2 settimane",none:"Nessuno è assente nelle prossime 2 settimane.",copy:"Copia riepilogo",copied:"Copiato",head:"chi è assente"},
+  bg:{t:"Следващите 2 седмици",none:"Никой не отсъства през следващите 2 седмици.",copy:"Копирай обобщението",copied:"Копирано",head:"кой отсъства"},
+  ar:{t:"الأسبوعان القادمان",none:"لا أحد غائب في الأسبوعين القادمين.",copy:"نسخ الملخص",copied:"تم النسخ",head:"من غائب"},
+};
+function upcomingAway(members,fromKey,days){
+  const p=pk(fromKey);const keys=[];for(let i=0;i<days;i++){const d=new Date(p.y,p.m,p.d+i,12);keys.push(dk(d.getFullYear(),d.getMonth(),d.getDate()));}
+  const out=[];
+  (members||[]).forEach((m,mi)=>{const set=new Set(m.days||[]);let run=null;keys.forEach(k=>{if(set.has(k)){if(run)run.to=k;else run={from:k,to:k};}else if(run){out.push({m,mi,...run});run=null;}});if(run)out.push({m,mi,...run});});
+  return out.sort((a,b)=>a.from.localeCompare(b.from)||String(a.m.name).localeCompare(String(b.m.name)));
+}
+function ComingUp({team,th,lang}){
+  const L=UP_TX[lang]||UP_TX.en;const[copied,setCopied]=useState(false);
+  const today=dk(CY,CM,CD);const runs=upcomingAway(team.members,today,14);
+  const loc=lang==="en"?"en-GB":lang;
+  const f=k=>{const p=pk(k);try{return new Date(p.y,p.m,p.d,12).toLocaleDateString(loc,{weekday:"short",day:"numeric",month:"short"});}catch(e){return k;}};
+  const range=r=>r.from===r.to?f(r.from):f(r.from)+" – "+f(r.to);
+  const copy=async()=>{const end=(()=>{const p=pk(today);const d=new Date(p.y,p.m,p.d+13,12);return dk(d.getFullYear(),d.getMonth(),d.getDate());})();
+    const txt=team.name+" – "+L.head+" ("+f(today)+" – "+f(end)+")\n"+(runs.length?runs.map(r=>"• "+r.m.name+": "+range(r)).join("\n"):L.none);
+    try{await navigator.clipboard.writeText(txt);setCopied(true);setTimeout(()=>setCopied(false),2000);}catch(e){}};
+  return <div dir={lang==="ar"?"rtl":"ltr"} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",padding:"8px 12px",background:th.gbg,border:"1px solid "+th.gbd,borderRadius:10,marginBottom:10,fontFamily:F}}>
+    <span style={{fontSize:12,fontWeight:700,color:th.tx,marginInlineEnd:4}}>{L.t}</span>
+    {runs.length===0&&<span style={{fontSize:12,color:th.t3}}>{L.none}</span>}
+    {runs.slice(0,8).map((r,i)=>{const c=MC[r.mi%MC.length];return <span key={i} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 10px",borderRadius:999,background:c.b,color:c.t,fontSize:12,fontWeight:600}}>{r.m.name}<span style={{fontWeight:500,opacity:.85}}>{range(r)}</span></span>;})}
+    {runs.length>8&&<span style={{fontSize:12,color:th.t3}}>+{runs.length-8}</span>}
+    <button onClick={copy} style={{marginInlineStart:"auto",padding:"5px 12px",borderRadius:999,border:"1px solid "+th.gbd,background:th.sf,color:th.ac,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",minHeight:32}}>{copied?"✓ "+L.copied:L.copy}</button>
+  </div>;
+}
+
 function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members||[]).filter(function(m){return(m.days||[]).indexOf(today)>=0;});if(!out.length)return <div style={{padding:"8px 14px",background:"rgba(16,185,129,.08)",borderRadius:10,border:"1px solid rgba(16,185,129,.15)",marginBottom:10,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,color:"#059669"}}><span>✅</span>{t.fullTeam||"Full team in today!"}</div>;return <div style={{padding:"8px 14px",background:out.length>=3?"rgba(239,68,68,.06)":"rgba(245,158,11,.06)",borderRadius:10,border:"1px solid "+(out.length>=3?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)"),marginBottom:10}}><div style={{fontSize:10,fontWeight:700,color:out.length>=3?"#DC2626":"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{t.outToday||"Out today"} ({out.length})</div><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{out.map(function(m){var mc=MC[team.members.indexOf(m)%MC.length];return <span key={m.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:8,background:mc.b,fontSize:11,fontWeight:600,color:mc.t}}><span style={{width:6,height:6,borderRadius:"50%",background:mc.d}}></span>{m.name}</span>;})}</div></div>;}
 function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,theme,setTheme}){
   const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
@@ -3789,6 +3828,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
         {/* Add Member button — TOP of sidebar */}
         <div style={{padding:"4px 8px 6px",display:"flex",flexDirection:"column",gap:4}}>
           {!locked&&!adding&&<Btn th={th} sz="sm" icon="plus" onClick={startAdd} disabled={team.members.length>=50} style={{width:"100%",justifyContent:"center"}}>{t.am}</Btn>}
+          {!locked&&!adding&&team.members.length<50&&<button onClick={()=>setShowCSVImport(true)} style={{width:"100%",marginTop:4,padding:"6px 8px",border:"none",background:"none",color:th.t2,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}}>Add several people at once</button>}
           {(()=>{const am=team.members.find(x=>x.id===aId);if(!am||am.pinHash)return null;return <button onClick={()=>{setSetPinFor(am.id);setNewPinInput("");setConfirmPinInput("");}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"1.5px solid #F59E0B",background:"rgba(254,243,199,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#92400E",marginTop:4}}><Ic n="lock" s={12} c="#92400E"/> Set PIN to protect</button>;})()}
           <button onClick={function(){setHolBr(true);if(mob)setSb(false);}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #EF4444)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(245,158,11,0.3)"}}><Ic n="flag" s={12} c="#fff"/> {t.ch}</button>
         </div>
@@ -3871,6 +3911,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
         })()}
 
         <WhosOutBanner team={rawTeam||team} th={th} t={t}/>
+        <ComingUp team={rawTeam||team} th={th} lang={lang}/>
         {view==="cal"&&!am&&team.members.length>0&&!locked&&<div style={{background:th.al,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:th.ac,fontWeight:500}}>{t.sel}</div>}
         {view==="cal"&&locked&&<div style={{background:th.wl,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#92400E",fontWeight:500,display:"flex",alignItems:"center",gap:6}}><Ic n="lock" s={14} c="#92400E"/>{t.locked}</div>}
 
@@ -3985,23 +4026,46 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
     })()}
 
     {/* CSV Import Modal */}
-    {showCSVImport&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowCSVImport(false)}>
-      <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:500,width:"100%",padding:24,boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}>
-          <h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx}}>Import CSV</h3>
-          <button onClick={()=>setShowCSVImport(false)} style={{background:th.sh,border:"none",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
+    {showCSVImport&&(()=>{
+      const plan=planImport(csvText,team.members,EU_C,{sevenDay:!!team.w7,max:50});
+      const nUpd=Object.keys(plan.updates).length;
+      const apply=()=>{
+        if(locked){flash(t.locked);return;}
+        const members=team.members.map(m=>{const u=plan.updates[m.id];if(!u)return m;const nm={...m,days:[...(m.days||[]),...u.days]};if(u.country)nm.country=u.country;return nm;}).concat(plan.adds.map(a=>({id:gid(),name:a.name,country:a.country,days:a.days})));
+        const msg=(plan.adds.length?`Added ${plan.adds.length} ${plan.adds.length!==1?"people":"person"}`:"")+(plan.adds.length&&nUpd?", ":"")+(nUpd?`updated ${nUpd}`:"");
+        updateWithHistory({...team,members,log:addLogEntry(team,"Import: "+(msg||"no changes"))});
+        setShowCSVImport(false);setCsvText("");flash(msg||"Nothing to import");
+      };
+      const badge=a=>a==="add"?{bg:"#ECFDF5",c:"#047857",l:"new"}:a==="update"?{bg:"#EEF2FF",c:"#4338CA",l:"update"}:{bg:"#FEF2F2",c:"#B91C1C",l:"skip"};
+      return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={()=>setShowCSVImport(false)}>
+      <div role="dialog" aria-label="Add people or import days" onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:620,width:"100%",maxHeight:"92vh",overflowY:"auto",padding:22,boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,boxSizing:"border-box"}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+          <h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx}}>Add people or import vacation days</h3>
+          <button aria-label="Close" onClick={()=>setShowCSVImport(false)} style={{background:th.sh,border:"none",borderRadius:"50%",width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
         </div>
-        <p style={{margin:"0 0 10px",fontSize:12,color:th.t2}}>Format: Name, Country, Start Date (YYYY-MM-DD), End Date</p>
-        <textarea value={csvText} onChange={e=>setCsvText(e.target.value)} placeholder={'Name,Country,Start,End\n"John Doe","Romania","2026-07-01","2026-07-15"'} rows={8} style={{width:"100%",padding:10,border:`1.5px solid ${th.bd}`,borderRadius:8,fontSize:12,fontFamily:FM,resize:"vertical",outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/>
-        <div style={{display:"flex",gap:8,marginTop:12}}>
-          <label style={{flex:1}}>
-            <input type="file" accept=".csv,.txt" style={{display:"none"}} onChange={e=>{const f=(e.target.files&&e.target.files[0]);if(f){const r=new FileReader();r.onload=()=>setCsvText(r.result);r.readAsText(f);}}}/>
-            <div style={{padding:"8px 14px",background:th.sh,borderRadius:8,textAlign:"center",cursor:"pointer",fontSize:12,fontWeight:600,color:th.t2,border:`1px solid ${th.bd}`}}>Choose File</div>
-          </label>
-          <Btn th={th} disabled={!csvText.trim()} onClick={()=>{const imported=parseCSVImport(csvText);if(imported.length){updateWithHistory({...team,members:[...team.members,...imported]});setShowCSVImport(false);setCsvText("");flash(`Imported ${imported.length} member${imported.length>1?"s":""}`);}else{flash("No valid data found");}}}>Import {csvText.trim()?`(${parseCSVImport(csvText).length} found)`:""}</Btn>
+        <p style={{margin:"0 0 8px",fontSize:12,color:th.t2,lineHeight:1.5}}>One line per person or per period: <b>Name, Country, Start, End</b>. Country and dates are optional. Paste from Excel or a list, or choose a CSV file. People already on the team are matched by name and only get the new days.</p>
+        <textarea value={csvText} onChange={e=>setCsvText(e.target.value)} placeholder={"Ana Pop, RO\nLukas Weber, Germany\nIoana Mureșan, RO, 2027-07-05, 2027-07-16"} rows={6} aria-label="List to import" style={{width:"100%",padding:10,border:`1.5px solid ${th.bd}`,borderRadius:10,fontSize:12,fontFamily:FM,resize:"vertical",outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/>
+        <label style={{display:"inline-block",marginTop:8}}>
+          <input type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" style={{display:"none"}} onChange={e=>{const f=(e.target.files&&e.target.files[0]);if(f){const r=new FileReader();r.onload=()=>setCsvText(String(r.result||""));r.readAsText(f);}e.target.value="";}}/>
+          <span style={{display:"inline-block",padding:"8px 14px",background:th.sh,borderRadius:10,cursor:"pointer",fontSize:12,fontWeight:600,color:th.t2,border:`1px solid ${th.bd}`}}>Choose a CSV file</span>
+        </label>
+        {plan.rows.length>0&&<div style={{marginTop:12,border:`1px solid ${th.bd}`,borderRadius:12,overflow:"hidden"}}>
+          <div style={{padding:"8px 12px",fontSize:12,fontWeight:700,color:th.tx,background:th.sh}}>Preview · {plan.adds.length} new · {nUpd} updated{plan.skipped?` · ${plan.skipped} skipped`:""}</div>
+          <div style={{maxHeight:220,overflowY:"auto"}}>
+            {plan.rows.slice(0,200).map((r,i)=>{const b=badge(r.action);return <div key={i} style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 44px 70px 58px",gap:8,alignItems:"center",padding:"6px 12px",borderTop:i?`1px solid ${th.bl}`:"none",fontSize:12,color:th.tx}}>
+              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.note||""}>{r.name}{r.note&&<span style={{display:"block",fontSize:11,color:"#B45309"}}>{r.note}</span>}</span>
+              <span style={{fontFamily:FM,fontWeight:700,color:th.t2}}>{r.country||"—"}</span>
+              <span style={{color:th.t2}}>{r.days.length?`${r.days.length} day${r.days.length!==1?"s":""}`:"—"}</span>
+              <span style={{fontSize:11,fontWeight:700,padding:"2px 6px",borderRadius:6,background:b.bg,color:b.c,textAlign:"center"}}>{b.l}</span>
+            </div>;})}
+          </div>
+        </div>}
+        <div style={{display:"flex",gap:8,marginTop:14,justifyContent:"flex-end"}}>
+          <Btn th={th} v="ghost" onClick={()=>setShowCSVImport(false)}>Cancel</Btn>
+          <Btn th={th} disabled={locked||(!plan.adds.length&&!nUpd)} onClick={apply}>{plan.adds.length||nUpd?`Apply · ${plan.adds.length} new, ${nUpd} updated`:"Apply"}</Btn>
         </div>
       </div>
-    </div>}
+    </div>;})()}
 
     <Toast message={toast} visible={!!toast}/>
     {pinModalEl}
