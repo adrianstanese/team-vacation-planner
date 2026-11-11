@@ -115,7 +115,7 @@
 .fp .band{margin-block:16px 0;border-block:1px solid var(--line);background:color-mix(in oklch,var(--surface) 55%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .fp .band .wrap{display:flex;align-items:center;gap:14px;padding-block:14px;flex-wrap:wrap}
 @container (min-width:880px){.fp .band .wrap{flex-wrap:nowrap}}
-.fp .band .when{display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.fp .band .when{display:flex;align-items:baseline;gap:4px 8px;flex-wrap:wrap}
 .fp .band .when b{font:800 22px/1 var(--display);color:var(--head)}
 .fp .band .when span{font-size:13px;color:var(--muted);font-weight:600}
 .fp .ticks{display:flex;gap:8px;list-style:none;margin:0;padding:0 0 4px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:thin;flex:1 1 100%;min-width:0}

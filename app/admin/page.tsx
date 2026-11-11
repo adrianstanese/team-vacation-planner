@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const F = "'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif";
-const C = { bg: "#F4F2FB", card: "#FFFFFF", tx: "#1E1B4B", t2: "#4B5563", t3: "#8B8BA7", bd: "#E6E3F3", ac: "#6D28D9", al: "#EDE9FE", red: "#DC2626", redBg: "#FEF2F2", green: "#047857", greenBg: "#ECFDF5", amber: "#B45309", amberBg: "#FFFBEB" };
+const C = { bg: "#F4F2FB", card: "#FFFFFF", tx: "#1E1B4B", t2: "#4B5563", t3: "#64648A", bd: "#E6E3F3", ac: "#6D28D9", al: "#EDE9FE", red: "#DC2626", redBg: "#FEF2F2", green: "#047857", greenBg: "#ECFDF5", amber: "#B45309", amberBg: "#FFFBEB" };
 
 type Stats = { teams: number; active: number; updated7: number; updated30: number; members: number; empty: number; trash: number; visits: number; countries: { cc: string; n: number }[]; months: { month: string; n: number }[] };
 type TeamRow = { id: string; name: string; year: string; created: string; updated_at: string; expires_at: string; locked: boolean; approver: string | null; members: number; pins: number; days: number };
@@ -37,19 +37,19 @@ function Login({ onDone }: { onDone: () => void }) {
   };
   return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
     <form onSubmit={e => { e.preventDefault(); submit(); }} style={{ width: "100%", maxWidth: 360, background: C.card, border: `1px solid ${C.bd}`, borderRadius: 20, padding: 28 }}>
-      <div style={{ fontSize: 20, fontWeight: 750, color: C.tx, marginBottom: 4 }}>Admin sign-in</div>
+      <h1 style={{ fontSize: 20, fontWeight: 750, color: C.tx, margin: "0 0 4px" }}>Admin sign-in</h1>
       <div style={{ fontSize: 13, color: C.t3, marginBottom: 18 }}>Team Vacation Planner</div>
-      <label style={{ fontSize: 12, fontWeight: 600, color: C.t2 }}>Username</label>
-      <input autoComplete="username" value={u} onChange={e => { setU(e.target.value); setErr(""); }} style={inp} />
-      <label style={{ fontSize: 12, fontWeight: 600, color: C.t2 }}>Password</label>
-      <input type="password" autoComplete="current-password" value={p} onChange={e => { setP(e.target.value); setErr(""); }} style={inp} />
+      <label htmlFor="adm-u" style={{ fontSize: 12, fontWeight: 600, color: C.t2 }}>Username</label>
+      <input id="adm-u" autoComplete="username" value={u} onChange={e => { setU(e.target.value); setErr(""); }} style={inp} />
+      <label htmlFor="adm-p" style={{ fontSize: 12, fontWeight: 600, color: C.t2 }}>Password</label>
+      <input id="adm-p" type="password" autoComplete="current-password" value={p} onChange={e => { setP(e.target.value); setErr(""); }} style={inp} />
       {err && <div role="alert" style={{ fontSize: 13, color: C.red, margin: "2px 0 10px" }}>{err}</div>}
       <button type="submit" disabled={busy} style={{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "none", background: C.ac, color: "#fff", fontWeight: 700, fontSize: 14, fontFamily: F, cursor: "pointer", opacity: busy ? 0.7 : 1 }}>{busy ? "Signing in…" : "Sign in"}</button>
       <Link href="/" prefetch={false} style={{ display: "block", textAlign: "center", marginTop: 14, fontSize: 12, color: C.t3, textDecoration: "none" }}>Back to the planner</Link>
     </form>
   </div>;
 }
-const inp: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "9px 12px", margin: "4px 0 12px", borderRadius: 10, border: `1px solid ${C.bd}`, fontSize: 14, fontFamily: F, color: C.tx, outline: "none" };
+const inp: React.CSSProperties = { width: "100%", boxSizing: "border-box", padding: "9px 12px", margin: "4px 0 12px", borderRadius: 10, border: `1px solid ${C.bd}`, fontSize: 14, fontFamily: F, color: C.tx };
 
 function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) {
   return <div style={{ background: C.card, border: `1px solid ${C.bd}`, borderRadius: 16, padding: "14px 16px" }}>

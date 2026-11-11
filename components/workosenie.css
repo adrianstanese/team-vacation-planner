@@ -9,7 +9,7 @@
    Both live inside the card's own box, so nothing can spill past its edges. */
 .wpo { position: relative; border-radius: 28px; isolation: isolate; height: 100%;
   box-shadow: 0 0 50px -14px rgba(255,106,43,.55), 0 0 90px -24px rgba(124,58,237,.5); }
-@media (prefers-reduced-motion: no-preference) { .wpo { animation: wpo-halo 4s ease-in-out infinite alternate; } }
+@media (prefers-reduced-motion: no-preference) { .wpo { animation: wpo-halo 4s ease-in-out 6 alternate; } }
 @keyframes wpo-halo { to { box-shadow: 0 0 70px -10px rgba(255,106,43,.75), 0 0 120px -20px rgba(124,58,237,.6); } }
 .wpo::before, .wpo::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
@@ -22,7 +22,8 @@
 }
 .wpo::after { z-index: -1; filter: blur(22px); opacity: .85; }
 @media (prefers-reduced-motion: no-preference) {
-  .wpo::before, .wpo::after { animation: wpo-spin 6s linear infinite; }
+  /* A few orbits, then rest (WCAG 2.2.2: no endless motion without a pause control) */
+  .wpo::before, .wpo::after { animation: wpo-spin 6s linear 4; }
 }
 @keyframes wpo-spin { to { --wpo-a: 360deg; } }
 
@@ -45,6 +46,8 @@
 .wpo-h { margin: 0; font: 800 clamp(18px, 2.1vw, 23px)/1.15 var(--font-display, system-ui), system-ui; letter-spacing: -.02em; color: #3B0F80; }
 .wpo.dark .wpo-h { color: #F5F3FF; }
 .wpo-h span { background: linear-gradient(95deg, #FF6A2B, #FF3D7F 50%, #7C3AED); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wpo-from { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9A3412; margin-bottom: 2px; }
+.wpo.dark .wpo-from { color: #FDBA74; }
 .wpo-sub { margin: 3px 0 0; font-size: 14px; line-height: 1.45; color: #6B5B95; }
 .wpo.dark .wpo-sub { color: #B4A8D6; }
 
@@ -61,9 +64,9 @@
 
 .wpo-foot { position: relative; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .wpo-cta { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 999px; color: #fff; text-decoration: none;
-  font: 700 15px/1 var(--font-body, system-ui), system-ui; background: linear-gradient(135deg, #FF6A2B, #FF3D7F); box-shadow: 0 12px 30px -10px rgba(255,80,60,.75); overflow: hidden; }
+  font: 700 15px/1 var(--font-body, system-ui), system-ui; background: linear-gradient(135deg, #C2410C, #BE185D); box-shadow: 0 12px 30px -10px rgba(255,80,60,.75); overflow: hidden; }
 .wpo-cta::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%); transform: translateX(-120%); }
-@media (prefers-reduced-motion: no-preference) { .wpo-cta::after { animation: wpo-sheen 3.4s ease-in-out infinite; } }
+@media (prefers-reduced-motion: no-preference) { .wpo-cta::after { animation: wpo-sheen 3.4s ease-in-out 3; } }
 @keyframes wpo-sheen { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
 .wpo-cta:focus-visible { outline: 3px solid #7C3AED; outline-offset: 3px; }
 .wpo-fine { font-size: 12px; color: #6B5B95; }

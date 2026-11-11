@@ -23,7 +23,7 @@ Team Vacation Planner helps teams coordinate their time off. Team members add th
 - Holiday clash detector
 - Conflict alerts with configurable threshold
 - 11 languages: English, French, German, Spanish, Portuguese, Romanian, Hungarian, Swedish, Italian, Bulgarian, Arabic
-- 3 themes: Light, Dark, Pink with Apple Liquid Glass design
+- 3 themes: Light, Dark, Pink with a frosted-glass design
 - No accounts, no login, no passwords
 - 24-month data retention with automatic cleanup
 
