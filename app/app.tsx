@@ -2062,7 +2062,7 @@ const HC_TX={
 };
 // For one date: each country (and region) in the team that has a holiday, its name and who is off
 function holidayInfo(key,members,year,names){
-  const groups={};
+  const groups:Record<string,{cc:string,who:string[],regions:Set<string>}>={};
   (members||[]).forEach(m=>{
     if(!m.country)return;
     if(getAllHolidays(m,year).indexOf(key)<0)return;
