@@ -1,5 +1,10 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans, Figtree } from "next/font/google";
+
+// Front-page fonts, self-hosted by next/font at build time (no runtime request to Google)
+const display = Plus_Jakarta_Sans({ subsets: ["latin", "latin-ext"], weight: ["700", "800"], variable: "--font-display", display: "swap" });
+const body = Figtree({ subsets: ["latin", "latin-ext"], weight: ["400", "600", "700", "800"], variable: "--font-body", display: "swap" });
 
 const SITE_URL = "https://vacationplanner.team";
 const SITE_NAME = "Team Vacation Planner";
@@ -105,7 +110,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${display.variable} ${body.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />

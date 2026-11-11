@@ -3,6 +3,7 @@ import qrcode from "qrcode-generator";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import ShareSection from "@/components/ShareSection";
+import "./frontpage.css";
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { buildSheets } from "@/lib/xlsxSheets";
 
@@ -1628,7 +1629,8 @@ function BadgeView({ team, th, t }) {
 
 // ─── Visit Counter by Country ────────────────────────────────────
 function AnimNum({val}){var ref=useRef(null);var started=useRef(false);var[d,setD]=useState(0);useEffect(function(){if(!ref.current||started.current)return;var obs=new IntersectionObserver(function(en){if(en[0].isIntersecting&&!started.current){started.current=true;var s=performance.now();var tick=function(now){var p=Math.min((now-s)/1200,1);setD(Math.round((1-Math.pow(1-p,3))*val));if(p<1)requestAnimationFrame(tick);};requestAnimationFrame(tick);obs.disconnect();}},{threshold:0.5});obs.observe(ref.current);return function(){obs.disconnect();};},[val]);return <span ref={ref}>{d.toLocaleString()}</span>;}
-function VisitCounter({ th }) {
+// Counts this visit once per browser session (same logic as before) and returns the totals
+function useVisits() {
   const [visits, setVisits] = useState(null);
   const counted = useRef(false);
   useEffect(() => {
@@ -1685,6 +1687,10 @@ function VisitCounter({ th }) {
     })();
   }, []);
 
+  return visits;
+}
+function VisitCounter({ th }) {
+  const visits = useVisits();
   if (!visits) return null;
 
   const sorted = Object.entries(visits.countries || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -2913,133 +2919,171 @@ function TodayHolidays({th,t}) {
 
 function FadeIn({children,delay}){var ref=useRef(null);var[vis,setVis]=useState(false);useEffect(function(){if(!ref.current)return;var obs=new IntersectionObserver(function(en){if(en[0].isIntersecting){setVis(true);obs.disconnect();}},{threshold:0.1});obs.observe(ref.current);return function(){obs.disconnect();};},[]);return <div ref={ref} style={{opacity:vis?1:0,transform:vis?"none":"translateY(16px)",transition:"opacity .5s ease "+(delay||0)+"ms,transform .5s ease "+(delay||0)+"ms"}}>{children}</div>;}
 function fireConfetti(){var cv=document.createElement("canvas");cv.style.cssText="position:fixed;inset:0;z-index:9999;pointer-events:none";document.body.appendChild(cv);var ctx=cv.getContext("2d");cv.width=window.innerWidth;cv.height=window.innerHeight;var P=[];var cols=["#8B5CF6","#6366F1","#EC4899","#F59E0B","#10B981","#3B82F6"];for(var i=0;i<80;i++)P.push({x:cv.width/2,y:cv.height/2,vx:(Math.random()-.5)*12,vy:Math.random()*-14-4,s:Math.random()*6+3,c:cols[i%6],l:1,d:Math.random()*.015+.008,r:Math.random()*360});(function draw(){ctx.clearRect(0,0,cv.width,cv.height);var alive=false;P.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.vy+=.35;p.l-=p.d;p.r+=p.vx;if(p.l>0){alive=true;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r*Math.PI/180);ctx.globalAlpha=p.l;ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore();}});if(alive)requestAnimationFrame(draw);else cv.remove();})();}
+// ─── Front page (concept B "Command Bar", styles in app/frontpage.css) ─────────
+const FP_TX={
+  en:{create:"Create",join:"Join",teamName:"Team name",teamCode:"Team code or link",year:"Year",w5:"Mon–Fri week",w7:"7-day operations",joinHint:"Ask your team for the code, or paste the board link.",recent:"Jump back in",remove:"Remove",cancel:"Cancel",removeQ:"Remove {n} from this list?",today:"Today",nonWorking:"non-working in {n} countries",noneToday:"No public holiday today in the 55 countries",holTitle:"Public holidays",holSub:"55 countries, regions included, 2026–2035.",country:"Country",next:"Next public holidays",all:"All public holidays",numbers:"Planned here so far",teams:"Teams",members:"Members",visits:"Visits",about:"About",contact:"Contact",language:"Language",theme:"Change theme",free:"Free · no login"},
+  fr:{create:"Créer",join:"Rejoindre",teamName:"Nom de l'équipe",teamCode:"Code ou lien de l'équipe",year:"Année",w5:"Semaine lun–ven",w7:"Activité 7 j/7",joinHint:"Demandez le code à votre équipe ou collez le lien du tableau.",recent:"Reprendre",remove:"Retirer",cancel:"Annuler",removeQ:"Retirer {n} de cette liste ?",today:"Aujourd'hui",nonWorking:"jour chômé dans {n} pays",noneToday:"Aucun jour férié aujourd'hui dans les 55 pays",holTitle:"Jours fériés",holSub:"55 pays, régions comprises, 2026–2035.",country:"Pays",next:"Prochains jours fériés",all:"Tous les jours fériés",numbers:"Planifié ici jusqu'à présent",teams:"Équipes",members:"Membres",visits:"Visites",about:"À propos",contact:"Contact",language:"Langue",theme:"Changer de thème",free:"Gratuit · sans inscription"},
+  de:{create:"Erstellen",join:"Beitreten",teamName:"Teamname",teamCode:"Teamcode oder Link",year:"Jahr",w5:"Mo–Fr-Woche",w7:"7-Tage-Betrieb",joinHint:"Fragen Sie Ihr Team nach dem Code oder fügen Sie den Link ein.",recent:"Weitermachen",remove:"Entfernen",cancel:"Abbrechen",removeQ:"{n} aus dieser Liste entfernen?",today:"Heute",nonWorking:"arbeitsfrei in {n} Ländern",noneToday:"Heute kein Feiertag in den 55 Ländern",holTitle:"Feiertage",holSub:"55 Länder, inklusive Regionen, 2026–2035.",country:"Land",next:"Nächste Feiertage",all:"Alle Feiertage",numbers:"Bisher hier geplant",teams:"Teams",members:"Mitglieder",visits:"Besuche",about:"Über",contact:"Kontakt",language:"Sprache",theme:"Design wechseln",free:"Kostenlos · ohne Anmeldung"},
+  es:{create:"Crear",join:"Unirse",teamName:"Nombre del equipo",teamCode:"Código o enlace del equipo",year:"Año",w5:"Semana lun–vie",w7:"Operación 7 días",joinHint:"Pide el código a tu equipo o pega el enlace del tablero.",recent:"Volver a",remove:"Quitar",cancel:"Cancelar",removeQ:"¿Quitar {n} de esta lista?",today:"Hoy",nonWorking:"festivo en {n} países",noneToday:"Hoy no hay festivos en los 55 países",holTitle:"Días festivos",holSub:"55 países, con regiones, 2026–2035.",country:"País",next:"Próximos festivos",all:"Todos los festivos",numbers:"Planificado aquí hasta ahora",teams:"Equipos",members:"Miembros",visits:"Visitas",about:"Acerca de",contact:"Contacto",language:"Idioma",theme:"Cambiar tema",free:"Gratis · sin registro"},
+  pt:{create:"Criar",join:"Entrar",teamName:"Nome da equipa",teamCode:"Código ou link da equipa",year:"Ano",w5:"Semana seg–sex",w7:"Operação 7 dias",joinHint:"Peça o código à sua equipa ou cole o link do quadro.",recent:"Voltar a",remove:"Remover",cancel:"Cancelar",removeQ:"Remover {n} desta lista?",today:"Hoje",nonWorking:"feriado em {n} países",noneToday:"Hoje não há feriados nos 55 países",holTitle:"Feriados",holSub:"55 países, incluindo regiões, 2026–2035.",country:"País",next:"Próximos feriados",all:"Todos os feriados",numbers:"Planeado aqui até agora",teams:"Equipas",members:"Membros",visits:"Visitas",about:"Sobre",contact:"Contacto",language:"Idioma",theme:"Mudar tema",free:"Grátis · sem registo"},
+  ro:{create:"Creează",join:"Alătură-te",teamName:"Numele echipei",teamCode:"Codul sau linkul echipei",year:"An",w5:"Săptămână L–V",w7:"Program 7 zile",joinHint:"Cere codul echipei sau lipește linkul tabloului.",recent:"Continuă",remove:"Elimină",cancel:"Anulează",removeQ:"Elimini {n} din listă?",today:"Azi",nonWorking:"zi nelucrătoare în {n} țări",noneToday:"Azi nu e sărbătoare legală în cele 55 de țări",holTitle:"Sărbători legale",holSub:"55 de țări, inclusiv regiuni, 2026–2035.",country:"Țara",next:"Următoarele sărbători legale",all:"Toate sărbătorile legale",numbers:"Planificat aici până acum",teams:"Echipe",members:"Membri",visits:"Vizite",about:"Despre",contact:"Contact",language:"Limba",theme:"Schimbă tema",free:"Gratuit · fără cont"},
+  hu:{create:"Létrehozás",join:"Csatlakozás",teamName:"Csapat neve",teamCode:"Csapatkód vagy link",year:"Év",w5:"H–P hét",w7:"7 napos működés",joinHint:"Kérd el a kódot a csapatodtól, vagy illeszd be a linket.",recent:"Folytatás",remove:"Eltávolítás",cancel:"Mégse",removeQ:"Eltávolítod: {n}?",today:"Ma",nonWorking:"munkaszüneti nap {n} országban",noneToday:"Ma nincs ünnepnap az 55 országban",holTitle:"Ünnepnapok",holSub:"55 ország, régiókkal, 2026–2035.",country:"Ország",next:"Következő ünnepnapok",all:"Összes ünnepnap",numbers:"Eddig itt tervezve",teams:"Csapatok",members:"Tagok",visits:"Látogatás",about:"Rólunk",contact:"Kapcsolat",language:"Nyelv",theme:"Téma váltása",free:"Ingyenes · regisztráció nélkül"},
+  sv:{create:"Skapa",join:"Gå med",teamName:"Teamnamn",teamCode:"Teamkod eller länk",year:"År",w5:"Mån–fre-vecka",w7:"Drift 7 dagar",joinHint:"Be ditt team om koden eller klistra in länken.",recent:"Fortsätt",remove:"Ta bort",cancel:"Avbryt",removeQ:"Ta bort {n} från listan?",today:"Idag",nonWorking:"helgdag i {n} länder",noneToday:"Ingen helgdag idag i de 55 länderna",holTitle:"Helgdagar",holSub:"55 länder, regioner inräknade, 2026–2035.",country:"Land",next:"Kommande helgdagar",all:"Alla helgdagar",numbers:"Planerat här hittills",teams:"Team",members:"Medlemmar",visits:"Besök",about:"Om",contact:"Kontakt",language:"Språk",theme:"Byt tema",free:"Gratis · ingen inloggning"},
+  it:{create:"Crea",join:"Unisciti",teamName:"Nome del team",teamCode:"Codice o link del team",year:"Anno",w5:"Settimana lun–ven",w7:"Operatività 7 giorni",joinHint:"Chiedi il codice al tuo team o incolla il link.",recent:"Riprendi",remove:"Rimuovi",cancel:"Annulla",removeQ:"Rimuovere {n} da questo elenco?",today:"Oggi",nonWorking:"festivo in {n} paesi",noneToday:"Oggi nessuna festività nei 55 paesi",holTitle:"Festività",holSub:"55 paesi, regioni incluse, 2026–2035.",country:"Paese",next:"Prossime festività",all:"Tutte le festività",numbers:"Pianificato qui finora",teams:"Team",members:"Membri",visits:"Visite",about:"Informazioni",contact:"Contatti",language:"Lingua",theme:"Cambia tema",free:"Gratis · senza registrazione"},
+  bg:{create:"Създай",join:"Присъедини се",teamName:"Име на екипа",teamCode:"Код или връзка на екипа",year:"Година",w5:"Седмица пон–пет",w7:"Работа 7 дни",joinHint:"Поискай кода от екипа си или постави връзката.",recent:"Продължи",remove:"Премахни",cancel:"Отказ",removeQ:"Да премахна ли {n} от списъка?",today:"Днес",nonWorking:"почивен ден в {n} държави",noneToday:"Днес няма празник в 55-те държави",holTitle:"Официални празници",holSub:"55 държави, включително региони, 2026–2035.",country:"Държава",next:"Следващи празници",all:"Всички празници",numbers:"Планирано тук досега",teams:"Екипи",members:"Членове",visits:"Посещения",about:"За нас",contact:"Контакт",language:"Език",theme:"Смени темата",free:"Безплатно · без регистрация"},
+  ar:{create:"إنشاء",join:"انضمام",teamName:"اسم الفريق",teamCode:"رمز الفريق أو الرابط",year:"السنة",w5:"أسبوع من الاثنين إلى الجمعة",w7:"عمل 7 أيام",joinHint:"اطلب الرمز من فريقك أو الصق رابط اللوحة.",recent:"تابع",remove:"إزالة",cancel:"إلغاء",removeQ:"إزالة {n} من القائمة؟",today:"اليوم",nonWorking:"عطلة في {n} دولة",noneToday:"لا عطلة رسمية اليوم في الدول الـ 55",holTitle:"العطل الرسمية",holSub:"55 دولة مع المناطق، 2026–2035.",country:"الدولة",next:"العطل القادمة",all:"كل العطل الرسمية",numbers:"ما تم تخطيطه هنا",teams:"الفرق",members:"الأعضاء",visits:"الزيارات",about:"حول",contact:"اتصال",language:"اللغة",theme:"تغيير المظهر",free:"مجاني · دون تسجيل"},
+};
+const LANG_NAMES={en:"English",fr:"Français",de:"Deutsch",es:"Español",pt:"Português",ro:"Română",hu:"Magyar",sv:"Svenska",it:"Italiano",bg:"Български",ar:"العربية"};
+const LANG_HOME={ro:"RO",de:"DE",fr:"FR",es:"ES",pt:"PT",hu:"HU",sv:"SE",it:"IT",bg:"BG",ar:"AE"};
+const fpFmt=(n)=>{try{return Number(n||0).toLocaleString();}catch(e){return String(n||0);}};
+function guessCountry(lang){
+  try{const loc=(navigator.languages&&navigator.languages[0])||navigator.language||"";const m=loc.match(/-([A-Z]{2})$/i);if(m&&EU_C.some(c=>c.c===m[1].toUpperCase()))return m[1].toUpperCase();}catch(e){}
+  return LANG_HOME[lang]||"GB";
+}
+const FpIcon=({n,cls="i"})=>{const P={
+  sun:<Fragment><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></Fragment>,
+  moon:<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>,heart:<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>,
+  globe:<Fragment><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></Fragment>,
+  arrow:<path d="M5 12h14M13 6l6 6-6 6"/>,x:<path d="M18 6L6 18M6 6l12 12"/>,plus:<path d="M12 5v14M5 12h14"/>,
+  link:<Fragment><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></Fragment>,
+  flag:<path d="M4 22V4M4 4h13l-2 4 2 4H4"/>};
+  return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true">{P[n]}</svg>;};
+
+function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTeam,onCreateTeam,onJoinTeam,yr,setYr,YRS,ww,setWw,name,setName,code,setCode,err,setErr,confirmDel,setConfirmDel,onAbout,onContact,onHolidays,th,children}){
+  const L=FP_TX[lang]||FP_TX.en;
+  const[mode,setMode]=useState("create");
+  const[stats,setStats]=useState(null);
+  const[todayIdx,setTodayIdx]=useState(null);
+  const[cc,setCc]=useState("GB");
+  const visits=useVisits();
+  const langRef=useRef(null);
+  useEffect(()=>{
+    let alive=true;
+    const g=setTimeout(()=>{if(alive)setCc(guessCountry(lang));},0);
+    fetch("/api/stats",{cache:"no-store"}).then(r=>r.json()).then(d=>{if(alive&&d&&typeof d.teams==="number")setStats(d);}).catch(()=>{});
+    fetch("/hn/y"+CY+".json").then(r=>r.ok?r.json():null).then(d=>{if(alive)setTodayIdx(d||{});}).catch(()=>{if(alive)setTodayIdx({});});
+    return()=>{alive=false;clearTimeout(g);};
+  },[lang]);
+  const names=useHolidayNames([cc]);
+  const todayKey=dk(CY,CM,CD);
+  // Today's non-working countries: the planner's own engine decides, the name index labels them
+  const today=EU_C.filter(co=>computeHolidays(co.c,CY).indexOf(todayKey)>=0).map(co=>{
+    const row=todayIdx&&todayIdx[todayKey]?todayIdx[todayKey].find(r=>r[0]===co.c):null;
+    return{cc:co.c,country:co.n,name:row?(row[2]||row[1]):holName(todayKey),local:row&&row[2]&&row[1]!==row[2]?row[1]:""};
+  });
+  // Next three public holidays in the chosen country
+  const upcoming=[...computeHolidays(cc,CY),...computeHolidays(cc,CY+1)].filter(d=>d>=todayKey).slice(0,3).map(d=>{
+    const rows=names[cc]&&names[cc].h&&names[cc].h[d];const r=rows&&(rows.find(x=>!x[3])||rows[0]);
+    const p=pk(d);const dt=new Date(p.y,p.m,p.d,12);
+    let day="",wd="";try{day=dt.toLocaleDateString(lang==="en"?"en-GB":lang,{day:"numeric",month:"short"});wd=dt.toLocaleDateString(lang==="en"?"en-GB":lang,{weekday:"short"});}catch(e){day=d.slice(5);}
+    return{d,day,wd:d===todayKey?L.today:wd,name:r?r[0]:holName(d)};
+  });
+  const countryName=(EU_C.find(c=>c.c===cc)||{}).n||cc;
+  const vSorted=visits?Object.entries(visits.countries||{}).sort((a,b)=>b[1]-a[1]).slice(0,4):[];
+  const vMax=vSorted.length?vSorted[0][1]:1;
+  const submit=(e)=>{
+    e.preventDefault();
+    if(mode==="create"){if(name.trim())onCreateTeam(name.trim(),yr,ww);}
+    else if(code.trim()){setErr(null);onJoinTeam(code.trim(),e2=>setErr(e2));}
+  };
+  const cycleTheme=()=>{const order=["light","dark","pink"];setTheme(order[(order.indexOf(theme)+1)%3]);};
+  const pickLang=(k)=>{setLang(k);if(langRef.current)langRef.current.open=false;};
+  const todayLabel=(()=>{try{return new Date(CY,CM,CD,12).toLocaleDateString(lang==="en"?"en-GB":lang,{day:"numeric",month:"short"});}catch(e){return todayKey;}})();
+
+  return <div className="fp" data-theme={theme} dir={lang==="ar"?"rtl":"ltr"} lang={lang}>
+    <div className="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+    <header className="top"><div className="wrap">
+      <span className="brand"><span className="logo"><FpIcon n="sun"/></span><span className="long">{t.brand}</span></span>
+      <button className="ghost hide-s" onClick={onAbout}>{L.about}</button>
+      <button className="ghost hide-s" onClick={onContact}>{L.contact}</button>
+      <details className="lang" ref={langRef}>
+        <summary className="ghost" aria-label={L.language+": "+(LANG_NAMES[lang]||lang)}><FpIcon n="globe"/>{(lang||"en").toUpperCase()}</summary>
+        <ul>{Object.keys(LANG_NAMES).filter(k=>TX[k]).map(k=><li key={k}><button aria-current={k===lang?"true":undefined} onClick={()=>pickLang(k)}><b>{k.toUpperCase()}</b>{LANG_NAMES[k]}</button></li>)}</ul>
+      </details>
+      <button className="ghost" onClick={cycleTheme} aria-label={L.theme}><FpIcon n={theme==="dark"?"moon":theme==="pink"?"heart":"sun"}/></button>
+    </div></header>
+
+    <main>
+      <section className="wrap hero">
+        <span className="pill"><i></i>{L.free} · {t.bf}</span>
+        <h1 className="h"><span>{t.brand}</span></h1>
+        <p className="lede">{t.tag1} {t.tag2}</p>
+        <form className="cmd" onSubmit={submit}>
+          <div className="cmd-bar">
+            <div className="seg" role="group" aria-label={L.create+" / "+L.join}>
+              <button type="button" aria-pressed={mode==="create"} onClick={()=>{setMode("create");setErr(null);}}><FpIcon n="plus"/>{L.create}</button>
+              <button type="button" className="j" aria-pressed={mode==="join"} onClick={()=>{setMode("join");setErr(null);}}><FpIcon n="link"/>{L.join}</button>
+            </div>
+            {mode==="create"
+              ?<Fragment><label className="sr" htmlFor="fp-name">{L.teamName}</label><input id="fp-name" className="cmd-in" value={name} maxLength={40} onChange={e=>setName(e.target.value)} placeholder={t.tnP} autoComplete="off"/></Fragment>
+              :<Fragment><label className="sr" htmlFor="fp-code">{L.teamCode}</label><input id="fp-code" className="cmd-in code" value={code} onChange={e=>{setCode(e.target.value);setErr(null);}} placeholder={t.jcP} autoComplete="off" autoCapitalize="off" spellCheck={false}/></Fragment>}
+            {mode==="create"
+              ?<button type="submit" className="go" disabled={!name.trim()}>{t.cr}<FpIcon n="arrow" cls="i flip"/></button>
+              :<button type="submit" className="go j" disabled={!code.trim()}>{t.jn}<FpIcon n="arrow" cls="i flip"/></button>}
+          </div>
+          {mode==="create"
+            ?<div className="cmd-opts">
+              <select aria-label={L.year} value={yr} onChange={e=>setYr(Number(e.target.value))}>{YRS.map(y=><option key={y} value={y}>{y}</option>)}</select>
+              <select aria-label={L.w5+" / "+L.w7} value={ww} onChange={e=>setWw(e.target.value)}><option value="5">{L.w5}</option><option value="7">{L.w7}</option></select>
+            </div>
+            :<div className="cmd-opts"><span>{L.joinHint}</span></div>}
+          {err&&<div className="cmd-err" role="alert">{err}</div>}
+        </form>
+        {myTeams.length>0&&<div className="recent">
+          <h2>{L.recent}</h2>
+          {myTeams.map(tm=><div key={tm.id} className={"rt"+(confirmDel===tm.id?" confirm":"")}>
+            {confirmDel===tm.id?<Fragment>
+              <span className="ask">{L.removeQ.replace("{n}",tm.name||"")}</span>
+              <button className="yes" onClick={()=>{onDeleteTeam(tm.id);setConfirmDel(null);}}>{L.remove}</button>
+              <button className="no" onClick={()=>setConfirmDel(null)}>{L.cancel}</button>
+            </Fragment>:<Fragment>
+              <button className="open" onClick={()=>onOpenTeam(tm.id)}>
+                <span className="stack"><b style={{background:MC[(tm.name||"?").charCodeAt(0)%MC.length].b,color:MC[(tm.name||"?").charCodeAt(0)%MC.length].t}}>{tm.logo?<img src={tm.logo} alt=""/>:(tm.name||"?").trim().charAt(0).toUpperCase()}</b></span>
+                <span><span className="t">{tm.name}</span><br/><span className="m">{tm.year||"—"} · {tm.mc||0} {(tm.mc||0)!==1?t.mbs:t.mb}</span></span>
+              </button>
+              <button className="x" aria-label={L.remove+": "+(tm.name||"")} onClick={()=>setConfirmDel(tm.id)}><FpIcon n="x"/></button>
+            </Fragment>}
+          </div>)}
+        </div>}
+      </section>
+
+      <section className="band" aria-label={t.offToday||L.today}><div className="wrap">
+        <div className="when"><b>{L.today}, {todayLabel}</b><span>{today.length?L.nonWorking.replace("{n}",String(today.length)):L.noneToday}</span></div>
+        {today.length>0&&<ul className="ticks">{today.map(h=><li key={h.cc}><span className="code">{h.cc}</span><span><span className="n">{h.country}</span> <span className="hn" title={h.local||undefined}>· {h.name}</span></span></li>)}</ul>}
+      </div></section>
+
+      <section className="wrap lower">
+        <div className="card hb">
+          <div className="hb-head"><span className="hb-ic"><FpIcon n="flag"/></span><div><h2>{L.holTitle}</h2><p className="sub">{L.holSub}</p></div></div>
+          <div className="hb-ctl"><select aria-label={L.country} value={cc} onChange={e=>setCc(e.target.value)}>{EU_C.map(c=><option key={c.c} value={c.c}>{c.c} · {c.n}</option>)}</select></div>
+          <div style={{fontSize:13,fontWeight:700,color:"var(--muted)",margin:"0 0 8px"}}>{L.next} · {countryName}</div>
+          <ul className="hl">{upcoming.map(u=><li key={u.d}><span className="dt">{u.day}</span><span>{u.name}</span><span className="wd">{u.wd}</span></li>)}</ul>
+          <button className="more" onClick={onHolidays}>{L.all}<FpIcon n="arrow" cls="i flip"/></button>
+        </div>
+        <div className="card">
+          <h2>{L.numbers}</h2>
+          <div className="nums"><div><b>{stats?fpFmt(stats.teams):"–"}</b><span>{L.teams}</span></div><div><b>{stats?fpFmt(stats.members):"–"}</b><span>{L.members}</span></div><div><b>{visits?fpFmt(visits.total):"–"}</b><span>{L.visits}</span></div></div>
+          {vSorted.length>0&&<ul className="cty" aria-label={L.visits}>{vSorted.map(([k,v])=><li key={k}><span className="cc">{k}</span><span className="tr"><i style={{width:Math.max(4,Math.round(v/vMax*100))+"%"}}></i></span><span className="v">{fpFmt(v)}</span></li>)}</ul>}
+        </div>
+      </section>
+      <div className="wrap"><ShareSection th={th} lang={lang}/></div>
+    </main>
+    <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><button onClick={onContact}>{L.contact}</button></div></footer>
+    {children}
+  </div>;
+}
+
 function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,lang,setLang,theme,setTheme}){
   const[name,setName]=useState("");const[scrY,setScrY]=useState(0);useEffect(function(){var h=function(){setScrY(window.scrollY);};window.addEventListener("scroll",h,{passive:true});return function(){window.removeEventListener("scroll",h);};},[]);const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
   const YRS=Array.from({length:10},(_,i)=>2026+i);
 
   if(about) return <AboutPage th={th} t={t} onBack={()=>setAbout(false)} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>;
 
-  return <div style={{minHeight:"100vh",background:th.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 20px",fontFamily:F}}>
-    <div style={{textAlign:"center",maxWidth:520,width:"100%"}}>
-      <div style={{display:"flex",justifyContent:"center",gap:10,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
-        <ThPk theme={theme} set={setTheme} th={th}/>
-        <LangPk lang={lang} set={setLang} th={th}/>
-        <button onClick={()=>setAbout(true)} style={{padding:"3px 10px",borderRadius:6,fontSize:11,fontWeight:600,fontFamily:F,cursor:"pointer",border:`1px solid ${th.gbd}`,background:th.gbg,color:th.t2,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,display:"flex",alignItems:"center",gap:4,transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=th.ac} onMouseLeave={e=>e.currentTarget.style.borderColor=th.gbd}><Ic n="globe" s={11} c={th.t3}/>{t.about}</button>
-        <button onClick={()=>setContact(true)} style={{padding:"3px 10px",borderRadius:6,fontSize:11,fontWeight:600,fontFamily:F,cursor:"pointer",border:`1px solid ${th.gbd}`,background:th.gbg,color:th.t2,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,display:"flex",alignItems:"center",gap:4,transition:"all .2s"}} onMouseEnter={e=>e.currentTarget.style.borderColor=th.ac} onMouseLeave={e=>e.currentTarget.style.borderColor=th.gbd}><Ic n="mail" s={11} c={th.t3}/>{t.contact}</button>
-      </div>
-      <div style={{width:60,height:60,borderRadius:18,background:th.gd,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",boxShadow:`0 8px 40px ${th.ac}50, inset 0 1px 0 rgba(255,255,255,0.3)`}}><Ic n="sun" s={28} c="#fff"/></div>
-      <h1 style={{fontSize:26,fontWeight:800,color:th.tx,margin:"0 0 6px",letterSpacing:-.6,lineHeight:1.15}}>{t.brand}</h1>
-      <p style={{fontSize:15,color:th.t2,margin:"0 0 32px",lineHeight:1.5}}>{t.tag1}<br/>{t.tag2}</p>
-
-      {!mode&&<div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:24}}>
-        {/* Create Team with orbiting glow */}
-        <div onClick={()=>{setMode("create");setErr(null);}} style={{position:"relative",borderRadius:22,padding:2,cursor:"pointer",overflow:"hidden",marginBottom:0}}>
-          <div style={{position:"absolute",inset:-20,background:"conic-gradient(from 0deg, transparent 0%, transparent 30%, #818CF8 40%, #A78BFA 50%, #6366F1 55%, transparent 65%, transparent 100%)",animation:"glowSpin 3s linear infinite",borderRadius:"50%",zIndex:0}}/>
-          <div style={{position:"relative",zIndex:1,background:"linear-gradient(135deg, rgba(129,140,248,0.15), rgba(99,102,241,0.1))",backdropFilter:"blur(20px) saturate(1.8)",WebkitBackdropFilter:"blur(20px) saturate(1.8)",border:"1px solid rgba(255,255,255,0.45)",borderRadius:20,padding:"20px 22px",display:"flex",alignItems:"center",gap:16,fontFamily:F,textAlign:"left",transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",boxShadow:"0 2px 16px rgba(99,102,241,0.2), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";}} onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";}}>
-            <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #818CF8, #6366F1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(99,102,241,0.2)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="plus" s={22} c="#fff"/></div>
-            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.crt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{t.crSub}</div></div>
-          </div>
-        </div>
-        {/* Join Team */}
-        {[
-          {m:"join",i:"link",grad:"linear-gradient(135deg, rgba(52,211,153,0.12), rgba(16,185,129,0.08))",glowColor:"rgba(16,185,129,0.18)",iconGrad:"linear-gradient(135deg, #34D399, #10B981)",tt:t.jnt,st:t.jnSub},
-        ].map(o=>
-          <button key={o.m} onClick={()=>{setMode(o.m);setErr(null);}} style={{
-            background:o.grad,
-            backdropFilter:"blur(20px) saturate(1.8)",
-            WebkitBackdropFilter:"blur(20px) saturate(1.8)",
-            border:"1px solid rgba(255,255,255,0.45)",
-            borderRadius:20,padding:"20px 22px",cursor:"pointer",textAlign:"left",
-            display:"flex",alignItems:"center",gap:16,
-            transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",
-            boxShadow:`0 2px 16px ${o.glowColor}, 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)`,
-            fontFamily:F,position:"relative",overflow:"hidden",
-          }}
-          onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";e.currentTarget.style.boxShadow=`0 8px 32px ${o.glowColor}, 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)`;}}
-          onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";e.currentTarget.style.boxShadow=`0 2px 16px ${o.glowColor}, 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)`;}}>
-            <div style={{width:44,height:44,borderRadius:14,background:o.iconGrad,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 4px 16px ${o.glowColor}`,border:"1px solid rgba(255,255,255,0.3)"}}><Ic n={o.i} s={22} c="#fff"/></div>
-            <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{o.tt}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>{o.st}</div></div>
-          </button>)}
-      </div>}
-
-      {mode==="create"&&<div style={{background:th.gbg,borderRadius:G.rSm,padding:24,border:`1px solid ${th.gbd}`,boxShadow:th.sm,marginBottom:24,textAlign:"left",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}><h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx}}>{t.crt}</h3><button onClick={()=>setMode(null)} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><Ic n="x" s={16} c={th.t3}/></button></div>
-        <label style={{fontSize:12,fontWeight:600,color:th.t2,marginBottom:4,display:"block"}}>{t.tn}</label>
-        <Inp th={th} value={name} onChange={setName} placeholder={t.tnP} autoFocus maxLength={40} onKeyDown={e=>{if(e.key==="Enter"&&name.trim())onCreateTeam(name.trim(),yr,ww);}}/>
-        <label style={{fontSize:12,fontWeight:600,color:th.t2,marginBottom:4,display:"block",marginTop:12}}>{t.vy}</label>
-        <div style={{display:"flex",flexWrap:"wrap",gap:5}}>{YRS.map(y=> <button key={y} onClick={()=>setYr(y)} style={{padding:"6px 12px",borderRadius:6,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer",border:y===yr?`2px solid ${th.ac}`:`1.5px solid ${th.bd}`,background:y===yr?th.al:th.sf,color:y===yr?th.ac:th.tx}}>{y}</button>)}</div>
-        <label style={{fontSize:12,fontWeight:600,color:th.t2,marginBottom:8,display:"block",marginTop:14}}>{t.workDays||"Working Days"}</label>
-        <div style={{display:"flex",gap:5,marginBottom:8}}>
-          {[t.mo,t.tu,t.we2,t.th,t.fr,t.sa,t.su].map((d,i)=>{
-            const isWork=ww==="7"||i<5;
-            return <div key={i} style={{flex:1,padding:"8px 0",borderRadius:G.rXs,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:isWork?th.al:th.sh,color:isWork?th.ac:th.t3,border:isWork?"1.5px solid rgba(37,99,235,0.25)":"1.5px solid "+th.gbd,transition:"all .3s"}}>
-              {d}
-              <div style={{fontSize:8,marginTop:2}}>{isWork?"\u2713":"off"}</div>
-            </div>;
-          })}
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          {[{k:"5",label:t.stdWeek||"Standard (Mon\u2013Fri)"},{k:"7",label:t.fullWeek||"7-Day Operations"}].map(opt=>
-            <button key={opt.k} onClick={()=>setWw(opt.k)} style={{flex:1,padding:"8px 10px",borderRadius:8,fontSize:11,fontWeight:600,fontFamily:F,cursor:"pointer",transition:"all .2s",background:ww===opt.k?th.ac:"transparent",color:ww===opt.k?"#fff":th.t2,border:ww===opt.k?"none":"1.5px solid "+th.gbd}}>{opt.label}</button>
-          )}
-        </div>
-        <div style={{marginTop:14}}><Btn th={th} onClick={()=>name.trim()&&onCreateTeam(name.trim(),yr,ww)} disabled={!name.trim()} icon="arrow" style={{width:"100%",justifyContent:"center"}}>{t.cr}</Btn></div>
-      </div>}
-
-      {mode==="join"&&<div style={{background:th.gbg,borderRadius:G.rSm,padding:24,border:`1px solid ${th.gbd}`,boxShadow:th.sm,marginBottom:24,textAlign:"left",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}><h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx}}>{t.jnt}</h3><button onClick={()=>setMode(null)} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><Ic n="x" s={16} c={th.t3}/></button></div>
-        <Inp th={th} value={code} onChange={setCode} placeholder={t.jcP} autoFocus onKeyDown={e=>{if(e.key==="Enter"&&code.trim()){setErr(null);onJoinTeam(code.trim(),e2=>setErr(e2));}}}/>
-        {err&&<div style={{marginTop:6,fontSize:12,color:"#DC2626"}}>{err}</div>}
-        <div style={{marginTop:14}}><Btn th={th} onClick={()=>{if(code.trim()){setErr(null);onJoinTeam(code.trim(),e2=>setErr(e2));}}} disabled={!code.trim()} icon="arrow" style={{width:"100%",justifyContent:"center"}}>{t.jn}</Btn></div>
-      </div>}
-
-      {myTeams.length>0&&<div style={{textAlign:"left",marginBottom:16}}><h3 style={{fontSize:12,fontWeight:600,color:th.t3,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>{t.mt}</h3>
-        {myTeams.map(tm=> <div key={tm.id} style={{width:"100%",background:th.gbg,border:`1px solid ${confirmDel===tm.id?'#EF4444':th.gbd}`,borderRadius:G.rXs,marginBottom:5,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,transition:"all .25s",overflow:"hidden"}}>
-          {confirmDel===tm.id?<div style={{padding:"12px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-            <div style={{fontSize:13,fontWeight:600,color:"#EF4444",fontFamily:F}}>Remove <strong>{tm.name}</strong>?</div>
-            <div style={{display:"flex",gap:4,flexShrink:0}}>
-              <button onClick={function(){onDeleteTeam(tm.id);setConfirmDel(null);}} style={{padding:"6px 14px",borderRadius:8,border:"none",background:"#EF4444",color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer"}}>Remove</button>
-              <button onClick={function(){setConfirmDel(null);}} style={{padding:"6px 14px",borderRadius:8,border:`1px solid ${th.bd}`,background:th.sf,color:th.t2,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer"}}>Cancel</button>
-            </div>
-          </div>:<div style={{display:"flex",alignItems:"center"}}>
-            <button onClick={function(){onOpenTeam(tm.id);}} style={{flex:1,background:"none",border:"none",padding:"12px 16px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",fontFamily:F}}>
-              <div style={{textAlign:"left"}}><div style={{fontSize:14,fontWeight:600,color:th.tx}}>{tm.name}</div><div style={{fontSize:11,color:th.t3,marginTop:1}}>{tm.year||"—"} · {tm.mc||0} {(tm.mc||0)!==1?t.mbs:t.mb}</div></div>
-              <Ic n="chevR" s={16} c={th.t3}/>
-            </button>
-            <button onClick={function(e){e.stopPropagation();setConfirmDel(tm.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:"8px 12px",display:"flex",alignItems:"center",flexShrink:0,opacity:0.4,transition:"opacity .2s"}} onMouseEnter={function(e){e.currentTarget.style.opacity="1";}} onMouseLeave={function(e){e.currentTarget.style.opacity="0.4";}}><Ic n="x" s={14} c="#EF4444"/></button>
-          </div>}
-        </div>)}
-      </div>}
-
-      {/* Country Holidays */}
-      <button onClick={()=>setHolBr(true)} style={{
-        width:"100%",marginTop:8,
-        background:"linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.08))",
-        backdropFilter:"blur(20px) saturate(1.8)",
-        WebkitBackdropFilter:"blur(20px) saturate(1.8)",
-        border:"1px solid rgba(255,255,255,0.45)",
-        borderRadius:20,padding:"20px 22px",cursor:"pointer",textAlign:"left",
-        display:"flex",alignItems:"center",gap:16,
-        transition:"all 0.35s cubic-bezier(0.4,0,0.2,1)",
-        boxShadow:"0 2px 16px rgba(245,158,11,0.12), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)",
-        fontFamily:F,
-      }}
-      onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px) scale(1.01)";e.currentTarget.style.boxShadow="0 8px 32px rgba(245,158,11,0.18), 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.8)";}}
-      onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0) scale(1)";e.currentTarget.style.boxShadow="0 2px 16px rgba(245,158,11,0.12), 0 1px 3px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.6)";}}>
-        <div style={{width:44,height:44,borderRadius:14,background:"linear-gradient(135deg, #F59E0B, #EF4444)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"0 4px 16px rgba(245,158,11,0.25)",border:"1px solid rgba(255,255,255,0.3)"}}><Ic n="flag" s={22} c="#fff"/></div>
-        <div><div style={{fontSize:16,fontWeight:700,color:th.tx,letterSpacing:-0.2}}>{t.ch}</div><div style={{fontSize:12,color:th.t2,marginTop:3,fontWeight:450}}>2026–2035 · 55 countries</div></div>
-      </button>
-    </div>
-    <TodayHolidays th={th} t={t}/>
-    <div style={{marginTop:40,fontSize:11,color:th.t3}}>{t.bf}</div>
-    <ShareSection th={th} lang={lang}/>
-    <FadeIn delay={200}><VisitCounter th={th}/></FadeIn>
-    <FadeIn delay={350}><TeamStats th={th} t={t}/></FadeIn>
-    
-    
+  return <FrontPage {...{t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTeam,onCreateTeam,onJoinTeam,yr,setYr,YRS,ww,setWw,name,setName,code,setCode,err,setErr,confirmDel,setConfirmDel}}
+    onAbout={()=>setAbout(true)} onContact={()=>setContact(true)} onHolidays={()=>setHolBr(true)} th={th}>
     {holBr&&<HolBrowser onClose={()=>setHolBr(false)} th={th} t={t} year={yr}/>}
     {contact&&<ContactModal onClose={()=>setContact(false)} th={th} t={t}/>}
-  </div>;
+  </FrontPage>;
 }
 
 // ─── Workspace ───────────────────────────────────────────────────

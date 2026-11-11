@@ -32,4 +32,17 @@ for (const cc of codes) {
   writeFileSync(join(out, `${cc.toLowerCase()}.json`), body);
   total += body.length;
 }
+// Per-year index of NATIONAL public holidays across all countries (front page "today" band): hn/y<year>.json
+const byYear = {};
+for (const cc of codes) {
+  const file = join(out, `${cc.toLowerCase()}.json`);
+  if (!existsSync(file)) continue;
+  const { h } = JSON.parse(readFileSync(file, "utf8"));
+  for (const [date, rows] of Object.entries(h)) {
+    const nat = rows.find(r => String(r[2]).includes("P") && !r[3]) || rows.find(r => !r[3]) || rows[0];
+    if (!nat) continue;
+    ((byYear[date.slice(0, 4)] ||= {})[date] ||= []).push([cc, nat[0], nat[1]]);
+  }
+}
+for (const [y, idx] of Object.entries(byYear)) writeFileSync(join(out, `y${y}.json`), JSON.stringify(idx));
 console.log(`wrote ${codes.length - missing.length} files, ${Math.round(total / 1024)} KB total; no data for: ${missing.join(", ") || "none"}`);
