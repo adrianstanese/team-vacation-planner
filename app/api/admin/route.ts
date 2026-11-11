@@ -6,6 +6,7 @@ import {
   makeSession, recordFailure, sameOrigin, tooManyAttempts,
 } from "@/lib/adminAuth";
 import type { Sql } from "@/lib/db";
+import { newOwnerKey } from "@/lib/teamAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +96,8 @@ export async function GET(req: NextRequest) {
     const data = rows[0].data as Team;
     // Never send PIN hashes to the browser, only whether a PIN is set
     const members = (data.members || []).map(m => { const { pinHash, ...rest } = m; return { ...rest, hasPin: !!pinHash }; });
-    return json({ team: { ...data, members }, updated_at: rows[0].updated_at, expires_at: rows[0].expires_at });
+    const { ownerHash, ...rest } = data as Team & { ownerHash?: string };
+    return json({ team: { ...rest, hasOwner: !!ownerHash, members }, updated_at: rows[0].updated_at, expires_at: rows[0].expires_at });
   }
 
   if (op === "export") {
@@ -213,6 +215,15 @@ export async function POST(req: NextRequest) {
     const r = await updateTeam(sql, id, t => { if (!t.approver) return null; t.approver = null; t.log = addLog(t, "Approval mode turned off by the site admin"); return t; });
     if (r.ok) await logAction(sql, "clearApprover", id);
     return json(r, r.ok ? 200 : 409);
+  }
+
+  if (action === "ownerLink") {
+    // New owner key for the team (replaces any previous owner key); the link is shown once
+    const { key, hash } = newOwnerKey();
+    const r = await updateTeam(sql, id, t => { (t as Team & { ownerHash?: string }).ownerHash = hash; t.log = addLog(t, "New owner link created by the site admin"); return t; });
+    if (!r.ok) return json(r, 409);
+    await logAction(sql, "ownerLink", id);
+    return json({ ok: true, link: `${req.nextUrl.origin}/#team=${id}&owner=${key}` });
   }
 
   if (action === "extend") {

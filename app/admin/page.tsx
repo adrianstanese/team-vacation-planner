@@ -9,7 +9,7 @@ const C = { bg: "#F4F2FB", card: "#FFFFFF", tx: "#1E1B4B", t2: "#4B5563", t3: "#
 type Stats = { teams: number; active: number; updated7: number; updated30: number; members: number; empty: number; trash: number; visits: number; countries: { cc: string; n: number }[]; months: { month: string; n: number }[] };
 type TeamRow = { id: string; name: string; year: string; created: string; updated_at: string; expires_at: string; locked: boolean; approver: string | null; members: number; pins: number; days: number };
 type Member = { id: string; name?: string; country?: string; region?: string; days?: string[]; hasPin?: boolean; pto?: number; approved?: boolean };
-type TeamDetail = { team: { id?: string; name?: string; year?: number; locked?: boolean; lockY?: Record<string, boolean>; approver?: string | null; members: Member[]; createdAt?: string; log?: { t: string; a: string }[] }; updated_at: string; expires_at: string };
+type TeamDetail = { team: { id?: string; name?: string; year?: number; locked?: boolean; hasOwner?: boolean; lockY?: Record<string, boolean>; approver?: string | null; members: Member[]; createdAt?: string; log?: { t: string; a: string }[] }; updated_at: string; expires_at: string };
 
 const fmt = (s?: string | null) => { if (!s) return "—"; const d = new Date(s); return isNaN(+d) ? "—" : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); };
 const ago = (s?: string | null) => { if (!s) return "—"; const d = (Date.now() - new Date(s).getTime()) / 864e5; if (d < 1) return "today"; if (d < 2) return "yesterday"; if (d < 60) return `${Math.floor(d)} days ago`; return fmt(s); };
@@ -107,11 +107,18 @@ function Detail({ id, onClose, onChanged, flash }: { id: string; onClose: () => 
       <div>Expires<br /><b style={{ color: new Date(d.expires_at) < new Date() ? C.red : C.tx }}>{fmt(d.expires_at)}</b></div>
       <div>Locked<br /><b style={{ color: C.tx }}>{lockedYears.length ? lockedYears.join(", ") : "No"}</b></div>
       <div>Approval mode<br /><b style={{ color: C.tx }}>{t.approver ? "On" : "Off"}</b></div>
+      <div>Owner<br /><b style={{ color: C.tx }}>{t.hasOwner ? "Yes" : "None"}</b></div>
     </div>
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 18 }}>
       <a href={`/#team=${id}`} target="_blank" rel="noopener" style={{ textDecoration: "none" }}><Btn small tone="primary">Open team</Btn></a>
       <a href={`/api/admin?op=export&id=${id}`} style={{ textDecoration: "none" }}><Btn small>Download JSON</Btn></a>
       <Btn small onClick={() => act({ action: "extend" }, "Expiry extended by 24 months")}>Extend 24 months</Btn>
+      <Btn small onClick={async () => {
+        if (t.hasOwner && !window.confirm("This team already has an owner. A new link replaces the old owner key. Continue?")) return;
+        const r = await api("/api/admin", { op: "action", id, action: "ownerLink" });
+        if (r.status === 200) { const link = String(r.data.link); try { await navigator.clipboard.writeText(link); flash("Owner link copied (shown once)"); } catch { window.prompt("Owner link (shown once):", link); } setVer(v => v + 1); }
+        else flash(String(r.data.error || "That did not work."));
+      }}>Create owner link</Btn>
       {t.locked ? <Btn small onClick={() => act({ action: "setLock", locked: false, year: base }, `Unlocked ${base}`)}>Unlock {base}</Btn> : <Btn small onClick={() => act({ action: "setLock", locked: true, year: base }, `Locked ${base}`)}>Lock {base}</Btn>}
       {Object.keys(t.lockY || {}).map(y => <Btn key={y} small onClick={() => act({ action: "setLock", locked: false, year: Number(y) }, `Unlocked ${y}`)}>Unlock {y}</Btn>)}
       {t.approver && <Btn small onClick={() => act({ action: "clearApprover" }, "Approval mode turned off", "Turn off approval mode for this team?")}>Turn off approval</Btn>}

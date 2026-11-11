@@ -11,16 +11,7 @@ import { planImport } from "@/lib/importPlan";
 import { findBridges } from "@/lib/bridges";
 import { X, setTextLang, dateLocale } from "@/lib/extraText";
 
-// ─── PIN hashing (SHA-256) ──────────────────────────────────────────
-const hashPin = async (pin) => {
-  const enc = new TextEncoder().encode(String(pin));
-  const buf = await crypto.subtle.digest("SHA-256", enc);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-};
-const verifyPin = async (pin, hash) => {
-  const h = await hashPin(pin);
-  return h === hash;
-};
+// PINs are hashed and checked on the server (app/api/team/auth, lib/teamAuth.ts)
 
 // ═══════════════════════════════════════════════════════════════════
 // TEAM VACATION PLANNER v5
@@ -675,14 +666,28 @@ const API_BASE = "/api/team";
 // VER = server version (X-Updated-At) this browser last saw; BASE = that version's JSON (for 3-way merges).
 const SYNC={VER:{},BASE:{},PENDING:{},INFLIGHT:{},listeners:new Set()};
 const syncIdle=id=>!SYNC.INFLIGHT[id]&&!SYNC.PENDING[id];
+// PIN tokens (per tab) and owner keys (per browser): proofs the server checks before changing protected members
+const authKey=id=>"tvp-tok-"+id;
+const getTokens=id=>{try{return JSON.parse(sessionStorage.getItem(authKey(id))||"{}")||{};}catch(e){return {};}};
+const setToken=(id,mid,tok)=>{try{const t0=getTokens(id);t0[mid]=tok;sessionStorage.setItem(authKey(id),JSON.stringify(t0));}catch(e){}};
+const getOwner=id=>{try{return localStorage.getItem("tvp-owner-"+id)||"";}catch(e){return "";}};
+const setOwner=(id,key)=>{try{if(key)localStorage.setItem("tvp-owner-"+id,key);}catch(e){}};
+const hasPinOf=m=>!!(m&&(m.hasPin||m.pinHash));
+const waitIdle=async id=>{for(let i=0;i<100&&!syncIdle(id);i++)await new Promise(r=>setTimeout(r,100));};
+async function teamAuth(body){try{const r=await fetch("/api/team/auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));return {ok:r.ok,status:r.status,...j};}catch(e){return {ok:false,status:0,error:"offline"};}}
 function syncNotify(id,doc){SYNC.listeners.forEach(fn=>{try{fn(id,doc);}catch(e){}});}
+// Reload a team from the server and show it (after the server refused part of a save, or after a PIN change)
+async function syncReload(id,reverted){
+  try{const r=await fetch(API_BASE+"?id="+id,{cache:"no-store"});if(!r.ok)return;const d=await r.json();if(!d)return;const v=r.headers.get("X-Updated-At");if(v&&syncIdle(id)){SYNC.VER[id]=v;SYNC.BASE[id]=JSON.stringify(d);}syncNotify(id,d);if(reverted)window.dispatchEvent(new CustomEvent("tvp-reverted"));}catch(e){}
+}
 async function syncFlush(id){
   if(SYNC.INFLIGHT[id])return;
   while(SYNC.PENDING[id]){
     const doc=SYNC.PENDING[id];delete SYNC.PENDING[id];
     SYNC.INFLIGHT[id]=true;
     try{
-      let res=await fetch(API_BASE+"?id="+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,data:doc,base:SYNC.VER[id]||null})});
+      const proof={tokens:getTokens(id),owner:getOwner(id)||undefined};
+      let res=await fetch(API_BASE+"?id="+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,data:doc,base:SYNC.VER[id]||null,...proof})});
       if(res.status===409){
         const cur=await res.json();
         const base=SYNC.BASE[id]?JSON.parse(SYNC.BASE[id]):null;
@@ -690,13 +695,14 @@ async function syncFlush(id){
         const mineNow=SYNC.PENDING[id]||doc;delete SYNC.PENDING[id];
         const merged=mergeTeam(base,mineNow,cur.data);
         SYNC.VER[id]=cur.v;SYNC.BASE[id]=JSON.stringify(cur.data);
-        res=await fetch(API_BASE+"?id="+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,data:merged,base:cur.v})});
-        if(res.ok){const j=await res.json();SYNC.VER[id]=j.v||null;SYNC.BASE[id]=JSON.stringify(merged);}
+        res=await fetch(API_BASE+"?id="+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,data:merged,base:cur.v,...proof})});
+        if(res.ok){const j=await res.json();SYNC.VER[id]=j.v||null;SYNC.BASE[id]=JSON.stringify(merged);if(j.reverted&&j.reverted.length)syncReload(id,true);}
         else if(res.status===409){SYNC.PENDING[id]=merged;}
         syncNotify(id,merged);
       }else if(res.ok){
         const j=await res.json().catch(()=>({}));
         if(j&&j.v){SYNC.VER[id]=j.v;SYNC.BASE[id]=JSON.stringify(doc);}
+        if(j&&j.reverted&&j.reverted.length)syncReload(id,true);
       }
     }catch(e){
       // Offline or server error: keep the newest edit queued and try again shortly
@@ -3638,7 +3644,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   // Approver, once unlocked, can manage all members
   const isPinLocked = (memberId) => {
     const target = team.members.find(x => x.id === memberId);
-    if (!target || !target.pinHash) return false; // No PIN → free
+    if (!target || !hasPinOf(target)) return false; // No PIN → free
     if (unlockedId === memberId) return false; // Already unlocked
     const meUnlocked = team.members.find(x => x.id === unlockedId);
     const meIsApprover = meUnlocked && (meUnlocked.isApprover || team.approver === meUnlocked.id);
@@ -3671,6 +3677,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   // Undo steps belong to the year they were made in: start clean when the year changes
   useEffect(()=>{historyRef.current=[];redoRef.current=[];},[team.year]);
 
+  useEffect(()=>{const h=()=>flash(X("reverted"));window.addEventListener("tvp-reverted",h);return()=>window.removeEventListener("tvp-reverted",h);},[]);
   // Keyboard shortcuts for undo/redo
   useEffect(()=>{const h=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==="z"){e.preventDefault();if(e.shiftKey)redo();else undo();}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[team]);
 
@@ -3690,16 +3697,18 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
     const n=nn.trim();
     if(!n||!nc)return;
     if(nPin.length!==6||!/^\d{6}$/.test(nPin)){flash(X("pin6"));return;}
-    const ph=await hashPin(nPin);
+    const pinForNew=nPin;
     const teamHasApprover=!!team.approver||team.members.some(x=>x.isApprover);
     const becomeApprover=nIsApprover&&!teamHasApprover;
-    const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:!team.approver,pinHash:ph,isApprover:becomeApprover};
+    const nm={id:gid(),name:n,country:nc,region:nr||null,days:[],pto:null,approved:!team.approver,isApprover:becomeApprover};
     const co=EU_C.find(c=>c.c===nc);
     const updTeam={...team,members:[...team.members,nm],log:addLogEntry(team,`${n} (${(co&&co.f)||""} ${(co&&co.n)||nc}) joined the team`)};
     if(becomeApprover&&!team.approver)updTeam.approver=nm.id;
     updateWithHistory(updTeam);
     setAId(nm.id);
     setUnlockedId(nm.id);
+    // The PIN is hashed and stored by the server once the new member is saved
+    (async()=>{await waitIdle(team.id);const r=await teamAuth({op:"set",id:team.id,memberId:nm.id,pin:pinForNew});if(r.ok&&r.token){setToken(team.id,nm.id,r.token);syncReload(team.id,false);}else flash(r.error||"PIN not saved");})();
     setAdding(false);
     setNn("");setNc(null);setNr(null);
     setNPin("");setNIsApprover(false);
@@ -3710,7 +3719,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
     const target=team.members.find(x=>x.id===id);
     if(!target){return;}
     // If the member has a PIN, require approver or self to delete
-    if(target.pinHash){
+    if(hasPinOf(target)){
       const meUnlocked=team.members.find(x=>x.id===unlockedId);
       const meIsApprover=meUnlocked&&(meUnlocked.isApprover||team.approver===meUnlocked.id);
       if(unlockedId!==id&&!meIsApprover){
@@ -3776,15 +3785,17 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
     if (pinInput.length !== 6) return;
     const m = team.members.find(x => x.id === pinPrompt);
     if (!m) { setPinPrompt(null); return; }
-    if (!m.pinHash) {
+    if (!hasPinOf(m)) {
       setUnlockedId(m.id);
       setAId(m.id);
       setPinPrompt(null);
       setPinInput("");
       return;
     }
-    const ok = await verifyPin(pinInput, m.pinHash);
-    if (ok) {
+    const r = await teamAuth({ op: "verify", id: team.id, memberId: m.id, pin: pinInput });
+    if (r.ok && r.token) setToken(team.id, m.id, r.token);
+    if (r.status === 429) { flash(r.error || "Too many tries"); }
+    if (r.ok) {
       setUnlockedId(m.id);
       setAId(m.id);
       setPinPrompt(null);
@@ -3802,6 +3813,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         {pinErr&&<div style={{color:"#EF4444",fontSize:11,fontWeight:600,marginTop:6,textAlign:"center",fontFamily:F}}>{X("pinWrong")}</div>}
         <div style={{display:"flex",gap:8,marginTop:16}}>
           <button onClick={tryUnlock} disabled={pinInput.length!==6} style={{flex:1,padding:"10px",borderRadius:10,border:"none",background:pinInput.length===6?th.ac:th.t3,color:"#fff",fontSize:13,fontWeight:700,fontFamily:F,cursor:pinInput.length===6?"pointer":"not-allowed",opacity:pinInput.length===6?1:0.5}}>{X("unlock")}</button>
+          {getOwner(team.id)&&<button onClick={async()=>{const who=(team.members.find(x=>x.id===pinPrompt)||{}).name||"";if(!window.confirm(X("ownerResetQ",{n:who})))return;await waitIdle(team.id);const r=await teamAuth({op:"reset",id:team.id,memberId:pinPrompt,owner:getOwner(team.id)});if(r.ok){flash(X("ownerResetDone",{n:who}));syncReload(team.id,false);setPinPrompt(null);setPinInput("");}else flash(r.error||"Not reset");}} style={{padding:"10px 12px",borderRadius:10,border:"1px solid #FECACA",background:"transparent",color:"#B91C1C",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer"}}>{X("ownerReset")}</button>}
           <button onClick={()=>{setPinPrompt(null);setPinInput("");setPinErr(false);}} style={{padding:"10px 16px",borderRadius:10,border:"1px solid "+th.bd,background:"transparent",color:th.t2,fontSize:13,fontWeight:600,fontFamily:F,cursor:"pointer"}}>{X("cancel")}</button>
         </div>
       </div>
@@ -3812,13 +3824,11 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
   const savePin = async () => {
     if (newPinInput.length !== 6) return;
     if (newPinInput !== confirmPinInput) return;
-    const ph = await hashPin(newPinInput);
-    const upd = {
-      ...team,
-      members: team.members.map(x => x.id === setPinFor ? { ...x, pinHash: ph } : x),
-      log: addLogEntry(team, `PIN set for ${(team.members.find(x=>x.id===setPinFor)||{}).name||"member"}`)
-    };
-    updateWithHistory(upd);
+    await waitIdle(team.id);
+    const r = await teamAuth({ op: "set", id: team.id, memberId: setPinFor, pin: newPinInput, token: getTokens(team.id)[setPinFor], owner: getOwner(team.id) || undefined });
+    if (!r.ok) { flash(r.error || "PIN not saved"); return; }
+    if (r.token) setToken(team.id, setPinFor, r.token);
+    syncReload(team.id, false);
     setUnlockedId(setPinFor);
     setSetPinFor(null);
     setNewPinInput("");
@@ -3884,7 +3894,8 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
       <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>Import</Btn>
       <label title={X("carryTitle")} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2,fontWeight:600}}>{X("carryUpTo")}
         <input type="number" min="0" max="60" value={team.carryMax||0} onChange={e=>{const v=Math.max(0,Math.min(60,parseInt(e.target.value)||0));const nt={...team};if(v)nt.carryMax=v;else delete nt.carryMax;updateWithHistory(nt);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11}}/> {X("days")}</label>
-      {onDeleteForever&&<Btn th={th} v="ghost" sz="sm" onClick={()=>{setDelText("");setDelOpen(true);}} style={{color:"#DC2626",borderColor:"#FECACA"}}>{NY.delBtn}</Btn>}
+      {getOwner(team.id)?<button onClick={async()=>{const link=window.location.origin+"/#team="+team.id+"&owner="+getOwner(team.id);try{await navigator.clipboard.writeText(link);flash(X("ownerCopied"));}catch(e){window.prompt(X("ownerLink"),link);}}} title={X("ownerLinkHint")} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",color:"#047857",fontSize:11,fontWeight:700,fontFamily:F,cursor:"pointer"}}>★ {X("ownerYou")} · {X("ownerLink")}</button>:(team.hasOwner?<span style={{fontSize:11,color:th.t3}}>{X("ownerOther")}</span>:null)}
+      {onDeleteForever&&(!team.hasOwner||getOwner(team.id))&&<Btn th={th} v="ghost" sz="sm" onClick={()=>{setDelText("");setDelOpen(true);}} style={{color:"#DC2626",borderColor:"#FECACA"}}>{NY.delBtn}</Btn>}
       <div style={{width:1,height:20,background:th.bd}}/>
       <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}>
         <span style={{fontWeight:600}}>{t.alertLabel}</span>
@@ -3907,7 +3918,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
         <div style={{padding:"4px 8px 6px",display:"flex",flexDirection:"column",gap:4}}>
           {!locked&&!adding&&<Btn th={th} sz="sm" icon="plus" onClick={startAdd} disabled={team.members.length>=50} style={{width:"100%",justifyContent:"center"}}>{t.am}</Btn>}
           {!locked&&!adding&&team.members.length<50&&<button onClick={()=>setShowCSVImport(true)} style={{width:"100%",marginTop:4,padding:"6px 8px",border:"none",background:"none",color:th.t2,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}}>{X("several")}</button>}
-          {(()=>{const am=team.members.find(x=>x.id===aId);if(!am||am.pinHash)return null;return <button onClick={()=>{setSetPinFor(am.id);setNewPinInput("");setConfirmPinInput("");}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"1.5px solid #F59E0B",background:"rgba(254,243,199,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#92400E",marginTop:4}}><Ic n="lock" s={12} c="#92400E"/> Set PIN to protect</button>;})()}
+          {(()=>{const am=team.members.find(x=>x.id===aId);if(!am||hasPinOf(am))return null;return <button onClick={()=>{setSetPinFor(am.id);setNewPinInput("");setConfirmPinInput("");}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"1.5px solid #F59E0B",background:"rgba(254,243,199,0.5)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#92400E",marginTop:4}}><Ic n="lock" s={12} c="#92400E"/> Set PIN to protect</button>;})()}
           <button onClick={function(){setHolBr(true);if(mob)setSb(false);}} style={{width:"100%",padding:"7px 10px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #EF4444)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:5,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(245,158,11,0.3)"}}><Ic n="flag" s={12} c="#fff"/> {t.ch}</button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"2px 8px 8px",display:"flex",flexDirection:"column",gap:1}}>
@@ -3929,7 +3940,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=nul
               if(m.id===aId){setAId(null);return;}
               const meUnlocked=team.members.find(x=>x.id===unlockedId);
               const meIsAppr=meUnlocked&&(meUnlocked.isApprover||team.approver===meUnlocked.id);
-              if(m.pinHash&&unlockedId!==m.id&&!meIsAppr){setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
+              if(hasPinOf(m)&&unlockedId!==m.id&&!meIsAppr){setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
               setAId(m.id);
               if(mob)setSb(false);
             }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll}/>)}
@@ -4218,7 +4229,9 @@ export default function App(){
 
   useEffect(()=>{(async()=>{
     const sl=await db.ld("drift-lang");const st=await db.ld("drift-theme");
-    if(sl){setLang(sl);}else{
+    // ?lang=xx in the address (the sitemap's language links) wins and is remembered
+    const ql=(()=>{try{const m=(window.location.search+"&"+window.location.hash).match(/[?&#]lang=([a-z]{2})\b/i);return m&&TX[m[1].toLowerCase()]?m[1].toLowerCase():null;}catch(e){return null;}})();
+    if(ql){setLang(ql);db.sv("drift-lang",ql);}else if(sl&&TX[sl]){setLang(sl);}else{
       // Auto-detect language from timezone on first visit
       const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"";
       const tzLang={
@@ -4235,8 +4248,8 @@ export default function App(){
       const detected=tzLang[tz];
       if(detected&&TX[detected]){setLang(detected);db.sv("drift-lang",detected);}
     }
-    // Theme: use stored preference, otherwise always default to light
-    if(st){setTheme(st);}
+    // Theme: stored preference; on a first visit follow the device (dark mode → dark theme)
+    if(st&&TH[st]){setTheme(st);}else{try{if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)setTheme("dark");}catch(e){}}
 
     // 24-month TTL cleanup
     const sv=await db.ld("my-teams");
@@ -4257,6 +4270,8 @@ export default function App(){
     if(expired.length>0||valid.length!==teams.length){await db.sv("my-teams",valid);}
     setMyTeams(valid);
 
+    // Owner link (#team=ID&owner=KEY): keep the key in this browser and remove it from the address bar
+    try{const ok=linkParams().match(/team=([a-z0-9]+)/i),ow=linkParams().match(/[#&?]owner=([A-Za-z0-9_-]{20,64})/);if(ok&&ow){setOwner(ok[1],ow[1]);window.history.replaceState(null,"","#team="+ok[1]);}}catch(e){}
     // Link-only access: check URL hash
     const hash=linkParams();const match=hash.match(/team=([a-z0-9]+)/i);
     if(match){const ld=await db.ld(`team:${match[1]}`,true);if(ld){
@@ -4270,7 +4285,9 @@ export default function App(){
 
   const cL=l=>{setLang(l);db.sv("drift-lang",l);};const cT=t=>{setTheme(t);db.sv("drift-theme",t);};
 
-  const create=(name,year,ww)=>{const nt={id:gid(),name,year,members:[],createdAt:new Date().toISOString(),locked:false,w7:ww==="7"};setTeam(nt);setScreen("ws");window.location.hash=`team=${nt.id}`;const u=[...myTeams,{id:nt.id,name,year,mc:0}];setMyTeams(u);db.sv(`team:${nt.id}`,nt,true);db.sv("my-teams",u);};
+  const create=(name,year,ww)=>{const nt={id:gid(),name,year,members:[],createdAt:new Date().toISOString(),locked:false,w7:ww==="7"};setTeam(nt);setScreen("ws");window.location.hash=`team=${nt.id}`;const u=[...myTeams,{id:nt.id,name,year,mc:0}];setMyTeams(u);db.sv(`team:${nt.id}`,nt,true);db.sv("my-teams",u);
+    // The creator becomes the team owner (can reset PINs, delete the team)
+    (async()=>{await waitIdle(nt.id);const r=await teamAuth({op:"claim",id:nt.id});if(r.ok&&r.owner){setOwner(nt.id,r.owner);syncReload(nt.id,false);}})();};
 
   const join=async(code,onErr)=>{let id=code;const m=code.match(/team=([a-z0-9]+)/i);if(m)id=m[1];id=id.replace(/[^a-z0-9]/gi,"");const ld=await db.ld(`team:${id}`,true);if(ld){setTeam(ld);setScreen("ws");window.location.hash=`team=${id}`;if(!myTeams.find(x=>x.id===id)){const u=[...myTeams,{id,name:ld.name,year:ld.year,mc:ld.members.length}];setMyTeams(u);db.sv("my-teams",u);}}else onErr(t.nf);};
 
@@ -4302,7 +4319,12 @@ export default function App(){
 
   const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);try{localStorage.removeItem("team:"+id);}catch(e){}};
   // Delete for everyone: only from inside the team, after typing its name; the server keeps a restorable copy
-  const deleteForever=async id=>{await db.del("team:"+id,true);delTeam(id);goHome();};
+  const deleteForever=async id=>{
+    const r=await fetch(API_BASE+"?id="+id,{method:"DELETE",headers:{"X-Owner-Key":getOwner(id)}}).catch(()=>null);
+    if(r&&r.status===403){alert(X("ownerOnlyDelete"));return;}
+    try{if(window.storage)await window.storage.delete("team:"+id,true);}catch(e){}
+    delTeam(id);goHome();
+  };
 
   if(screen==="ws"&&team) {
     const tv=teamForYear(team,vy);
