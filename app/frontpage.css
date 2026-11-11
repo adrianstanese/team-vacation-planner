@@ -75,8 +75,20 @@
 .fp .lede{font-size:clamp(16px,1.8cqi,19px);color:var(--muted);margin:0 0 28px;max-width:46ch}
 
 .fp .cmd{width:100%;max-width:700px;text-align:start}
-.fp .cmd-bar{display:grid;grid-template-columns:1fr;gap:8px;padding:8px;border-radius:26px;background:var(--surface);border:1px solid var(--line-2);box-shadow:var(--shadow-float),0 0 0 6px color-mix(in oklch,var(--accent) 6%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
-@container (min-width:620px){.fp .cmd-bar{grid-template-columns:auto 1fr auto;border-radius:999px;align-items:center}}
+/* One capsule: the bar, plus (when creating) a second row with year and week */
+.fp .cmd-shell{border-radius:26px;background:var(--surface);border:1px solid var(--line-2);box-shadow:var(--shadow-float),0 0 0 6px color-mix(in oklch,var(--accent) 6%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:border-radius .3s ease}
+.fp .cmd-bar{display:grid;grid-template-columns:1fr;gap:8px;padding:8px}
+@container (min-width:620px){.fp .cmd-bar{grid-template-columns:auto 1fr auto;align-items:center}.fp .cmd:not(.open) .cmd-shell{border-radius:999px}.fp .cmd.open .cmd-shell{border-radius:34px}}
+.fp .cmd-row2{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .32s cubic-bezier(.2,.8,.2,1),opacity .22s ease}
+.fp .cmd.open .cmd-row2{grid-template-rows:1fr;opacity:1}
+.fp .cmd-row2-in{overflow:hidden;min-height:0}
+.fp .cmd-row2-pad{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:10px 18px 12px;border-top:1px solid var(--line)}
+.fp .cmd-opt{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}
+.fp .cmd-opt select{min-height:36px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface-2);padding:0 10px 0 12px;font-weight:700;font-size:14px;color:var(--ink-2);font-family:inherit;cursor:pointer}
+.fp .cmd-sw{display:inline-flex;padding:3px;border-radius:999px;background:var(--accent-wash);gap:2px}
+.fp .cmd-sw button{min-height:32px;padding:0 12px;border:0;border-radius:999px;background:transparent;font:700 13px/1 inherit;font-family:inherit;color:var(--muted);cursor:pointer;white-space:nowrap}
+.fp .cmd-sw button[aria-pressed="true"]{background:var(--surface);color:var(--accent-ink);box-shadow:0 1px 6px -1px rgba(76,29,149,.25)}
+@media (prefers-reduced-motion:reduce){.fp .cmd-shell,.fp .cmd-row2{transition:none}}
 .fp .seg{display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:999px;background:var(--accent-wash);gap:2px}
 .fp .seg button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 14px;border-radius:999px;border:0;background:transparent;font-weight:700;font-size:14px;color:var(--muted);cursor:pointer;white-space:nowrap}
 .fp .seg button svg{width:16px;height:16px}

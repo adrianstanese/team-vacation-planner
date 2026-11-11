@@ -1553,7 +1553,8 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
         <span className="pill"><i></i>{L.free} · {t.bf}</span>
         <h1 className="h"><span>{t.brand}</span></h1>
         <p className="lede">{t.tag1} {t.tag2}</p>
-        <form className="cmd" onSubmit={submit}>
+        <form className={"cmd"+(mode==="create"?" open":"")} onSubmit={submit}>
+          <div className="cmd-shell">
           <div className="cmd-bar">
             <div className="seg" role="group" aria-label={L.create+" / "+L.join}>
               <button type="button" aria-pressed={mode==="create"} onClick={()=>{setMode("create");setErr(null);}}><FpIcon n="plus"/>{L.create}</button>
@@ -1566,12 +1567,18 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
               ?<button type="submit" className="go" disabled={!name.trim()}>{t.cr}<FpIcon n="arrow" cls="i flip"/></button>
               :<button type="submit" className="go j" disabled={!code.trim()}>{t.jn}<FpIcon n="arrow" cls="i flip"/></button>}
           </div>
-          {mode==="create"
-            ?<div className="cmd-opts">
-              <select aria-label={L.year} value={yr} onChange={e=>setYr(Number(e.target.value))}>{YRS.map(y=><option key={y} value={y}>{y}</option>)}</select>
-              <select aria-label={L.w5+" / "+L.w7} value={ww} onChange={e=>setWw(e.target.value)}><option value="5">{L.w5}</option><option value="7">{L.w7}</option></select>
-            </div>
-            :<div className="cmd-opts"><span>{L.joinHint}</span></div>}
+          {/* Second row inside the same capsule: only for creating; folds away (and leaves the tab order) for joining */}
+          <div className="cmd-row2" inert={mode!=="create"}>
+            <div className="cmd-row2-in"><div className="cmd-row2-pad">
+              <label className="cmd-opt"><span>{L.year}</span><select value={yr} onChange={e=>setYr(Number(e.target.value))}>{YRS.map(y=><option key={y} value={y}>{y}</option>)}</select></label>
+              <div className="cmd-sw" role="group" aria-label={L.w5+" / "+L.w7}>
+                <button type="button" aria-pressed={ww==="5"} onClick={()=>setWw("5")}>{L.w5}</button>
+                <button type="button" aria-pressed={ww==="7"} onClick={()=>setWw("7")}>{L.w7}</button>
+              </div>
+            </div></div>
+          </div>
+          </div>
+          {mode!=="create"&&<div className="cmd-opts"><span>{L.joinHint}</span></div>}
           {err&&<div className="cmd-err" role="alert">{err}</div>}
         </form>
         {myTeams.length>0&&<div className="recent">
