@@ -6,6 +6,7 @@ import ShareSection from "@/components/ShareSection";
 import "./frontpage.css";
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { buildSheets } from "@/lib/xlsxSheets";
+import { mergeTeam } from "@/lib/merge";
 
 // ─── PIN hashing (SHA-256) ──────────────────────────────────────────
 const hashPin = async (pin) => {
@@ -647,13 +648,50 @@ function mergeYearView(view,raw){
 
 // ─── Storage (hybrid: API for teams, localStorage for prefs, window.storage for artifact sandbox) ───
 const API_BASE = "/api/team";
+// ─── Team sync: one save at a time per team, versioned, merged on conflict ───
+// VER = server version (X-Updated-At) this browser last saw; BASE = that version's JSON (for 3-way merges).
+const SYNC={VER:{},BASE:{},PENDING:{},INFLIGHT:{},listeners:new Set()};
+const syncIdle=id=>!SYNC.INFLIGHT[id]&&!SYNC.PENDING[id];
+function syncNotify(id,doc){SYNC.listeners.forEach(fn=>{try{fn(id,doc);}catch(e){}});}
+async function syncFlush(id){
+  if(SYNC.INFLIGHT[id])return;
+  while(SYNC.PENDING[id]){
+    const doc=SYNC.PENDING[id];delete SYNC.PENDING[id];
+    SYNC.INFLIGHT[id]=true;
+    try{
+      let res=await fetch(API_BASE+"?id="+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,data:doc,base:SYNC.VER[id]||null})});
+      if(res.status===409){
+        const cur=await res.json();
+        const base=SYNC.BASE[id]?JSON.parse(SYNC.BASE[id]):null;
+        // Newer local edits queued meanwhile are merged on top of this one
+        const mineNow=SYNC.PENDING[id]||doc;delete SYNC.PENDING[id];
+        const merged=mergeTeam(base,mineNow,cur.data);
+        SYNC.VER[id]=cur.v;SYNC.BASE[id]=JSON.stringify(cur.data);
+        res=await fetch(API_BASE+"?id="+id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,data:merged,base:cur.v})});
+        if(res.ok){const j=await res.json();SYNC.VER[id]=j.v||null;SYNC.BASE[id]=JSON.stringify(merged);}
+        else if(res.status===409){SYNC.PENDING[id]=merged;}
+        syncNotify(id,merged);
+      }else if(res.ok){
+        const j=await res.json().catch(()=>({}));
+        if(j&&j.v){SYNC.VER[id]=j.v;SYNC.BASE[id]=JSON.stringify(doc);}
+      }
+    }catch(e){
+      // Offline or server error: keep the newest edit queued and try again shortly
+      if(!SYNC.PENDING[id])SYNC.PENDING[id]=doc;
+      SYNC.INFLIGHT[id]=false;
+      setTimeout(()=>syncFlush(id),5000);
+      return;
+    }
+    SYNC.INFLIGHT[id]=false;
+  }
+}
 const db={
   async sv(k,d,s=false){
     try {
       // Team data → API (production) or window.storage (artifact sandbox)
       if(k.startsWith("team:")&&s){
         var teamId=k.replace("team:","");
-        try{await fetch(API_BASE+"?id="+teamId,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:teamId,data:d})});}catch(e){}
+        SYNC.PENDING[teamId]=d;syncFlush(teamId);
       }
       // Also save to window.storage if available (artifact sandbox)
       if(window.storage){try{await window.storage.set(k,JSON.stringify(d),s);}catch(e){}}
@@ -666,7 +704,7 @@ const db={
       // Team data → try API first, then window.storage, then localStorage
       if(k.startsWith("team:")&&s){
         var teamId=k.replace("team:","");
-        try{var res=await fetch(API_BASE+"?id="+teamId);if(res.ok){var data=await res.json();if(data)return data;}}catch(e){}
+        try{var res=await fetch(API_BASE+"?id="+teamId,{cache:"no-store"});if(res.ok){var data=await res.json();if(data){var v=res.headers.get("X-Updated-At");if(v&&syncIdle(teamId)){SYNC.VER[teamId]=v;SYNC.BASE[teamId]=JSON.stringify(data);}return data;}}}catch(e){}
       }
       // Try window.storage (artifact sandbox)
       if(window.storage){try{var r=await window.storage.get(k,s);if(r)return JSON.parse(r.value);}catch(e){}}
@@ -2133,6 +2171,20 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
   const handleMouseUp=()=>{dragRef.current=null;};
 
   useEffect(()=>{const up=()=>{dragRef.current=null;};window.addEventListener("mouseup",up);return()=>window.removeEventListener("mouseup",up);},[]);
+  // Touch: drag across days with a finger. Only while a member is selected (otherwise the page scrolls as usual).
+  // Native listeners with passive:false so the drag doesn't scroll the page or fire emulated mouse clicks.
+  const gridRef=useRef(null);const touchRef=useRef({});
+  touchRef.current={down:handleMouseDown,enter:handleMouseEnter,up:handleMouseUp,active:!!activeId};
+  useEffect(()=>{
+    const el=gridRef.current;if(!el)return;
+    const dayAt=(x,y)=>{const c=document.elementFromPoint(x,y);const d=c&&c.closest&&c.closest("[data-day]");return d&&el.contains(d)?Number(d.getAttribute("data-day")):null;};
+    let last=null;
+    const start=e=>{if(!touchRef.current.active||e.touches.length!==1)return;const t0=e.touches[0];const d=dayAt(t0.clientX,t0.clientY);if(d==null)return;e.preventDefault();last=d;touchRef.current.down(d);};
+    const move=e=>{if(last==null)return;e.preventDefault();const t0=e.touches[0];const d=dayAt(t0.clientX,t0.clientY);if(d!=null&&d!==last){last=d;touchRef.current.enter(d);}};
+    const end=()=>{if(last==null)return;last=null;touchRef.current.up();};
+    el.addEventListener("touchstart",start,{passive:false});el.addEventListener("touchmove",move,{passive:false});el.addEventListener("touchend",end);el.addEventListener("touchcancel",end);
+    return()=>{el.removeEventListener("touchstart",start);el.removeEventListener("touchmove",move);el.removeEventListener("touchend",end);el.removeEventListener("touchcancel",end);};
+  },[]);
 
   return <div style={{background:th.gbg,borderRadius:G.rSm,border:`1px solid ${th.gbd}`,overflow:"hidden",animation:"popIn .3s ease-out",boxShadow:th.sd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
     <div style={{padding:compact?"8px 12px":"12px 16px",borderBottom:`1px solid ${th.bl}`,background:month>=5&&month<=7?"rgba(245,158,11,.035)":month===11||month<=1?"rgba(99,102,241,.035)":month>=2&&month<=4?"rgba(16,185,129,.03)":"rgba(249,115,22,.025)",display:"flex",justifyContent:"space-between"}}>
@@ -2142,7 +2194,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",marginBottom:3}}>
         {dayLabels.map(d=> <div key={d} style={{textAlign:"center",fontSize:10,fontWeight:600,color:th.t3,padding:"3px 0",fontFamily:F,textTransform:"uppercase",letterSpacing:.5}}>{d}</div>)}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1}} onMouseLeave={handleMouseUp}>
+      <div ref={gridRef} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,touchAction:activeId?"none":"auto"}} onMouseLeave={handleMouseUp}>
         {cells.map((day,i)=>{
           if(!day) return <div key={`e${i}`}/>;
           const we=isWe(year,month,day);const key=dk(year,month,day);
@@ -2198,7 +2250,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           var hasUnapprovedMember = mh.some(function(mx){return approvalMode && !mx.approved;});
           if(!isA && hasUnapprovedMember && mh.length>0) { pendingStripe = "repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(245,158,11,.12) 3px,rgba(245,158,11,.12) 6px)"; }
 
-          return <div key={day}
+          return <div key={day} data-day={day}
             onMouseDown={e=>{e.preventDefault();handleMouseDown(day);}} onContextMenu={function(e){e.preventDefault();if(typeof setCommentDay==="function")setCommentDay(dk(year,month,day));}}
             onMouseEnter={function(e){handleMouseEnter(day);if(activeId)e.currentTarget.style.transform="scale(1.1)";if(isHol&&holInfo){var el=e.currentTarget;clearTimeout(cardTimer.current);cardTimer.current=setTimeout(function(){openCard(key,el);},180);}}}
             onMouseLeave={function(e){e.currentTarget.style.transform="";if(isHol&&holInfo){clearTimeout(cardTimer.current);cardTimer.current=setTimeout(function(){setCard(function(c){return c&&c.key===key&&!c.pinned?null:c;});},120);}}}
@@ -3508,7 +3560,9 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
   const pushHistory=(prev)=>{if(skipHistoryRef.current){skipHistoryRef.current=false;return;}historyRef.current=[...historyRef.current.slice(-19),JSON.stringify(prev)];redoRef.current=[];};
   const undo=()=>{if(!historyRef.current.length)return;const prev=historyRef.current.pop();redoRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(prev));flash("Undo");};
   const redo=()=>{if(!redoRef.current.length)return;const next=redoRef.current.pop();historyRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(next));flash("Redo");};
-  const updateWithHistory=(newTeam)=>{pushHistory(team);onUpdate(newTeam);};
+  // teamRef = the newest version, even before React re-renders (fast drags toggle several days per frame)
+  const teamRef=useRef(team);teamRef.current=team;
+  const updateWithHistory=(newTeam)=>{pushHistory(teamRef.current);teamRef.current=newTeam;onUpdate(newTeam);};
   // Undo steps belong to the year they were made in: start clean when the year changes
   useEffect(()=>{historyRef.current=[];redoRef.current=[];},[team.year]);
 
@@ -3565,6 +3619,7 @@ function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,th,t,lang,setLang,t
   const setPto=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
   const setRegion=(id,val)=>{if(isPinLocked(id)){flash("Enter PIN to edit this member");return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
   const tog=(y,m,d)=>{
+    const team=teamRef.current;
     if(!aId||locked)return;
     if(isPinLocked(aId)){flash("Enter PIN to edit this member");return;}
     const key=dk(y,m,d);
@@ -4064,6 +4119,23 @@ export default function App(){
   const update=u0=>{const u=mergeYearView(u0,team);setTeamRaw(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>{if(x.id!==u.id)return x;const nx={...x,name:u.name,year:u.year,mc:u.members.length};const lg=safeLogo(u.logo);if(lg)nx.logo=lg;else delete nx.logo;return nx;});setMyTeams(ut);db.sv("my-teams",ut);};
 
   const goHome=()=>{setTeam(null);setScreen("home");window.location.hash="";};
+
+  // Saves that had to be merged with someone else's edits come back here
+  useEffect(()=>{const fn=(id,doc)=>{setTeamRaw(cur=>cur&&cur.id===id?doc:cur);};SYNC.listeners.add(fn);return()=>{SYNC.listeners.delete(fn);};},[]);
+  // Fresh data: reload the open team when the tab becomes visible again, and every 90 s while visible
+  const openId=team&&team.id;
+  useEffect(()=>{
+    if(!openId)return;
+    let busy=false;
+    const refresh=async()=>{
+      if(busy||document.visibilityState!=="visible"||!syncIdle(openId))return;
+      busy=true;
+      try{const fresh=await db.ld(`team:${openId}`,true);if(fresh&&syncIdle(openId))setTeamRaw(cur=>cur&&cur.id===openId&&JSON.stringify(cur)!==JSON.stringify(fresh)?fresh:cur);}finally{busy=false;}
+    };
+    const iv=setInterval(refresh,90000);
+    document.addEventListener("visibilitychange",refresh);window.addEventListener("focus",refresh);
+    return()=>{clearInterval(iv);document.removeEventListener("visibilitychange",refresh);window.removeEventListener("focus",refresh);};
+  },[openId]);
 
   if(screen==="ws"&&team) {
     const tv=teamForYear(team,vy);
