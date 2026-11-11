@@ -9,6 +9,7 @@ import { nationalDates, regionalDates, RN, DEF } from "@/lib/holidayDates";
 import "./frontpage.css";
 import { mergeTeam } from "@/lib/merge";
 import { X, setTextLang, textLang, dateLocale } from "@/lib/extraText";
+import { V } from "@/lib/v3Text";
 // Loaded only when first opened (keeps the first page load small)
 // The team screen lives in app/workspace.tsx and loads on demand: team links start loading it at once,
 // the front page fetches it when the browser is idle, so opening a team stays instant.
@@ -380,7 +381,10 @@ for(const cc of Object.keys(RN)){const have=new Set((REGIONS[cc]||[]).map(r=>Str
 export const defaultRegionName=cc=>{const g=DEF[cc];if(!g)return null;const r=(REGIONS[cc]||[]).find(x=>String(x.id).replace(/_[A-Z]{2}$/,"")===g);return r?r.n:g;};
 
 // ─── Country Data ────────────────────────────────────────────────
-export const EU_C=[{c:"AL",n:"Albania",f:"🇦🇱"},{c:"AD",n:"Andorra",f:"🇦🇩"},{c:"AT",n:"Austria",f:"🇦🇹"},{c:"BY",n:"Belarus",f:"🇧🇾"},{c:"BE",n:"Belgium",f:"🇧🇪"},{c:"BA",n:"Bosnia & Herz.",f:"🇧🇦"},{c:"BG",n:"Bulgaria",f:"🇧🇬"},{c:"HR",n:"Croatia",f:"🇭🇷"},{c:"CY",n:"Cyprus",f:"🇨🇾"},{c:"CZ",n:"Czechia",f:"🇨🇿"},{c:"DK",n:"Denmark",f:"🇩🇰"},{c:"EE",n:"Estonia",f:"🇪🇪"},{c:"FI",n:"Finland",f:"🇫🇮"},{c:"FR",n:"France",f:"🇫🇷"},{c:"DE",n:"Germany",f:"🇩🇪"},{c:"GR",n:"Greece",f:"🇬🇷"},{c:"HU",n:"Hungary",f:"🇭🇺"},{c:"IS",n:"Iceland",f:"🇮🇸"},{c:"IE",n:"Ireland",f:"🇮🇪"},{c:"IT",n:"Italy",f:"🇮🇹"},{c:"XK",n:"Kosovo",f:"🇽🇰"},{c:"LV",n:"Latvia",f:"🇱🇻"},{c:"LI",n:"Liechtenstein",f:"🇱🇮"},{c:"LT",n:"Lithuania",f:"🇱🇹"},{c:"LU",n:"Luxembourg",f:"🇱🇺"},{c:"MK",n:"N. Macedonia",f:"🇲🇰"},{c:"MT",n:"Malta",f:"🇲🇹"},{c:"MD",n:"Moldova",f:"🇲🇩"},{c:"MC",n:"Monaco",f:"🇲🇨"},{c:"ME",n:"Montenegro",f:"🇲🇪"},{c:"NL",n:"Netherlands",f:"🇳🇱"},{c:"NO",n:"Norway",f:"🇳🇴"},{c:"PL",n:"Poland",f:"🇵🇱"},{c:"PT",n:"Portugal",f:"🇵🇹"},{c:"RO",n:"Romania",f:"🇷🇴"},{c:"RS",n:"Serbia",f:"🇷🇸"},{c:"SK",n:"Slovakia",f:"🇸🇰"},{c:"SI",n:"Slovenia",f:"🇸🇮"},{c:"SM",n:"San Marino",f:"🇸🇲"},{c:"ES",n:"Spain",f:"🇪🇸"},{c:"SE",n:"Sweden",f:"🇸🇪"},{c:"CH",n:"Switzerland",f:"🇨🇭"},{c:"TR",n:"Turkey",f:"🇹🇷"},{c:"UA",n:"Ukraine",f:"🇺🇦"},{c:"GB",n:"United Kingdom",f:"🇬🇧"},{c:"SA",n:"Saudi Arabia",f:"🇸🇦"},{c:"AE",n:"UAE",f:"🇦🇪"},{c:"CL",n:"Chile",f:"🇨🇱"},{c:"BR",n:"Brazil",f:"🇧🇷"},{c:"MA",n:"Morocco",f:"🇲🇦"},{c:"KZ",n:"Kazakhstan",f:"🇰🇿"},{c:"BH",n:"Bahrain",f:"🇧🇭"},{c:"US",n:"United States",f:"🇺🇸"},{c:"CA",n:"Canada",f:"🇨🇦"},{c:"AU",n:"Australia",f:"🇦🇺"}].sort((a,b)=>a.n.localeCompare(b.n));
+export const EU_C:{c:string;n:string;f:string;ne?:string}[]=[{c:"AL",n:"Albania",f:"🇦🇱"},{c:"AD",n:"Andorra",f:"🇦🇩"},{c:"AT",n:"Austria",f:"🇦🇹"},{c:"BY",n:"Belarus",f:"🇧🇾"},{c:"BE",n:"Belgium",f:"🇧🇪"},{c:"BA",n:"Bosnia & Herz.",f:"🇧🇦"},{c:"BG",n:"Bulgaria",f:"🇧🇬"},{c:"HR",n:"Croatia",f:"🇭🇷"},{c:"CY",n:"Cyprus",f:"🇨🇾"},{c:"CZ",n:"Czechia",f:"🇨🇿"},{c:"DK",n:"Denmark",f:"🇩🇰"},{c:"EE",n:"Estonia",f:"🇪🇪"},{c:"FI",n:"Finland",f:"🇫🇮"},{c:"FR",n:"France",f:"🇫🇷"},{c:"DE",n:"Germany",f:"🇩🇪"},{c:"GR",n:"Greece",f:"🇬🇷"},{c:"HU",n:"Hungary",f:"🇭🇺"},{c:"IS",n:"Iceland",f:"🇮🇸"},{c:"IE",n:"Ireland",f:"🇮🇪"},{c:"IT",n:"Italy",f:"🇮🇹"},{c:"XK",n:"Kosovo",f:"🇽🇰"},{c:"LV",n:"Latvia",f:"🇱🇻"},{c:"LI",n:"Liechtenstein",f:"🇱🇮"},{c:"LT",n:"Lithuania",f:"🇱🇹"},{c:"LU",n:"Luxembourg",f:"🇱🇺"},{c:"MK",n:"N. Macedonia",f:"🇲🇰"},{c:"MT",n:"Malta",f:"🇲🇹"},{c:"MD",n:"Moldova",f:"🇲🇩"},{c:"MC",n:"Monaco",f:"🇲🇨"},{c:"ME",n:"Montenegro",f:"🇲🇪"},{c:"NL",n:"Netherlands",f:"🇳🇱"},{c:"NO",n:"Norway",f:"🇳🇴"},{c:"PL",n:"Poland",f:"🇵🇱"},{c:"PT",n:"Portugal",f:"🇵🇹"},{c:"RO",n:"Romania",f:"🇷🇴"},{c:"RS",n:"Serbia",f:"🇷🇸"},{c:"SK",n:"Slovakia",f:"🇸🇰"},{c:"SI",n:"Slovenia",f:"🇸🇮"},{c:"SM",n:"San Marino",f:"🇸🇲"},{c:"ES",n:"Spain",f:"🇪🇸"},{c:"SE",n:"Sweden",f:"🇸🇪"},{c:"CH",n:"Switzerland",f:"🇨🇭"},{c:"TR",n:"Turkey",f:"🇹🇷"},{c:"UA",n:"Ukraine",f:"🇺🇦"},{c:"GB",n:"United Kingdom",f:"🇬🇧"},{c:"SA",n:"Saudi Arabia",f:"🇸🇦"},{c:"AE",n:"UAE",f:"🇦🇪"},{c:"CL",n:"Chile",f:"🇨🇱"},{c:"BR",n:"Brazil",f:"🇧🇷"},{c:"MA",n:"Morocco",f:"🇲🇦"},{c:"KZ",n:"Kazakhstan",f:"🇰🇿"},{c:"BH",n:"Bahrain",f:"🇧🇭"},{c:"US",n:"United States",f:"🇺🇸"},{c:"CA",n:"Canada",f:"🇨🇦"},{c:"AU",n:"Australia",f:"🇦🇺"}].sort((a,b)=>a.n.localeCompare(b.n));
+// Country names in the UI language (Intl.DisplayNames); the English name stays in .ne so searching in English still works
+export function localizeCountries(lang){let dn=null;try{dn=new Intl.DisplayNames([lang==="en"?"en-GB":lang],{type:"region"});}catch(e){}
+  EU_C.forEach(function(c){if(!c.ne)c.ne=c.n;let n=c.ne;try{if(dn&&lang!=="en"&&/^[A-Z]{2}$/.test(c.c)){const v=dn.of(c.c==="XK"?"XK":c.c);if(v&&v!==c.c)n=v;}}catch(e){}c.n=n;});}
 
 // ─── i18n (compact) ──────────────────────────────────────────────
 const LANGS={en:{f:"🇬🇧",l:"EN"},fr:{f:"🇫🇷",l:"FR"},de:{f:"🇩🇪",l:"DE"},es:{f:"🇪🇸",l:"ES"},pt:{f:"🇵🇹",l:"PT"},ro:{f:"🇷🇴",l:"RO"},hu:{f:"🇭🇺",l:"HU"},sv:{f:"🇸🇪",l:"SV"},it:{f:"🇮🇹",l:"IT"},bg:{f:"🇧🇬",l:"BG"},ar:{f:"🇦🇪",l:"AR"}};
@@ -1114,7 +1118,7 @@ function TeamStats({ th, t }) {
 export function generateTSV(team, t) {
   team = reportSafe(team);
   const yr = safeYear(team);
-  let tsv = "Name\tCountry\tStart\tEnd\tDays\n";
+  let tsv = [V("rpName"),V("rpCountry"),V("rpStart"),V("rpEnd"),V("rpDays")].join("\t")+"\n";
   team.members.forEach(m => {
     const co = m.country ? (EU_C.find(c => c.c === m.country)||{}).n || "" : "";
     const sorted = [...(m.days || [])].sort();
@@ -1211,7 +1215,7 @@ export function HolBrowser({onClose,th,t,year}){
   const hols=sel?computeHolidays(sel,year).map(h=>({date:h,name:holNameFor(sel,h)})).sort((a,b)=>a.date.localeCompare(b.date)):[];
   const maxHol=17;
 
-  var filtered=EU_C.filter(function(c2){return !q||c2.n.toLowerCase().indexOf(q.toLowerCase())>=0;});
+  var filtered=EU_C.filter(function(c2){return !q||c2.n.toLowerCase().indexOf(q.toLowerCase())>=0||(c2.ne||"").toLowerCase().indexOf(q.toLowerCase())>=0;});
   if(sort==="most") filtered=filtered.slice().sort(function(a,b){return computeHolidays(b.c,year).length-computeHolidays(a.c,year).length;});
 
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
@@ -1715,7 +1719,7 @@ export default function App(){
   // Opening a team picks its year: "year=YYYY" in the link if present, else the default
   const setTeam=tm=>{let y=null;try{const lp=linkParams();const ym=lp.match(/[#&?]year=(\d{4})/);if(tm&&ym&&lp.indexOf("team="+tm.id)>=0)y=clampYear(parseInt(ym[1]));}catch(e){}setViewYear(y);setTeamRaw(tm);};const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState("en");const[theme,setTheme]=useState("light");
   const th=TH[theme];const t=TX[lang];
-  setTextLang(lang);
+  setTextLang(lang);localizeCountries(lang);
   useEffect(()=>{try{document.documentElement.lang=lang;document.documentElement.dir=lang==="ar"?"rtl":"ltr";}catch(e){}},[lang]);
 
   useEffect(()=>{(async()=>{

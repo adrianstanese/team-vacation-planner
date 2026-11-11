@@ -169,7 +169,7 @@ function generateTeamICS(team) {
       const endDt = new Date(p.y, p.m, p.d + 1);
       const end = `${endDt.getFullYear()}${String(endDt.getMonth()+1).padStart(2,"0")}${String(endDt.getDate()).padStart(2,"0")}`;
       const co = EU_C.find(c => c.c === cc);
-      lines.push("BEGIN:VEVENT",`UID:hol-${cc}-${h}@tvp`,`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:🏛 ${holNameFor(cc,h)} (${(co&&co.n) || cc})`,`DESCRIPTION:Public holiday in ${(co&&co.n) || cc}`,"TRANSP:TRANSPARENT","END:VEVENT");
+      lines.push("BEGIN:VEVENT",`UID:hol-${cc}-${h}@tvp`,`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:🏛 ${holNameFor(cc,h)} (${(co&&co.n) || cc})`,`DESCRIPTION:${V("rpPubHol",{c:String((co&&co.n) || cc)})}`,"TRANSP:TRANSPARENT","END:VEVENT");
     });
   });
   lines.push("END:VCALENDAR");
@@ -316,7 +316,7 @@ const Toast=({message:m,visible:v})=><div role="status" aria-live="polite" class
 function CountrySelect({value,onChange,th,t}) {
   const[open,setOpen]=useState(false);const[search,setSearch]=useState("");
   const co=value?EU_C.find(c=>c.c===value):null;
-  const filtered=EU_C.filter(c=>c.n.toLowerCase().includes(search.toLowerCase()));
+  const filtered=EU_C.filter(c=>c.n.toLowerCase().includes(search.toLowerCase())||(c.ne||"").toLowerCase().includes(search.toLowerCase()));
   return <div style={{position:"relative"}}>
     <button onClick={()=>setOpen(!open)} style={{width:"100%",padding:"8px 12px",border:`1.5px solid ${th.bd}`,borderRadius:8,background:th.sf,color:th.tx,fontFamily:F,fontSize:13,fontWeight:500,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:6}}>
       {co?<Fragment><span>{co.f}</span>{co.n}</Fragment>:<span style={{color:th.t3}}>{t.selC}</span>}
@@ -731,21 +731,21 @@ function ConflictAlerts({team,threshold,th,t}) {
   gAlerts.sort((x,y)=>x.d.localeCompare(y.d));
   if(!conflicts.length&&!gAlerts.length) return null;
   if(!conflicts.length) return <div style={{background:"rgba(245,158,11,.08)",border:"1px solid rgba(245,158,11,.3)",borderRadius:8,padding:"10px 14px",marginBottom:12}}>
-    <div style={{fontSize:12,fontWeight:700,color:"#B45309",marginBottom:6}}>⚠️ {gAlerts.length} group alert{gAlerts.length>1?"s":""}</div>
+    <div style={{fontSize:12,fontWeight:700,color:"#B45309",marginBottom:6}}>⚠️ {V("grpAlerts",{n:gAlerts.length})}</div>
     <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:100,overflowY:"auto"}}>
-      {gAlerts.slice(0,5).map((a2,i)=><div key={i} style={{fontSize:11,color:"#92400E"}}><strong>{a2.d}</strong> · {a2.g}: {a2.names.length} of {a2.of} away — {a2.names.join(", ")}</div>)}
-      {gAlerts.length>5&&<div style={{fontSize:11,color:"#92400E",fontStyle:"italic"}}>+{gAlerts.length-5} more</div>}
+      {gAlerts.slice(0,5).map((a2,i)=><div key={i} style={{fontSize:11,color:"#92400E"}}><strong>{a2.d}</strong> · {V("grpAway",{g:a2.g,a:a2.names.length,b:a2.of})} — {a2.names.join(", ")}</div>)}
+      {gAlerts.length>5&&<div style={{fontSize:11,color:"#92400E",fontStyle:"italic"}}>{V("moreN",{n:gAlerts.length-5})}</div>}
     </div>
   </div>;
 
   return <div style={{background:th.hc,border:`1px solid ${th.ht}30`,borderRadius:8,padding:"10px 14px",marginBottom:12}}>
-    <div style={{fontSize:12,fontWeight:700,color:th.ht,marginBottom:6}}>⚠️ {conflicts.length} coverage alert{conflicts.length>1?"s":""}</div>
+    <div style={{fontSize:12,fontWeight:700,color:th.ht,marginBottom:6}}>⚠️ {V("covAlerts",{n:conflicts.length})}</div>
     <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:100,overflowY:"auto"}}>
       {conflicts.slice(0,5).map(([d,names])=> <div key={d} style={{fontSize:11,color:th.ht}}>
-        <strong>{d}</strong>: {names.length} out — {names.join(", ")}
+        <strong>{d}</strong>: {V("covOut",{n:names.length})} — {names.join(", ")}
       </div>)}
-      {conflicts.length>5&&<div style={{fontSize:11,color:th.ht,fontStyle:"italic"}}>+{conflicts.length-5} more</div>}
-      {gAlerts.slice(0,3).map((a2,i)=><div key={"g"+i} style={{fontSize:11,color:"#92400E"}}><strong>{a2.d}</strong> · {a2.g}: {a2.names.length} of {a2.of} away</div>)}
+      {conflicts.length>5&&<div style={{fontSize:11,color:th.ht,fontStyle:"italic"}}>{V("moreN",{n:conflicts.length-5})}</div>}
+      {gAlerts.slice(0,3).map((a2,i)=><div key={"g"+i} style={{fontSize:11,color:"#92400E"}}><strong>{a2.d}</strong> · {V("grpAway",{g:a2.g,a:a2.names.length,b:a2.of})}</div>)}
     </div>
   </div>;
 }
@@ -972,7 +972,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
           return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
             <span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{count>0?count:""}</span>
             <div style={{width:"100%",height:pct+"%",minHeight:count>0?8:2,background:count>0?"linear-gradient(180deg,"+th.ac+",#6366F1)":th.sh,borderRadius:3,transition:"height .5s"}}/>
-            <span style={{fontSize:8,color:th.t3,fontWeight:600}}>{EN_MO[i]}</span>
+            <span style={{fontSize:8,color:th.t3,fontWeight:600}}>{(t.M?t.M[i].slice(0,3):EN_MO[i])}</span>
           </div>;
         })}
       </div>
@@ -1133,7 +1133,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
       <span style={{fontSize:14,fontWeight:700,color:th.tx}}>{t.cal||"Calendar"}</span>
       <div style={{display:"flex",gap:3}}>
-        {[{l:t.yr||"Year",v:null},{l:"Q1",v:0},{l:"Q2",v:1},{l:"Q3",v:2},{l:"Q4",v:3}].map(function(q){return <button key={q.l} onClick={function(){setQuarter(q.v);}} style={{padding:"3px 10px",borderRadius:6,fontSize:10,fontWeight:600,border:quarter===q.v?"1.5px solid #D97706":"1px solid "+th.gbd,background:quarter===q.v?"#FAEEDA":"transparent",color:quarter===q.v?"#D97706":th.t3,cursor:"pointer",fontFamily:F}}>{q.l}</button>;})}
+        {[{l:t.yr||V("yearLbl"),v:null},{l:"Q1",v:0},{l:"Q2",v:1},{l:"Q3",v:2},{l:"Q4",v:3}].map(function(q){return <button key={q.l} onClick={function(){setQuarter(q.v);}} style={{padding:"3px 10px",borderRadius:6,fontSize:10,fontWeight:600,border:quarter===q.v?"1.5px solid #D97706":"1px solid "+th.gbd,background:quarter===q.v?"#FAEEDA":"transparent",color:quarter===q.v?"#D97706":th.t3,cursor:"pointer",fontFamily:F}}>{q.l}</button>;})}
       </div>
     </div>
 
@@ -1763,7 +1763,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportCSV(team,t)}>CSV</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportXLSX(team,t)}>Excel</Btn>
       {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<Btn th={th} v="ghost" sz="sm" icon="check" onClick={()=>R("generateApprovedPDF")(team,t)} style={{color:"#10B981",borderColor:"#10B98140"}}>{t.approvedPdf}</Btn>}
-      <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>Import</Btn>
+      <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>{V("importLbl")}</Btn>
       <label title={X("carryTitle")} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2,fontWeight:600}}>{X("carryUpTo")}
         <input type="number" min="0" max="60" value={team.carryMax||0} onChange={e=>{const v=Math.max(0,Math.min(60,parseInt(e.target.value)||0));const nt={...team};if(v)nt.carryMax=v;else delete nt.carryMax;updateWithHistory(nt);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11}}/> {X("days")}</label>
       {getOwner(team.id)?<button onClick={async()=>{const link=window.location.origin+"/#team="+team.id+"&owner="+getOwner(team.id);try{await navigator.clipboard.writeText(link);flash(X("ownerCopied"));}catch(e){window.prompt(X("ownerLink"),link);}}} title={X("ownerLinkHint")} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",color:"#047857",fontSize:11,fontWeight:700,fontFamily:F,cursor:"pointer"}}>★ {X("ownerYou")} · {X("ownerLink")}</button>:(team.hasOwner?<span style={{fontSize:11,color:th.t3}}>{X("ownerOther")}</span>:null)}
@@ -1780,7 +1780,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
 
     {/* View tabs */}
     {!mob&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"6px 14px",display:"flex",gap:3,overflowX:"auto",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      {views.map(v=> <button key={v.k} onClick={()=>{if(v.k===view)return;withTransition(()=>flushSync(()=>{setView(v.k);setVk(function(p){return p+1;});}));}} style={{padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?(v.k==="trips"?"1.5px solid #D97706":`1.5px solid ${th.ac}`):`1px solid transparent`,background:v.k===view?(v.k==="trips"?"#FAEEDA":th.al):"transparent",color:v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3}/>{v.l}</button>)}
+      {views.map(v=> <button key={v.k} data-view={v.k} onClick={()=>{if(v.k===view)return;withTransition(()=>flushSync(()=>{setView(v.k);setVk(function(p){return p+1;});}));}} style={{padding:"4px 8px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:v.k===view?(v.k==="trips"?"1.5px solid #D97706":`1.5px solid ${th.ac}`):`1px solid transparent`,background:v.k===view?(v.k==="trips"?"#FAEEDA":th.al):"transparent",color:v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3,display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}><Ic n={v.i} s={12} c={v.k===view?(v.k==="trips"?"#D97706":th.ac):th.t3}/>{v.l}</button>)}
       {canApprove&&<button type="button" className="v3-ap-tab" aria-pressed={view==="approvals"} aria-label={V("inboxBadge",{n:pendN})} onClick={()=>{if(view==="approvals")return;withTransition(()=>flushSync(()=>{setView("approvals");setVk(function(p){return p+1;});}));}}>✓ {V("inbox")}{pendN>0&&<b>{pendN}</b>}</button>}
     </div>}
 
@@ -1889,16 +1889,16 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         {view==="cal"&&team.members.length>1&&<div style={{display:"flex",flexWrap:"wrap",gap:3,justifyContent:"center",marginBottom:8,padding:"5px 8px",background:th.gbg,borderRadius:8,border:"1px solid "+th.gbd}}>{team.members.map(function(m,i){var mc=MC[i%MC.length];var act=m.id===aId;return <button key={m.id} onClick={function(){setAId(m.id===aId?null:m.id);}} style={{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:5,border:act?"1.5px solid "+mc.d:"1px solid transparent",background:act?mc.b:"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:act?mc.t:th.t2,fontFamily:F}}><span style={{width:7,height:7,borderRadius:"50%",background:mc.d}}/>{m.name}</button>;})}</div>}
         {/* Export Pill Bar */}
         {view==="cal"&&team.members.length>0&&<div style={{padding:"8px 14px",background:th.sf,borderRadius:G.rXs,border:"1px solid "+th.bd,display:"flex",alignItems:"center",gap:4,flexWrap:"wrap",marginBottom:12}}>
-          <span style={{fontSize:10,fontWeight:700,color:th.t3,marginRight:2}}>EXPORT:</span>
-          <button onClick={function(){R("generatePDFReport")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.pdf}</button>
-          <button onClick={function(){downloadTeamICS(team)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Team .ics</button>
-          <button onClick={function(){exportXLSX(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Excel</button>
-          <button onClick={function(){exportCSV(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>CSV</button>
-          <button onClick={function(){var tsv=generateTSV(team,t);var blob=new Blob([tsv],{type:"text/tab-separated-values"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=fileBase(team.name)+"_vacations.tsv";a.click();URL.revokeObjectURL(url);}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>TSV</button>
-          <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>Share / QR</button>
-          <button onClick={function(){R("printReport")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
-          <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Import</button>
-          {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<button onClick={function(){R("generateApprovedPDF")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
+          <span style={{fontSize:10,fontWeight:700,color:th.t3,marginRight:2,textTransform:"uppercase"}}>{V("expLbl")}</span>
+          <button data-export="pdf" onClick={function(){R("generatePDFReport")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.pdf}</button>
+          <button data-export="ics" onClick={function(){downloadTeamICS(team)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Team .ics</button>
+          <button data-export="xlsx" onClick={function(){exportXLSX(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Excel</button>
+          <button data-export="csv" onClick={function(){exportCSV(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>CSV</button>
+          <button data-export="tsv" onClick={function(){var tsv=generateTSV(team,t);var blob=new Blob([tsv],{type:"text/tab-separated-values"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download=fileBase(team.name)+"_vacations.tsv";a.click();URL.revokeObjectURL(url);}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>TSV</button>
+          <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>{V("shareQr")}</button>
+          <button data-export="print" onClick={function(){R("printReport")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
+          <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{V("importLbl")}</button>
+          {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<button data-export="approved" onClick={function(){R("generateApprovedPDF")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
         </div>}
 
         {view==="cal"&&team.members.length===0&&<div style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:40,marginBottom:12}}>🌴</div><h2 style={{margin:"0 0 6px",fontSize:20,fontWeight:700,color:th.tx}}>{t.et}</h2><p style={{margin:"0 0 20px",fontSize:14,color:th.t2,lineHeight:1.5}}>{t.es2}</p><Btn th={th} icon="plus" onClick={()=>{setSb(true);setTimeout(startAdd,150);}}>{t.af}</Btn></div>}
@@ -1907,7 +1907,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8,marginBottom:14}}>
             <YearNav yr={yr} onYear={onYear} th={th}/>
             <div style={{display:"flex",gap:2,justifyContent:"center"}}>
-              {[{l:"Year",v:null},{l:"Q1",v:0},{l:"Q2",v:1},{l:"Q3",v:2},{l:"Q4",v:3}].map(q=>
+              {[{l:t.yr||V("yearLbl"),v:null},{l:"Q1",v:0},{l:"Q2",v:1},{l:"Q3",v:2},{l:"Q4",v:3}].map(q=>
                 <button key={q.l} onClick={()=>setQuarter(q.v)} style={{padding:"3px 10px",borderRadius:6,fontSize:10,fontWeight:600,fontFamily:F,cursor:"pointer",border:quarter===q.v?`1.5px solid ${th.ac}`:`1px solid ${th.gbd}`,background:quarter===q.v?th.al:th.gbg,color:quarter===q.v?th.ac:th.t3,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>{q.l}</button>)}
             </div>
           </div>

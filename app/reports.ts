@@ -1,6 +1,8 @@
 // Report and export builders (PDF report, approved-days PDF, print view, legacy .xls), moved out of app.tsx
 // so they load only when someone exports. Code unchanged.
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
+import { V } from "@/lib/v3Text";
+import { dateLocale } from "@/lib/extraText";
 import { EU_C, MC, computeHolidays, dim, dk, esc, fdm, fileBase, pk, reportSafe, safeYear, withBusy, _fd, _fd2, getAllHolidays, isWe } from "./app";
 
 export function generatePDFReport(team, t) {
@@ -60,7 +62,7 @@ export function generatePDFReport(team, t) {
 
   // Header
   html += '<div class="hdr"><h1>'+esc(team.name)+'</h1>';
-  html += '<div class="sub">'+yr+' &middot; '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' &middot; Generated '+new Date().toLocaleDateString()+'</div></div>';
+  html += '<div class="sub">'+yr+' &middot; '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' &middot; '+esc(V('rpGenOn',{d:new Date().toLocaleDateString(dateLocale())}))+'</div></div>';
 
   // Legend
   html += '<div class="legend">';
@@ -68,16 +70,16 @@ export function generatePDFReport(team, t) {
     var c=MC[i%MC.length];
     html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
   });
-  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">Holiday</span></div>';
+  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">'+esc(V("rpHoliday"))+'</span></div>';
   html += '</div>';
 
   // Stats boxes
   var avgCov = team.members.length > 0 ? Math.round((1 - totalDays / (team.members.length * 260)) * 100) : 100;
   html += '<div class="stats">';
-  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">Total vacation days</div></div>';
-  html += '<div class="stat"><div class="stat-val" style="color:#EF4444">'+overlaps.length+'</div><div class="stat-lbl">Overlap days</div></div>';
-  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">Team members</div></div>';
-  html += '<div class="stat"><div class="stat-val" style="color:#10B981">'+avgCov+'%</div><div class="stat-lbl">Avg coverage</div></div>';
+  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">'+esc(V("rpTotal"))+'</div></div>';
+  html += '<div class="stat"><div class="stat-val" style="color:#EF4444">'+overlaps.length+'</div><div class="stat-lbl">'+esc(V("rpOverlap"))+'</div></div>';
+  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">'+esc(V("rpTeam"))+'</div></div>';
+  html += '<div class="stat"><div class="stat-val" style="color:#10B981">'+avgCov+'%</div><div class="stat-lbl">'+esc(V("rpAvgCov"))+'</div></div>';
   html += '</div>';
 
   // Timeline per month (only months with activity)
@@ -106,7 +108,7 @@ export function generatePDFReport(team, t) {
   }
 
   // Calendar grid — 12 months, 3 per row
-  html += '<div class="tl-title">Year Calendar</div>';
+  html += '<div class="tl-title">'+esc(V("rpYearCal"))+'</div>';
   html += '<div class="cal-grid">';
   for (var mo2 = 0; mo2 < 12; mo2++) {
     html += '<div class="cal-month"><div class="cal-title">'+months[mo2]+'</div><div class="cal-days">';
@@ -163,15 +165,15 @@ export function generatePDFReport(team, t) {
 
   // Overlaps
   if(overlaps.length){
-    html += '<div class="tl-title">'+(t.overlapDays||'Overlap Days')+' ('+overlaps.length+')</div>';
-    html += '<table><tr><th>Date</th><th>Members Out</th></tr>';
+    html += '<div class="tl-title">'+(t.overlapDays||V('rpOverlap'))+' ('+overlaps.length+')</div>';
+    html += '<table><tr><th>'+esc(V("rpDate"))+'</th><th>'+esc(V("rpOut"))+'</th></tr>';
     overlaps.forEach(function(e){
       html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+(e[1] as string[]).map(esc).join(', ')+'</td></tr>';
     });
     html += '</table>';
   }
 
-  html += '<div class="footer">Team Vacation Planner &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString()+'</div>';
+  html += '<div class="footer">Team Vacation Planner &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString(dateLocale())+'</div>';
   html += '</body></html>';
 
   var base = fileBase(team.name)+"_"+yr+"_report";
@@ -423,10 +425,10 @@ export function printReport(team, t) {
   html += '</style></head><body>';
 
   // Print button
-  html += '<div class="no-print" style="position:fixed;top:10px;right:10px;z-index:100"><button onclick="window.print()" style="padding:8px 20px;border-radius:8px;border:none;background:#7C3AED;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Print / Save as PDF</button></div>';
+  html += '<div class="no-print" style="position:fixed;top:10px;right:10px;z-index:100"><button onclick="window.print()" style="padding:8px 20px;border-radius:8px;border:none;background:#7C3AED;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">'+esc(V("rpPrint"))+'</button></div>';
 
   // Header
-  html += '<div class="hdr"><div><h1>'+esc(team.name)+'</h1><div class="sub">'+yr+' &middot; '+team.members.length+' members &middot; Generated '+new Date().toLocaleDateString()+'</div></div><div style="font-size:9px;color:#9ca3af">vacationplanner.team</div></div>';
+  html += '<div class="hdr"><div><h1>'+esc(team.name)+'</h1><div class="sub">'+yr+' &middot; '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' &middot; '+esc(V('rpGenOn',{d:new Date().toLocaleDateString(dateLocale())}))+'</div></div><div style="font-size:9px;color:#9ca3af">vacationplanner.team</div></div>';
 
   // Legend
   html += '<div class="legend">';
@@ -434,16 +436,16 @@ export function printReport(team, t) {
     var c=MC[i%MC.length];
     html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
   });
-  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">Holiday</span></div>';
+  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">'+esc(V("rpHoliday"))+'</span></div>';
   html += '</div>';
 
   // Stats
   var avgCov = team.members.length > 0 ? Math.round((1 - totalDays / (team.members.length * 260)) * 100) : 100;
   html += '<div class="stats">';
-  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">Total vacation days</div></div>';
-  html += '<div class="stat"><div class="stat-red">'+overlaps.length+'</div><div class="stat-lbl">Overlap days</div></div>';
-  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">Team members</div></div>';
-  html += '<div class="stat"><div class="stat-grn">'+avgCov+'%</div><div class="stat-lbl">Avg coverage</div></div>';
+  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">'+esc(V("rpTotal"))+'</div></div>';
+  html += '<div class="stat"><div class="stat-red">'+overlaps.length+'</div><div class="stat-lbl">'+esc(V("rpOverlap"))+'</div></div>';
+  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">'+esc(V("rpTeam"))+'</div></div>';
+  html += '<div class="stat"><div class="stat-grn">'+avgCov+'%</div><div class="stat-lbl">'+esc(V("rpAvgCov"))+'</div></div>';
   html += '</div>';
 
   // Timeline per active month
@@ -471,7 +473,7 @@ export function printReport(team, t) {
   }
 
   // Calendar grid — 4 per row for landscape
-  html += '<div class="tl-title">Year Calendar '+yr+'</div>';
+  html += '<div class="tl-title">'+esc(V("rpYearCal"))+' '+yr+'</div>';
   html += '<div class="cal-grid">';
   for(var mo3=0;mo3<12;mo3++){
     html += '<div class="cal-month"><div class="cal-title">'+months[mo3]+'</div><div class="cal-days">';
@@ -500,8 +502,8 @@ export function printReport(team, t) {
   html += '</div>';
 
   // Summary table
-  html += '<div class="tl-title">Member Summary</div>';
-  html += '<table><tr><th>Member</th><th>Country</th><th>Days</th><th>Vacation Periods</th></tr>';
+  html += '<div class="tl-title">'+esc(V("rpSummary"))+'</div>';
+  html += '<table><tr><th>'+esc(V("rpMember"))+'</th><th>'+esc(V("rpCountry"))+'</th><th>'+esc(V("rpDays"))+'</th><th>'+esc(V("rpPeriods"))+'</th></tr>';
   team.members.forEach(function(m,i){
     var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
     var sorted=(m.days||[]).slice().sort();
@@ -516,13 +518,13 @@ export function printReport(team, t) {
   html += '</table>';
 
   if(overlaps.length){
-    html += '<div class="tl-title">Overlap Days ('+overlaps.length+')</div>';
-    html += '<table><tr><th>Date</th><th>Members Out</th></tr>';
+    html += '<div class="tl-title">'+esc(V('rpOverlap'))+' ('+overlaps.length+')</div>';
+    html += '<table><tr><th>'+esc(V("rpDate"))+'</th><th>'+esc(V("rpOut"))+'</th></tr>';
     overlaps.forEach(function(e){html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+(e[1] as string[]).map(esc).join(', ')+'</td></tr>';});
     html += '</table>';
   }
 
-  html += '<div class="footer">Generated by Team Vacation Planner &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString()+'</div>';
+  html += '<div class="footer">'+esc(V('rpGenerated'))+' &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString(dateLocale())+'</div>';
   html += '</body></html>';
 
   var win = window.open('','_blank','width=1100,height=800');
@@ -583,15 +585,15 @@ export function exportXLSLegacy(team, t) {
   xml += '<Column ss:Width="120"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="100"/><Column ss:Width="100"/>\n';
   // Title
   xml += '<Row ss:Height="30"><Cell ss:StyleID="title"><Data ss:Type="String">'+esc(team.name)+'</Data></Cell></Row>\n';
-  xml += '<Row><Cell ss:StyleID="sub"><Data ss:Type="String">'+yr+' | '+team.members.length+' members | Generated '+new Date().toLocaleDateString()+'</Data></Cell></Row>\n';
+  xml += '<Row><Cell ss:StyleID="sub"><Data ss:Type="String">'+yr+' | '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' | '+esc(V('rpGenOn',{d:new Date().toLocaleDateString(dateLocale())}))+'</Data></Cell></Row>\n';
   xml += '<Row></Row>\n';
   // Stats
   xml += '<Row><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+totalDays+'</Data></Cell><Cell ss:StyleID="stat-red"><Data ss:Type="Number">'+overlaps.length+'</Data></Cell><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+team.members.length+'</Data></Cell><Cell ss:StyleID="stat-grn"><Data ss:Type="String">'+Math.round((1-totalDays/(team.members.length*260||1))*100)+'%</Data></Cell></Row>\n';
-  xml += '<Row><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Total vacation days</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Overlap days</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Team members</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">Avg coverage</Data></Cell></Row>\n';
+  xml += '<Row><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">'+esc(V("rpTotal"))+'</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">'+esc(V("rpOverlap"))+'</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">'+esc(V("rpTeam"))+'</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">'+esc(V("rpAvgCov"))+'</Data></Cell></Row>\n';
   xml += '<Row></Row>\n';
   // Member summary
-  xml += '<Row><Cell ss:StyleID="sect" ss:MergeAcross="4"><Data ss:Type="String">Member Summary</Data></Cell></Row>\n';
-  xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">Member</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Country</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Days</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Periods</Data></Cell></Row>\n';
+  xml += '<Row><Cell ss:StyleID="sect" ss:MergeAcross="4"><Data ss:Type="String">'+esc(V("rpSummary"))+'</Data></Cell></Row>\n';
+  xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(V("rpMember"))+'</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(V("rpCountry"))+'</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(V("rpDays"))+'</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(V("rpPeriods"))+'</Data></Cell></Row>\n';
   team.members.forEach(function(m,i){
     var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
     var sorted = (m.days||[]).slice().sort();
@@ -605,8 +607,8 @@ export function exportXLSLegacy(team, t) {
   });
   // Overlaps
   if(overlaps.length){
-    xml += '<Row></Row><Row><Cell ss:StyleID="sect" ss:MergeAcross="3"><Data ss:Type="String">Overlap Days ('+overlaps.length+')</Data></Cell></Row>\n';
-    xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">Date</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">Members Out</Data></Cell></Row>\n';
+    xml += '<Row></Row><Row><Cell ss:StyleID="sect" ss:MergeAcross="3"><Data ss:Type="String">'+esc(V('rpOverlap'))+' ('+overlaps.length+')</Data></Cell></Row>\n';
+    xml += '<Row><Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(V("rpDate"))+'</Data></Cell><Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(V("rpOut"))+'</Data></Cell></Row>\n';
     overlaps.forEach(function(e){
       xml += '<Row><Cell ss:StyleID="overlap"><Data ss:Type="String">'+e[0]+'</Data></Cell><Cell><Data ss:Type="String">'+(e[1] as string[]).map(esc).join(', ')+'</Data></Cell></Row>\n';
     });
@@ -638,7 +640,7 @@ export function exportXLSLegacy(team, t) {
     if(week.length) { while(week.length<7) week.push(null); weeks.push(week); }
 
     weeks.forEach(function(wk){
-      xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">Team</Data></Cell>';
+      xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+esc(V("rpTeamLbl"))+'</Data></Cell>';
       wk.forEach(function(d){
         if(!d){xml += '<Cell></Cell>';return;}
         var key = dk(yr,mo,d);
@@ -673,7 +675,7 @@ export function exportXLSLegacy(team, t) {
 
     xml += '<Row ss:Height="20"><Cell ss:StyleID="sect"><Data ss:Type="String">'+months[mo2]+'</Data></Cell></Row>\n';
     // Day number header
-    xml += '<Row><Cell ss:StyleID="day-hdr"><Data ss:Type="String">Name</Data></Cell>';
+    xml += '<Row><Cell ss:StyleID="day-hdr"><Data ss:Type="String">'+esc(V("rpName"))+'</Data></Cell>';
     for(var d2=1;d2<=daysInMo2;d2++) xml += '<Cell ss:StyleID="day-hdr"><Data ss:Type="Number">'+d2+'</Data></Cell>';
     xml += '</Row>\n';
     // Member Gantt bars
