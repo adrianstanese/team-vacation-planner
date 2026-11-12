@@ -8,7 +8,7 @@ const body = Figtree({ subsets: ["latin", "latin-ext"], weight: ["400", "600", "
 
 const SITE_URL = "https://www.vacationplanner.team";
 const SITE_NAME = "Team Vacation Planner";
-const DESCRIPTION = "Free team vacation planner for teams up to 50. Plan vacations, see who's away, avoid overlaps. 55 countries, regional holidays, public holidays 2026–2035, heatmap, timeline, coverage dashboard. No login required.";
+const DESCRIPTION = "Free team vacation planner for teams up to 50. Plan vacations, see who's away, avoid overlaps. 61 countries, regional holidays, public holidays 2026–2035, heatmap, timeline, coverage dashboard. No login required.";
 const OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 export const viewport: Viewport = {
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Team Vacation Planner — Free Team Leave Calendar",
-    description: "Plan vacations, see who's away, avoid overlaps. 55 countries, 11 languages, no login required.",
+    description: "Plan vacations, see who's away, avoid overlaps. 61 countries, 17 languages, no login required.",
     images: [OG_IMAGE],
   },
   alternates: {
@@ -73,7 +73,7 @@ const jsonLd = {
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       featureList: [
         "Team vacation calendar for up to 50 members",
-        "Public holidays for 55 countries (2026–2035)",
+        "Public holidays for 61 countries (2026–2035)",
         "Regional holidays for Spain, Germany, Switzerland, Australia, Canada",
         "PTO balance tracker with progress bar",
         "Working days counter",
@@ -81,7 +81,7 @@ const jsonLd = {
         "iCal subscribe URL for Google Calendar and Outlook",
         "Heatmap, Timeline, Coverage Dashboard views",
         "ICS, PDF, CSV, Excel, TSV export",
-        "11 languages, 3 themes, frosted-glass design",
+        "17 languages, 3 themes, frosted-glass design",
         "No login or account required",
       ],
     },
@@ -89,9 +89,9 @@ const jsonLd = {
       "@type": "FAQPage", "@id": `${SITE_URL}/#faq`,
       mainEntity: [
         { "@type": "Question", name: "What is Team Vacation Planner?",
-          acceptedAnswer: { "@type": "Answer", text: "A free web app that helps teams of up to 50 people plan and coordinate vacations. Shows public holidays for 55 countries with regional support, detects overlaps, and provides heatmap, timeline, and coverage views. No login required." }},
+          acceptedAnswer: { "@type": "Answer", text: "A free web app that helps teams of up to 50 people plan and coordinate vacations. Shows public holidays for 61 countries with regional support, detects overlaps, and provides heatmap, timeline, and coverage views. No login required." }},
         { "@type": "Question", name: "How many countries are supported?",
-          acceptedAnswer: { "@type": "Answer", text: "55 countries across Europe, Middle East, South America, and Africa. Regional holidays for Spain (17 communities), Germany (16 states), Switzerland (6 cantons), Australia (6 states), and Canada (4 provinces)." }},
+          acceptedAnswer: { "@type": "Answer", text: "61 countries across Europe, Middle East, South America, and Africa. Regional holidays for Spain (17 communities), Germany (16 states), Switzerland (6 cantons), Australia (6 states), and Canada (4 provinces)." }},
         { "@type": "Question", name: "Do I need to create an account?",
           acceptedAnswer: { "@type": "Answer", text: "No. There are no accounts or passwords. Create a team and share its link; anyone with the link can view the team, and members can protect their own entries with a PIN." }},
         { "@type": "Question", name: "Is it really free?",

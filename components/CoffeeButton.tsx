@@ -14,6 +14,12 @@ const TX: Record<string, { cta: string; tab: string }> = {
   it: { cta: "Offrimi un caffè", tab: "apre buymeacoffee.com in una nuova scheda" },
   bg: { cta: "Почерпете ме с кафе", tab: "отваря buymeacoffee.com в нов раздел" },
   ar: { cta: "اشترِ لي قهوة", tab: "يفتح buymeacoffee.com في علامة تبويب جديدة" },
+/*i18n:bn*/bn:{"cta":"আমাকে এক কাপ কফি খাওয়ান","tab":"নতুন ট্যাবে buymeacoffee.com খুলবে"},/*/i18n:bn*/
+/*i18n:hi*/hi:{"cta":"मुझे एक कॉफ़ी पिलाएँ","tab":"buymeacoffee.com नए टैब में खुलता है"},/*/i18n:hi*/
+/*i18n:ja*/ja:{"cta":"コーヒーをおごる","tab":"新しいタブでbuymeacoffee.comを開きます"},/*/i18n:ja*/
+/*i18n:ru*/ru:{"cta":"Угостить меня кофе","tab":"откроется buymeacoffee.com в новой вкладке"},/*/i18n:ru*/
+/*i18n:ur*/ur:{"cta":"مجھے کافی پلائیں","tab":"buymeacoffee.com نئے ٹیب میں کھلتا ہے"},/*/i18n:ur*/
+/*i18n:zh*/zh:{"cta":"请我喝杯咖啡","tab":"在新标签页中打开 buymeacoffee.com"},/*/i18n:zh*/
 };
 
 export default function CoffeeButton({ lang = "en", iconOnly = false }: { lang?: string; iconOnly?: boolean }) {

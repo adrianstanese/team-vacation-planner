@@ -1,7 +1,7 @@
 {
   "name": "Team Vacation Planner",
   "short_name": "VacationPlanner",
-  "description": "Free team vacation planner for teams up to 50. 55 countries, regional holidays, 2026-2035. No login required.",
+  "description": "Free team vacation planner for teams up to 50. 61 countries, regional holidays, 2026-2035. No login required.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F2F1EE",

@@ -12,7 +12,8 @@ const src = process.argv[2];
 if (!src || !existsSync(src)) { console.error("Pass the NonWorkingDays holidays folder"); process.exit(1); }
 
 const app = readFileSync(join(here, "../app/app.tsx"), "utf8");
-const block = app.slice(app.indexOf("const EU_C=["), app.indexOf("];", app.indexOf("const EU_C=[")));
+const block = app.slice(app.indexOf("const EU_C")).split("\n")[0];
+if (!block.includes('{c:"RO"')) { console.error("country list not found in app/app.tsx"); process.exit(1); }
 const codes = [...block.matchAll(/\{c:"([A-Z]{2})"/g)].map(m => m[1]);
 const out = join(here, "../public/hn");
 mkdirSync(out, { recursive: true });

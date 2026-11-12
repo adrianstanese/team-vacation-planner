@@ -1,0 +1,2736 @@
+{
+ "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
+ "source": "en",
+ "strings": 649,
+ "rules": [
+  "Translate meaning, not words: short, natural interface language a colleague would use at work.",
+  "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
+  "Texts with a number before or after them have no plural logic: choose a form that reads acceptably with any number.",
+  "Keep product names and formats unchanged: Team Vacation Planner may be translated as a description only in 'brand'; Workoșenie, Buy Me a Coffee, PIN, PDF, Excel, CSV, ICS, QR, JSON, WhatsApp, Telegram, LinkedIn, Facebook, X stay as they are.",
+  "Keep symbols such as ½, ·, →, –, …, €, % and emoji where they are.",
+  "'max' is a soft limit in characters for labels on buttons, tabs and chips: stay under it when the language allows.",
+  "Lists ('items') keep the same number of entries in the same order.",
+  "No machine-sounding literalisms; no English left over except the names above.",
+  "Use one term per concept everywhere (see glossary) and one register (polite-neutral, addressing the user directly)."
+ ],
+ "glossary": {
+  "vacation / leave": "Paid annual leave an employee books. Use the everyday workplace word.",
+  "public holiday": "Official non-working day by law.",
+  "team": "The group of colleagues sharing one calendar.",
+  "member": "A person in the team.",
+  "approver": "The member who approves vacation requests.",
+  "owner / creator": "The person who created the team.",
+  "allowance (PTO)": "Vacation days a person may take per year.",
+  "carry-over": "Unused days moved to the next year.",
+  "coverage": "Share of the team at work on a given day.",
+  "overlap / clash": "Several people away on the same day (clash = too many).",
+  "bridge day": "A working day between a public holiday and a weekend, worth taking off.",
+  "half day": "Half a vacation day.",
+  "business trip": "Work travel, shown separately from vacation.",
+  "heatmap": "Calendar coloured by how many people are away.",
+  "timeline": "Horizontal bars per person across the year.",
+  "PIN": "The 4 to 6 digit code each member sets.",
+  "setup code": "One-time 8-digit code given after a PIN reset.",
+  "time travel": "Version history of the calendar.",
+  "Wrapped": "Year-in-review story."
+ },
+ "lang_block": {
+  "code": "ISO 639-1 code used in the app, e.g. ja",
+  "name": "Language name in the language itself, e.g. 日本語",
+  "label": "2-letter label for the language switcher, e.g. JA",
+  "flag": "Flag emoji shown in the switcher",
+  "home": "ISO country code preselected for a new member using this language, e.g. JP",
+  "locale": "BCP 47 tag for dates and numbers, e.g. ja-JP",
+  "dir": "ltr or rtl",
+  "fonts": "CSS font-family fallbacks if the script is not Latin/Cyrillic/Greek, else empty"
+ },
+ "groups": {
+  "TX": {
+   "where": "Main planner screen: sidebar, calendar, views, share dialog, contact form, business trips.",
+   "file": "app/app.tsx",
+   "strings": {
+    "brand": {
+     "en": "Team Vacation Planner"
+    },
+    "tag1": {
+     "en": "Beautiful team vacation planning."
+    },
+    "tag2": {
+     "en": "See who's away, avoid overlaps, stay in sync."
+    },
+    "crt": {
+     "en": "Create a Team",
+     "max": 25
+    },
+    "crSub": {
+     "en": "Start a new vacation board"
+    },
+    "jnt": {
+     "en": "Join a Team",
+     "max": 22
+    },
+    "jnSub": {
+     "en": "Enter a team code"
+    },
+    "tn": {
+     "en": "Team Name",
+     "max": 18
+    },
+    "tnP": {
+     "en": "e.g. Engineering, Marketing Q3"
+    },
+    "vy": {
+     "en": "Year",
+     "max": 10
+    },
+    "cr": {
+     "en": "Create Team",
+     "max": 22
+    },
+    "jc": {
+     "en": "Team Code or Link"
+    },
+    "jcP": {
+     "en": "Paste code or link"
+    },
+    "jn": {
+     "en": "Join Team",
+     "max": 18
+    },
+    "nf": {
+     "en": "Team not found.",
+     "max": 29
+    },
+    "mt": {
+     "en": "My Teams",
+     "max": 16
+    },
+    "mb": {
+     "en": "member",
+     "max": 13,
+     "note": "Follows a number: '1 member'."
+    },
+    "mbs": {
+     "en": "members",
+     "max": 15,
+     "note": "Follows a number: '5 members'. Use the form that works after any number above 1."
+    },
+    "tm": {
+     "en": "Team Members",
+     "max": 24
+    },
+    "am": {
+     "en": "Add Member",
+     "max": 20
+    },
+    "en2": {
+     "en": "Enter name…",
+     "max": 22
+    },
+    "add": {
+     "en": "Add",
+     "max": 10
+    },
+    "can": {
+     "en": "Cancel",
+     "max": 13
+    },
+    "mx": {
+     "en": "Max 50",
+     "max": 13,
+     "note": "Shown when the team is full: maximum 50 members."
+    },
+    "mr": {
+     "en": "Removed",
+     "max": 15,
+     "note": "Toast: member removed."
+    },
+    "nd": {
+     "en": "No days",
+     "max": 15,
+     "note": "No vacation days picked yet."
+    },
+    "dy": {
+     "en": "day",
+     "max": 10,
+     "note": "Follows a number: '1 day'."
+    },
+    "dys": {
+     "en": "days",
+     "max": 10,
+     "note": "Follows a number: '12 days'."
+    },
+    "ed": {
+     "en": "Editing",
+     "max": 15,
+     "note": "Label before the name of the member whose days are being edited."
+    },
+    "tap": {
+     "en": "tap dates to toggle · drag to select range"
+    },
+    "sel": {
+     "en": "Select a member to edit days"
+    },
+    "et": {
+     "en": "Your team is ready!"
+    },
+    "es2": {
+     "en": "Add your first member, then pick dates."
+    },
+    "af": {
+     "en": "Add First",
+     "max": 18,
+     "note": "Button: add the first member."
+    },
+    "leg": {
+     "en": "Legend",
+     "max": 13
+    },
+    "ol": {
+     "en": "Overlap",
+     "max": 15,
+     "note": "Overlap = days when several people are away at once."
+    },
+    "os": {
+     "en": "Summary",
+     "max": 15,
+     "note": "Heading: summary."
+    },
+    "ndy": {
+     "en": "No vacation days yet."
+    },
+    "dol": {
+     "en": "day(s) with 2+ out"
+    },
+    "sh": {
+     "en": "Share",
+     "max": 11
+    },
+    "sht": {
+     "en": "Share Team Link",
+     "max": 29
+    },
+    "shs": {
+     "en": "Anyone with this link can join"
+    },
+    "cl": {
+     "en": "Copy Link",
+     "max": 18
+    },
+    "cp": {
+     "en": "Copied!",
+     "max": 15
+    },
+    "lne": {
+     "en": "Link never expires."
+    },
+    "tc": {
+     "en": "Team Code",
+     "max": 18
+    },
+    "bf": {
+     "en": "Built for teams up to 50"
+    },
+    "ch": {
+     "en": "Country Holidays",
+     "max": 31
+    },
+    "tv": {
+     "en": "Team Holidays",
+     "max": 25,
+     "note": "Heading: the team's public holidays."
+    },
+    "co": {
+     "en": "Country",
+     "max": 15
+    },
+    "hol": {
+     "en": "holidays",
+     "max": 16,
+     "note": "Follows a number: '11 holidays' (public holidays)."
+    },
+    "selC": {
+     "en": "Select country…",
+     "max": 29
+    },
+    "close": {
+     "en": "Close",
+     "max": 11
+    },
+    "cal": {
+     "en": "Calendar",
+     "max": 16
+    },
+    "heatmap": {
+     "en": "Heatmap",
+     "max": 15
+    },
+    "timeline": {
+     "en": "Timeline",
+     "max": 16
+    },
+    "coverage": {
+     "en": "Coverage",
+     "max": 16,
+     "note": "Coverage = share of the team that is at work on a day."
+    },
+    "summary": {
+     "en": "Summary",
+     "max": 15
+    },
+    "lock": {
+     "en": "Lock Board",
+     "max": 20,
+     "note": "Lock the board so nobody can change days."
+    },
+    "unlock": {
+     "en": "Unlock Board",
+     "max": 24
+    },
+    "locked": {
+     "en": "Board is locked by admin"
+    },
+    "export": {
+     "en": "Export ICS",
+     "max": 20,
+     "note": "Keep 'ICS' (calendar file format)."
+    },
+    "pdf": {
+     "en": "PDF Report",
+     "max": 20
+    },
+    "embed": {
+     "en": "Embed Code",
+     "max": 20,
+     "note": "HTML code to embed the calendar in another page."
+    },
+    "wk": {
+     "en": "Workday",
+     "max": 15,
+     "note": "'Workday' as a day type in the legend."
+    },
+    "we": {
+     "en": "Weekend",
+     "max": 15,
+     "note": "'Weekend' as a day type in the legend. Not the pronoun."
+    },
+    "conflictWarn": {
+     "en": "Coverage alert: {n} members out on {date}",
+     "ph": [
+      "{n}",
+      "{date}"
+     ]
+    },
+    "threshold": {
+     "en": "Alert threshold",
+     "max": 29
+    },
+    "mo": {
+     "en": "Mo",
+     "max": 10,
+     "note": "Two-letter weekday abbreviation for Monday (calendar column header; keep to 1-3 characters)."
+    },
+    "tu": {
+     "en": "Tu",
+     "max": 10,
+     "note": "Weekday abbreviation: Tuesday (1-3 characters)."
+    },
+    "we2": {
+     "en": "We",
+     "max": 10,
+     "note": "Weekday abbreviation: Wednesday (1-3 characters). Not the pronoun 'we'."
+    },
+    "th": {
+     "en": "Th",
+     "max": 10,
+     "note": "Weekday abbreviation: Thursday (1-3 characters)."
+    },
+    "fr": {
+     "en": "Fr",
+     "max": 10,
+     "note": "Weekday abbreviation: Friday (1-3 characters)."
+    },
+    "sa": {
+     "en": "Sa",
+     "max": 10,
+     "note": "Weekday abbreviation: Saturday (1-3 characters)."
+    },
+    "su": {
+     "en": "Su",
+     "max": 10,
+     "note": "Weekday abbreviation: Sunday (1-3 characters)."
+    },
+    "about": {
+     "en": "About",
+     "max": 11
+    },
+    "contact": {
+     "en": "Contact",
+     "max": 15
+    },
+    "contactTitle": {
+     "en": "Contact & Feedback"
+    },
+    "contactSub": {
+     "en": "We'd love to hear from you"
+    },
+    "sendFeedback": {
+     "en": "Send Feedback",
+     "max": 25
+    },
+    "thankYou": {
+     "en": "Thank you!",
+     "max": 20
+    },
+    "thankYouSub": {
+     "en": "Your email client should open with the message ready to send."
+    },
+    "yourEmail": {
+     "en": "Your email",
+     "max": 20
+    },
+    "subjectLabel": {
+     "en": "Subject",
+     "max": 15
+    },
+    "messageLabel": {
+     "en": "Message",
+     "max": 15
+    },
+    "selectTopic": {
+     "en": "Select a topic…",
+     "max": 29
+    },
+    "emailPlaceholder": {
+     "en": "your@email.com",
+     "max": 27,
+     "note": "Example e-mail address; leave in Latin letters."
+    },
+    "msgPlaceholder": {
+     "en": "Tell us what is on your mind… (min 10 characters)"
+    },
+    "chars": {
+     "en": "characters",
+     "max": 20,
+     "note": "Follows a number: characters typed."
+    },
+    "emailNote": {
+     "en": "Opens your email client with the message pre-filled. Your email is only used to reply to your feedback."
+    },
+    "gotIt": {
+     "en": "Got it",
+     "max": 13
+    },
+    "back": {
+     "en": "Back",
+     "max": 10
+    },
+    "subFeedback": {
+     "en": "General Feedback",
+     "max": 31
+    },
+    "subBug": {
+     "en": "Bug Report",
+     "max": 20
+    },
+    "subSuggestion": {
+     "en": "Feature Suggestion"
+    },
+    "subQuestion": {
+     "en": "Question / How-to"
+    },
+    "subPartner": {
+     "en": "Partnership / Integration"
+    },
+    "subData": {
+     "en": "Data Correction (Holidays)"
+    },
+    "subOther": {
+     "en": "Other",
+     "max": 11
+    },
+    "noActivity": {
+     "en": "No activity yet.",
+     "max": 31
+    },
+    "activityLog": {
+     "en": "Activity Log",
+     "max": 24
+    },
+    "bestDays": {
+     "en": "Best Days for",
+     "max": 25,
+     "note": "Followed by a year or person: best days to take off for …"
+    },
+    "copyEmbed": {
+     "en": "Copy Embed Code",
+     "max": 29
+    },
+    "holiday": {
+     "en": "Holiday",
+     "max": 15
+    },
+    "avgCov": {
+     "en": "Avg Coverage",
+     "max": 24
+    },
+    "lowWeek": {
+     "en": "Lowest Week",
+     "max": 22
+    },
+    "weeksLow": {
+     "en": "Weeks <70%",
+     "max": 20,
+     "note": "Number of weeks where under 70% of the team is in."
+    },
+    "inOffice": {
+     "en": "In office",
+     "max": 18
+    },
+    "onVac": {
+     "en": "On vacation",
+     "max": 22
+    },
+    "outToday": {
+     "en": "Out today",
+     "max": 18
+    },
+    "nextVac": {
+     "en": "Next",
+     "max": 10,
+     "note": "Label before a date: next vacation."
+    },
+    "today": {
+     "en": "Today",
+     "max": 11
+    },
+    "printBtn": {
+     "en": "Print / Save as PDF"
+    },
+    "sheetsTitle": {
+     "en": "Google Sheets Live Feed"
+    },
+    "sheetsSub": {
+     "en": "Use =IMPORTDATA(this_url) in Google Sheets to auto-import"
+    },
+    "cookieMsg": {
+     "en": "This tool uses local storage to save your preferences and team data. No personal data is collected or shared with third parties."
+    },
+    "workDays": {
+     "en": "Working Days",
+     "max": 24
+    },
+    "stdWeek": {
+     "en": "Standard (Mon–Fri)"
+    },
+    "fullWeek": {
+     "en": "7-Day Operations",
+     "max": 31
+    },
+    "natOnly": {
+     "en": "National only",
+     "max": 25
+    },
+    "region": {
+     "en": "Region",
+     "max": 13
+    },
+    "pto": {
+     "en": "PTO",
+     "max": 10,
+     "note": "Paid time off = yearly vacation allowance in days. Translate as 'vacation days'/'leave allowance', not literally."
+    },
+    "role": {
+     "en": "Role",
+     "max": 10,
+     "note": "Role in the planner (member / approver), not job title."
+    },
+    "setApprover": {
+     "en": "Set as Approver",
+     "max": 29
+    },
+    "approverLabel": {
+     "en": "Approver",
+     "max": 16
+    },
+    "teamApproval": {
+     "en": "Team Approval",
+     "max": 25
+    },
+    "approveAll": {
+     "en": "Approve All",
+     "max": 22
+    },
+    "workDaysLeft": {
+     "en": "work days left",
+     "max": 27
+    },
+    "holCount": {
+     "en": "holidays",
+     "max": 16,
+     "note": "Follows a number: public holidays."
+    },
+    "subscribe": {
+     "en": "Subscribe",
+     "max": 18
+    },
+    "widget": {
+     "en": "Widget",
+     "max": 13,
+     "note": "Embeddable mini view. May stay 'Widget' if that is the common word."
+    },
+    "copySubURL": {
+     "en": "Copy Subscribe URL"
+    },
+    "copyWidget": {
+     "en": "Copy Widget Code",
+     "max": 31
+    },
+    "analytics": {
+     "en": "Analytics",
+     "max": 18
+    },
+    "totalVacDays": {
+     "en": "Total Vacation Days"
+    },
+    "overlapDays": {
+     "en": "Overlap Days",
+     "max": 24
+    },
+    "peakMonth": {
+     "en": "Peak Month",
+     "max": 20
+    },
+    "avgDays": {
+     "en": "Avg Days/Person",
+     "max": 29
+    },
+    "monthlyDist": {
+     "en": "Monthly Distribution"
+    },
+    "memberBreak": {
+     "en": "Per Member Breakdown"
+    },
+    "approvedPdf": {
+     "en": "Approved PDF",
+     "max": 24
+    },
+    "approvalCert": {
+     "en": "Approval Certification"
+    },
+    "alertLabel": {
+     "en": "Alert",
+     "max": 11
+    },
+    "pending": {
+     "en": "pending",
+     "max": 15,
+     "note": "Lower-case status: awaiting approval."
+    },
+    "approved": {
+     "en": "Approved",
+     "max": 16
+    },
+    "addMembers": {
+     "en": "Add members to see analytics"
+    },
+    "iCalTitle": {
+     "en": "iCal Subscribe URL"
+    },
+    "iCalDesc": {
+     "en": "Add this URL to Google Calendar, Outlook, or Apple Calendar. It updates automatically when vacations change."
+    },
+    "widgetDesc": {
+     "en": "A compact widget showing who is out this week. Perfect for Notion, wikis, or TV screens."
+    },
+    "offToday": {
+     "en": "Non-working day today"
+    },
+    "shareThis": {
+     "en": "Share this tool",
+     "max": 29
+    },
+    "teamsCreated": {
+     "en": "Teams",
+     "max": 11
+    },
+    "totalMembers": {
+     "en": "Members",
+     "max": 15
+    },
+    "live": {
+     "en": "Live",
+     "max": 10,
+     "note": "Badge: counters update live."
+    },
+    "addComment": {
+     "en": "Add a comment...",
+     "max": 31
+    },
+    "daysUntil": {
+     "en": "days until vacation"
+    },
+    "tomorrow": {
+     "en": "Tomorrow!",
+     "max": 18,
+     "note": "Badge on a holiday that is tomorrow."
+    },
+    "teamMap": {
+     "en": "Team countries",
+     "max": 27
+    },
+    "fullTeam": {
+     "en": "Full team in today!"
+    },
+    "trips": {
+     "en": "Business Trips",
+     "max": 27
+    },
+    "trip": {
+     "en": "trip",
+     "max": 10,
+     "note": "Follows a number: business trip."
+    },
+    "addTrip": {
+     "en": "Add Trip",
+     "max": 16
+    },
+    "editTrip": {
+     "en": "Edit Trip",
+     "max": 18
+    },
+    "dest": {
+     "en": "Destination",
+     "max": 22
+    },
+    "startDate": {
+     "en": "Start",
+     "max": 11,
+     "note": "Start date of a trip."
+    },
+    "endDate": {
+     "en": "End",
+     "max": 10,
+     "note": "End date of a trip."
+    },
+    "project": {
+     "en": "Project",
+     "max": 15
+    },
+    "noTrips": {
+     "en": "No business trips yet"
+    },
+    "noTripsDesc": {
+     "en": "Track your team's business travel."
+    },
+    "cancel": {
+     "en": "Cancel",
+     "max": 13
+    },
+    "save": {
+     "en": "Save",
+     "max": 10
+    },
+    "M": {
+     "en": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+     ],
+     "items": 12,
+     "note": "Month names, January to December, exactly 12 items in order."
+    }
+   }
+  },
+  "FP": {
+   "where": "Front page: create/join bar, counters, footer links.",
+   "file": "app/app.tsx",
+   "strings": {
+    "create": {
+     "en": "Create",
+     "max": 13
+    },
+    "join": {
+     "en": "Join",
+     "max": 10
+    },
+    "teamName": {
+     "en": "Team name",
+     "max": 18
+    },
+    "teamCode": {
+     "en": "Team code or link"
+    },
+    "year": {
+     "en": "Year",
+     "max": 10
+    },
+    "w5": {
+     "en": "Mon–Fri week",
+     "max": 24,
+     "note": "Option: the team works Monday to Friday."
+    },
+    "w7": {
+     "en": "7-day operations",
+     "max": 31,
+     "note": "Option: the team works all 7 days (shops, hospitals)."
+    },
+    "joinHint": {
+     "en": "Ask your team for the code, or paste the board link."
+    },
+    "recent": {
+     "en": "Jump back in",
+     "max": 24,
+     "note": "Heading above the teams this browser opened before."
+    },
+    "remove": {
+     "en": "Remove",
+     "max": 13
+    },
+    "cancel": {
+     "en": "Cancel",
+     "max": 13
+    },
+    "removeQ": {
+     "en": "Remove {n} from this list?",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "today": {
+     "en": "Today",
+     "max": 11
+    },
+    "nonWorking": {
+     "en": "non-working in {n} countries",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "noneToday": {
+     "en": "No public holiday today in the 61 countries"
+    },
+    "holTitle": {
+     "en": "Public holidays",
+     "max": 29
+    },
+    "holSub": {
+     "en": "61 countries, regions included, 2026–2035."
+    },
+    "country": {
+     "en": "Country",
+     "max": 15
+    },
+    "next": {
+     "en": "Next public holidays"
+    },
+    "all": {
+     "en": "All public holidays"
+    },
+    "numbers": {
+     "en": "Planned here so far"
+    },
+    "teams": {
+     "en": "Teams",
+     "max": 11
+    },
+    "members": {
+     "en": "Members",
+     "max": 15
+    },
+    "visits": {
+     "en": "Visits",
+     "max": 13
+    },
+    "about": {
+     "en": "About",
+     "max": 11
+    },
+    "contact": {
+     "en": "Contact",
+     "max": 15
+    },
+    "language": {
+     "en": "Language",
+     "max": 16
+    },
+    "theme": {
+     "en": "Change theme",
+     "max": 24
+    },
+    "free": {
+     "en": "Free · no login",
+     "max": 29
+    }
+   }
+  },
+  "HC": {
+   "where": "Small card shown when hovering a public holiday in the calendar.",
+   "file": "app/workspace.tsx",
+   "strings": {
+    "ph": {
+     "en": "Public holiday",
+     "max": 27
+    },
+    "off": {
+     "en": "Day off for",
+     "max": 22,
+     "note": "Followed by a list of member names."
+    },
+    "wk": {
+     "en": "falls on a weekend"
+    },
+    "mn": {
+     "en": "Moon-based date – it can move by a day",
+     "note": "Date set by the lunar calendar (e.g. Eid, Lunar New Year)."
+    }
+   }
+  },
+  "UP": {
+   "where": "'Next 2 weeks' panel listing who is away, with a copyable summary.",
+   "file": "app/workspace.tsx",
+   "strings": {
+    "t": {
+     "en": "Next 2 weeks",
+     "max": 24
+    },
+    "none": {
+     "en": "Nobody is away in the next 2 weeks."
+    },
+    "copy": {
+     "en": "Copy summary",
+     "max": 24
+    },
+    "copied": {
+     "en": "Copied",
+     "max": 13
+    },
+    "head": {
+     "en": "who is away",
+     "max": 22,
+     "note": "Lower-case, follows a date range in a copied text: '12-26 Nov: who is away'."
+    }
+   }
+  },
+  "NY": {
+   "where": "Plan-next-year prompt and the delete-team dialog.",
+   "file": "app/workspace.tsx",
+   "strings": {
+    "plan": {
+     "en": "Time to plan {y}",
+     "ph": [
+      "{y}"
+     ],
+     "max": 31
+    },
+    "sub": {
+     "en": "Everyone's {y} holidays are ready. Start picking vacation days.",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "open": {
+     "en": "Open {y}",
+     "ph": [
+      "{y}"
+     ],
+     "max": 16
+    },
+    "later": {
+     "en": "Not now",
+     "max": 15
+    },
+    "delBtn": {
+     "en": "Delete team…",
+     "max": 24
+    },
+    "delT": {
+     "en": "Delete this team for everyone?"
+    },
+    "delB": {
+     "en": "Everyone with the link loses access to {n}. This cannot be undone by you.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "delType": {
+     "en": "Type the team name to confirm"
+    },
+    "delGo": {
+     "en": "Delete for everyone"
+    },
+    "cancel": {
+     "en": "Cancel",
+     "max": 13
+    },
+    "removed": {
+     "en": "Team deleted",
+     "max": 24
+    }
+   }
+  },
+  "ABOUT": {
+   "where": "About page: marketing copy, feature list (title + one-line description pairs f1/f1d …), data and privacy notes.",
+   "file": "lib/aboutText.ts",
+   "strings": {
+    "hero": {
+     "en": "A beautiful, free, zero-login team vacation planning tool for teams up to 50. Frosted-glass design. 61 countries, 17 languages, 2026–2035."
+    },
+    "howTitle": {
+     "en": "How It Works",
+     "max": 24
+    },
+    "s1": {
+     "en": "Create a team",
+     "max": 25
+    },
+    "s1d": {
+     "en": "pick a name and year. You get an instant shareable link."
+    },
+    "s2d": {
+     "en": "enter each person's name and country. Their public holidays are automatically loaded."
+    },
+    "s3": {
+     "en": "Pick vacation days"
+    },
+    "s3d": {
+     "en": "select a member, then click or drag across calendar dates. Weekends are excluded automatically."
+    },
+    "s4": {
+     "en": "Share the link",
+     "max": 27
+    },
+    "s4d": {
+     "en": "anyone with the link can view the team. Members can set a PIN so only they (or the team owner) can change their days. No accounts, no sign-ups."
+    },
+    "s5": {
+     "en": "Analyze & export",
+     "max": 31
+    },
+    "s5d": {
+     "en": "switch between views, download reports, and keep your team in sync."
+    },
+    "calTitle": {
+     "en": "Calendar & Planning"
+    },
+    "viewTitle": {
+     "en": "Views & Analytics"
+    },
+    "shareTitle": {
+     "en": "Sharing & Collaboration"
+    },
+    "teamTitle": {
+     "en": "Team Management",
+     "max": 29
+    },
+    "expTitle": {
+     "en": "Export & Integration"
+    },
+    "designTitle": {
+     "en": "Design & Accessibility"
+    },
+    "dataTitle": {
+     "en": "Data & Privacy",
+     "max": 27
+    },
+    "footer": {
+     "en": "Built with care for teams who value simplicity."
+    },
+    "f1": {
+     "en": "12-Month Calendar View"
+    },
+    "f1d": {
+     "en": "Full-year overview with all team members color-coded. Click any day to toggle vacation."
+    },
+    "f2": {
+     "en": "Drag-to-Select",
+     "max": 27
+    },
+    "f2d": {
+     "en": "Click and drag across multiple days to select a range. Automatically skips weekends."
+    },
+    "f3": {
+     "en": "Multi-Year Support (2026–2035)"
+    },
+    "f3d": {
+     "en": "Holidays computed algorithmically for any year in the range."
+    },
+    "f4": {
+     "en": "Quarterly Focus View"
+    },
+    "f4d": {
+     "en": "Toggle Q1–Q4 to zoom into three months at a time."
+    },
+    "f5": {
+     "en": "61 Countries with Regional Holidays"
+    },
+    "f5d": {
+     "en": "Public holidays for 61 countries. Regional holidays for Spain, Germany, Switzerland, Australia, Canada."
+    },
+    "f6": {
+     "en": "Holiday Clash Detector"
+    },
+    "f6d": {
+     "en": "Warns when someone books vacation on their country's public holiday."
+    },
+    "f7": {
+     "en": "Smart Vacation Optimizer"
+    },
+    "f7d": {
+     "en": "Suggests optimal bridge days for maximum time off."
+    },
+    "f8": {
+     "en": "Heatmap View",
+     "max": 24
+    },
+    "f8d": {
+     "en": "Color-intensity grid showing daily absence density."
+    },
+    "f9": {
+     "en": "Timeline / Gantt View"
+    },
+    "f9d": {
+     "en": "Horizontal bars showing vacation blocks per member."
+    },
+    "f10": {
+     "en": "Coverage Dashboard"
+    },
+    "f10d": {
+     "en": "Weekly bar chart of team availability percentage."
+    },
+    "f11": {
+     "en": "Team Holidays Summary"
+    },
+    "f11d": {
+     "en": "Aggregated public holidays affecting your team."
+    },
+    "f12": {
+     "en": "Activity Log",
+     "max": 24
+    },
+    "f12d": {
+     "en": "Chronological feed of all changes with timestamps."
+    },
+    "f13": {
+     "en": "Instant Share Link"
+    },
+    "f13d": {
+     "en": "Unique URL per team. Share via chat, email, or QR."
+    },
+    "f14": {
+     "en": "QR Code",
+     "max": 15
+    },
+    "f14d": {
+     "en": "Scan to join — colleagues join with their phone camera."
+    },
+    "f15": {
+     "en": "Embeddable Widget"
+    },
+    "f15d": {
+     "en": "Iframe code for any website, wiki, or intranet."
+    },
+    "f16": {
+     "en": "Lock / Unlock Board"
+    },
+    "f16d": {
+     "en": "Admin can lock the board to prevent edits."
+    },
+    "f17": {
+     "en": "Undo / Redo",
+     "max": 22
+    },
+    "f17d": {
+     "en": "Ctrl+Z / Ctrl+Shift+Z with 20-action history."
+    },
+    "f18": {
+     "en": "PTO Balance Tracker"
+    },
+    "f18d": {
+     "en": "Set PTO allowance per member with visual progress bar."
+    },
+    "f19": {
+     "en": "Working Days Counter"
+    },
+    "f19d": {
+     "en": "Remaining working days excluding weekends, holidays, and vacation."
+    },
+    "f20": {
+     "en": "Approval Workflow"
+    },
+    "f20d": {
+     "en": "Approvers can review and approve vacation for each member."
+    },
+    "f21": {
+     "en": "Regional Holiday Support"
+    },
+    "f21d": {
+     "en": "Members select their specific region for local holidays."
+    },
+    "f22": {
+     "en": "ICS Calendar Export"
+    },
+    "f22d": {
+     "en": "Download .ics files for Google Calendar, Outlook, or Apple Calendar."
+    },
+    "f23": {
+     "en": "PDF / HTML Report"
+    },
+    "f23d": {
+     "en": "Annual report with member table, overlap analysis, and summary."
+    },
+    "f24": {
+     "en": "CSV Import & Export"
+    },
+    "f24d": {
+     "en": "Bulk upload from spreadsheets or export for HR systems."
+    },
+    "f25": {
+     "en": "Excel (XLSX) Export"
+    },
+    "f25d": {
+     "en": "SpreadsheetML file ready for payroll or HR."
+    },
+    "f26": {
+     "en": "TSV / Google Sheets Feed"
+    },
+    "f26d": {
+     "en": "Live auto-refreshing feed via IMPORTDATA()."
+    },
+    "f27": {
+     "en": "JSON API",
+     "max": 16
+    },
+    "f27d": {
+     "en": "Structured data for dashboards, Slack bots, or integrations."
+    },
+    "f28": {
+     "en": "iCal Subscribe URL"
+    },
+    "f28d": {
+     "en": "Webcal URL that auto-updates when vacations change."
+    },
+    "f29": {
+     "en": "Mini Dashboard Widget"
+    },
+    "f29d": {
+     "en": "Compact embeddable widget showing who's out this week."
+    },
+    "f30": {
+     "en": "17 Languages",
+     "max": 24
+    },
+    "f30d": {
+     "en": "All UI strings fully localized across 17 languages."
+    },
+    "f31": {
+     "en": "3 Frosted-Glass Themes"
+    },
+    "f31d": {
+     "en": "Light, Dark, and Pink with frosted translucent surfaces."
+    },
+    "f32": {
+     "en": "Dark Mode Auto-Detection"
+    },
+    "f32d": {
+     "en": "Respects your OS preference on first load."
+    },
+    "f33": {
+     "en": "Print-Optimized View"
+    },
+    "f33d": {
+     "en": "A3 landscape year-at-a-glance for office walls."
+    },
+    "f34": {
+     "en": "Mini Dashboard Badge"
+    },
+    "f34d": {
+     "en": "Compact 'Who's in today' widget for TV screens."
+    },
+    "f35": {
+     "en": "Visit Counter",
+     "max": 25
+    },
+    "f35d": {
+     "en": "Anonymous count by country, worked out from your browser's time zone. No IP address is stored."
+    },
+    "f36": {
+     "en": "No Account Needed"
+    },
+    "f36d": {
+     "en": "No sign-up and no passwords. The team link gives access, so share it only with your team."
+    },
+    "f37": {
+     "en": "Automatic Deletion"
+    },
+    "f37d": {
+     "en": "Teams are deleted 24 months after they are created. Deleted teams can be restored for 30 days, then are erased."
+    },
+    "f38": {
+     "en": "Where Data Is Stored"
+    },
+    "f38d": {
+     "en": "Team data is stored in a database at our hosting provider. See the Privacy page for details."
+    }
+   }
+  },
+  "X": {
+   "where": "Assorted planner labels: PIN dialogs, import, groups, half days, cookie notice, exports.",
+   "file": "lib/extraText.ts",
+   "strings": {
+    "nNew": {
+     "en": "new",
+     "max": 10,
+     "note": "Follows a number in an import preview: members that are new."
+    },
+    "nUpdated": {
+     "en": "updated",
+     "max": 15,
+     "note": "Follows a number: members updated."
+    },
+    "nSkipped": {
+     "en": "skipped",
+     "max": 15,
+     "note": "Follows a number: rows skipped."
+    },
+    "cookie": {
+     "en": "This tool keeps your preferences, your team list and team keys only in your browser, to make it work. No ad or tracking cookies. Team data you enter is saved on our server."
+    },
+    "privacy": {
+     "en": "Privacy",
+     "max": 15
+    },
+    "gotIt": {
+     "en": "Got it",
+     "max": 13
+    },
+    "commentHint": {
+     "en": "Don't write reasons for absence, especially health details."
+    },
+    "sameMaker": {
+     "en": "From the same maker"
+    },
+    "renameN": {
+     "en": "Rename {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 20
+    },
+    "removeN": {
+     "en": "Remove {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 20
+    },
+    "ownerReset": {
+     "en": "Reset PIN (owner)"
+    },
+    "ownerResetQ": {
+     "en": "Reset the PIN for {n}? They can set a new one next time.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "ownerResetDone": {
+     "en": "PIN reset for {n}",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "ownerYou": {
+     "en": "You own this team"
+    },
+    "ownerLink": {
+     "en": "Copy owner link",
+     "max": 29
+    },
+    "ownerLinkHint": {
+     "en": "Anyone with this link can manage the team like you: reset PINs and delete it. Share it only with a co-owner."
+    },
+    "ownerCopied": {
+     "en": "Owner link copied. Share it only with a co-owner."
+    },
+    "ownerOther": {
+     "en": "This team has an owner"
+    },
+    "ownerOnlyDelete": {
+     "en": "Only the team owner can delete this team."
+    },
+    "reverted": {
+     "en": "Some changes to PIN-protected members were not saved. Enter their PIN first."
+    },
+    "pinProtect": {
+     "en": "Protect {n} with a 6-digit PIN. If it is forgotten, the team owner or the site admin can reset it.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "pinEnter": {
+     "en": "Enter the PIN to edit this member"
+    },
+    "pinReqDel": {
+     "en": "PIN required to delete this member"
+    },
+    "pin6": {
+     "en": "The PIN must be exactly 6 digits"
+    },
+    "pinSet": {
+     "en": "PIN set",
+     "max": 15
+    },
+    "pinTitle": {
+     "en": "Enter PIN",
+     "max": 18
+    },
+    "pinWrong": {
+     "en": "Wrong PIN",
+     "max": 18
+    },
+    "unlock": {
+     "en": "Unlock",
+     "max": 13
+    },
+    "cancel": {
+     "en": "Cancel",
+     "max": 13
+    },
+    "setPin": {
+     "en": "Set a PIN",
+     "max": 18
+    },
+    "protect": {
+     "en": "Protect",
+     "max": 15,
+     "note": "Button: protect a member with a PIN."
+    },
+    "confirmPin": {
+     "en": "Confirm PIN",
+     "max": 22
+    },
+    "pinMismatch": {
+     "en": "PINs do not match"
+    },
+    "savePin": {
+     "en": "Save PIN",
+     "max": 16
+    },
+    "undo": {
+     "en": "Undo",
+     "max": 10
+    },
+    "redo": {
+     "en": "Redo",
+     "max": 10
+    },
+    "inOffice": {
+     "en": "In office",
+     "max": 18
+    },
+    "onVac": {
+     "en": "On vacation",
+     "max": 22
+    },
+    "outToday": {
+     "en": "Out today",
+     "max": 18
+    },
+    "next": {
+     "en": "Next",
+     "max": 10
+    },
+    "today": {
+     "en": "Today",
+     "max": 11
+    },
+    "starts": {
+     "en": "starts",
+     "max": 13,
+     "note": "Lower-case verb after a name: 'Ana starts 14 Dec'."
+    },
+    "search": {
+     "en": "Search…",
+     "max": 15
+    },
+    "group": {
+     "en": "Group",
+     "max": 11,
+     "note": "A sub-group inside a team (e.g. Design, Sales)."
+    },
+    "groupPh": {
+     "en": "Group (optional), e.g. Design"
+    },
+    "everyone": {
+     "en": "Everyone",
+     "max": 16
+    },
+    "carried": {
+     "en": "Carried over from last year"
+    },
+    "carryUpTo": {
+     "en": "Carry over up to",
+     "max": 31
+    },
+    "carryTitle": {
+     "en": "Unused days from last year carried into this year (0 = off)"
+    },
+    "days": {
+     "en": "days",
+     "max": 10
+    },
+    "calApp": {
+     "en": "Open in my calendar app"
+    },
+    "refreshNote": {
+     "en": "Calendar apps refresh subscriptions on their own schedule (Google: every few hours)."
+    },
+    "icalT": {
+     "en": "Calendar subscription"
+    },
+    "icalD": {
+     "en": "Add this link to Google Calendar, Outlook or Apple Calendar. It updates when vacations change."
+    },
+    "widgetT": {
+     "en": "Mini dashboard widget"
+    },
+    "widgetD": {
+     "en": "A compact widget showing who is out today. For Notion, wikis or office screens."
+    },
+    "embedD": {
+     "en": "Paste this code into any website to embed the team calendar:"
+    },
+    "stored": {
+     "en": "Teams are stored for 24 months. Bookmark this link to come back any time."
+    },
+    "scanJoin": {
+     "en": "Scan to open {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 31
+    },
+    "city": {
+     "en": "City, country",
+     "max": 25
+    },
+    "optional": {
+     "en": "Optional",
+     "max": 16
+    },
+    "logoChange": {
+     "en": "Change logo",
+     "max": 22
+    },
+    "logoRemove": {
+     "en": "Remove logo",
+     "max": 22
+    },
+    "logoAdd": {
+     "en": "Add a team logo",
+     "max": 29
+    },
+    "logoMenu": {
+     "en": "Team logo: change or remove"
+    },
+    "logoBad": {
+     "en": "That image could not be used. Try a PNG or JPG."
+    },
+    "several": {
+     "en": "Add several people at once"
+    },
+    "halfTitle": {
+     "en": "Half-day mode: tap a day to make it a half day"
+    },
+    "halfOn": {
+     "en": "½ on",
+     "max": 10,
+     "note": "Toggle label: half-day mode is on. Keep the ½ sign."
+    },
+    "halfDay": {
+     "en": "½ day",
+     "max": 11,
+     "note": "Keep the ½ sign."
+    },
+    "noCountries": {
+     "en": "No countries assigned."
+    },
+    "importT": {
+     "en": "Add people or import vacation days"
+    },
+    "importHelp": {
+     "en": "One line per person or per period: Name, Country, Start, End. Country and dates are optional. Paste from Excel or a list, or choose a CSV file. People already on the team are matched by name and only get the new days."
+    },
+    "chooseCsv": {
+     "en": "Choose a CSV file"
+    },
+    "preview": {
+     "en": "Preview",
+     "max": 15
+    },
+    "isNew": {
+     "en": "new",
+     "max": 10
+    },
+    "updated": {
+     "en": "updated",
+     "max": 15
+    },
+    "skipped": {
+     "en": "skipped",
+     "max": 15
+    },
+    "apply": {
+     "en": "Apply",
+     "max": 11
+    },
+    "close": {
+     "en": "Close",
+     "max": 11
+    },
+    "listImport": {
+     "en": "List to import",
+     "max": 27
+    },
+    "update": {
+     "en": "update",
+     "max": 13
+    },
+    "skip": {
+     "en": "skip",
+     "max": 10
+    },
+    "day": {
+     "en": "day",
+     "max": 10
+    },
+    "errT": {
+     "en": "Something went wrong"
+    },
+    "errD": {
+     "en": "The app hit an unexpected error. Your team data is safe."
+    },
+    "home": {
+     "en": "Go to the home page"
+    },
+    "bridgeNone": {
+     "en": "No bridge days found for {y}.",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "bridgeTake": {
+     "en": "Take {o} working day(s) off → {g} days off in a row",
+     "ph": [
+      "{o}",
+      "{g}"
+     ]
+    },
+    "add": {
+     "en": "Add",
+     "max": 10
+    },
+    "added": {
+     "en": "Added {n} day(s)",
+     "ph": [
+      "{n}"
+     ],
+     "max": 31
+    },
+    "covHint": {
+     "en": "Share of people at work on working days; each person's own public holidays count as away."
+    },
+    "groupAlerts": {
+     "en": "{n} group alert(s)",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "away": {
+     "en": "{a} of {b} away",
+     "ph": [
+      "{a}",
+      "{b}"
+     ],
+     "max": 29
+    }
+   }
+  },
+  "V": {
+   "where": "Newer features: approvals, 'Who are you?' gate, PIN reset, time travel (version history), Team Wrapped (year-in-review story), Today tiles, printed/PDF reports (keys starting rp).",
+   "file": "lib/v3Text.ts",
+   "strings": {
+    "rpGenOn": {
+     "en": "Generated {d}",
+     "ph": [
+      "{d}"
+     ],
+     "max": 25
+    },
+    "rpTotal": {
+     "en": "Total vacation days"
+    },
+    "rpOverlap": {
+     "en": "Overlap days",
+     "max": 24
+    },
+    "rpAvgCov": {
+     "en": "Avg coverage",
+     "max": 24
+    },
+    "rpTeam": {
+     "en": "Team members",
+     "max": 24
+    },
+    "rpYearCal": {
+     "en": "Year calendar",
+     "max": 25
+    },
+    "rpSummary": {
+     "en": "Member summary",
+     "max": 27
+    },
+    "rpMember": {
+     "en": "Member",
+     "max": 13
+    },
+    "rpCountry": {
+     "en": "Country",
+     "max": 15
+    },
+    "rpDays": {
+     "en": "Days",
+     "max": 10
+    },
+    "rpPeriods": {
+     "en": "Vacation periods",
+     "max": 31
+    },
+    "rpDate": {
+     "en": "Date",
+     "max": 10
+    },
+    "rpOut": {
+     "en": "Members out",
+     "max": 22
+    },
+    "rpHoliday": {
+     "en": "Holiday",
+     "max": 15
+    },
+    "rpName": {
+     "en": "Name",
+     "max": 10
+    },
+    "rpTeamLbl": {
+     "en": "Team",
+     "max": 10
+    },
+    "rpPrint": {
+     "en": "Print / Save as PDF"
+    },
+    "rpGenerated": {
+     "en": "Generated by Team Vacation Planner"
+    },
+    "rpStart": {
+     "en": "Start",
+     "max": 11
+    },
+    "rpEnd": {
+     "en": "End",
+     "max": 10
+    },
+    "rpPubHol": {
+     "en": "Public holiday in {c}",
+     "ph": [
+      "{c}"
+     ]
+    },
+    "expLbl": {
+     "en": "Export:",
+     "max": 15
+    },
+    "importLbl": {
+     "en": "Import",
+     "max": 13
+    },
+    "shareQr": {
+     "en": "Share / QR",
+     "max": 20
+    },
+    "yearLbl": {
+     "en": "Year",
+     "max": 10
+    },
+    "covAlerts": {
+     "en": "{n} coverage alert(s)",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "covOut": {
+     "en": "{n} out",
+     "ph": [
+      "{n}"
+     ],
+     "max": 15,
+     "note": "'{n} out' = n people away."
+    },
+    "moreN": {
+     "en": "+{n} more",
+     "ph": [
+      "{n}"
+     ],
+     "max": 18
+    },
+    "grpAlerts": {
+     "en": "{n} group alert(s)",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "grpAway": {
+     "en": "{g}: {a} of {b} away",
+     "ph": [
+      "{g}",
+      "{a}",
+      "{b}"
+     ]
+    },
+    "swQ": {
+     "en": "Switch to {n}? You'll need {n}'s PIN.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "swQNew": {
+     "en": "{n} has no PIN yet. Switch to {n} and set one now?",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "swTo": {
+     "en": "Switch to {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 25
+    },
+    "npTitle": {
+     "en": "{n} without a PIN",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "npText": {
+     "en": "Nobody can add or change their days until they have a PIN. Click a name to switch to that person and set one (the same PIN for several people is fine)."
+    },
+    "gtCode": {
+     "en": "8-digit setup code"
+    },
+    "gtCodeHelp": {
+     "en": "Your PIN was reset. Enter the one-time setup code your approver gave you, then choose a new PIN."
+    },
+    "prCodeT": {
+     "en": "One-time code for {n}",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "prCodeD": {
+     "en": "Give this code to {n} in person or by private message. With it they choose a new PIN. It works once, within 24 hours.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "prCodeOk": {
+     "en": "Done",
+     "max": 10
+    },
+    "dupName": {
+     "en": "That name is already in the team. Add your surname or an initial."
+    },
+    "apSumPeople": {
+     "en": "people waiting",
+     "max": 27
+    },
+    "apSumDays": {
+     "en": "days to review",
+     "max": 27
+    },
+    "apSumClash": {
+     "en": "with clashes",
+     "max": 24
+    },
+    "apStatReq": {
+     "en": "Requested",
+     "max": 18
+    },
+    "apStatPeriods": {
+     "en": "in {n} period(s)",
+     "ph": [
+      "{n}"
+     ],
+     "max": 31
+    },
+    "apAllowance": {
+     "en": "Allowance",
+     "max": 18
+    },
+    "apCarry": {
+     "en": "incl. {n} carried over",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "apPtoSet": {
+     "en": "days this year",
+     "max": 27
+    },
+    "apNoAllow": {
+     "en": "not set",
+     "max": 15
+    },
+    "apStatLeft": {
+     "en": "Left after",
+     "max": 20,
+     "note": "Days of allowance left after approval."
+    },
+    "apAfter": {
+     "en": "if you approve",
+     "max": 27
+    },
+    "apOverBy": {
+     "en": "{n} over allowance",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "apStatHol": {
+     "en": "Holidays inside",
+     "max": 29
+    },
+    "apHolSub": {
+     "en": "public holidays, not counted"
+    },
+    "apPeriods": {
+     "en": "Periods and who else is away"
+    },
+    "apWd": {
+     "en": "{n} working days",
+     "ph": [
+      "{n}"
+     ],
+     "max": 31
+    },
+    "apNobody": {
+     "en": "Nobody else away",
+     "max": 31
+    },
+    "apClashN": {
+     "en": "{n} clash day(s)",
+     "ph": [
+      "{n}"
+     ],
+     "max": 31
+    },
+    "apLast": {
+     "en": "Last change {d}",
+     "ph": [
+      "{d}"
+     ],
+     "max": 29
+    },
+    "renameBtn": {
+     "en": "Rename",
+     "max": 13
+    },
+    "gtTitle": {
+     "en": "Welcome to {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 27
+    },
+    "gtSub": {
+     "en": "Who are you?",
+     "max": 24
+    },
+    "gtNew": {
+     "en": "I'm new here",
+     "max": 24
+    },
+    "gtNewSub": {
+     "en": "Add yourself to the team"
+    },
+    "gtOld": {
+     "en": "I'm already in the team"
+    },
+    "gtOldSub": {
+     "en": "Pick your name and enter your PIN"
+    },
+    "gtPick": {
+     "en": "Pick your name",
+     "max": 27
+    },
+    "gtOwner": {
+     "en": "Continue as team owner"
+    },
+    "gtBack": {
+     "en": "Back",
+     "max": 10
+    },
+    "gtForgot": {
+     "en": "Forgot your PIN? Ask the approver to reset it"
+    },
+    "gtFpSent": {
+     "en": "Request sent. When the approver resets your PIN, come back and set a new one."
+    },
+    "gtFpAlready": {
+     "en": "You already asked. Wait for the approver to reset your PIN."
+    },
+    "gtCreatorForgot": {
+     "en": "The team creator's PIN can only be reset by the site admin: contact@stanese.ro"
+    },
+    "gtSetPin": {
+     "en": "Choose a 6-digit PIN for {n}. You'll use it every time you open the team.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "gtJoin": {
+     "en": "Join the team",
+     "max": 25
+    },
+    "gtName": {
+     "en": "Your name",
+     "max": 18
+    },
+    "gtPinWhy": {
+     "en": "Everyone has a PIN, so nobody else can change your days."
+    },
+    "gtYou": {
+     "en": "You: {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 16,
+     "note": "Chip showing who the current user is."
+    },
+    "gtSwitch": {
+     "en": "Switch",
+     "max": 13
+    },
+    "gtOwnerMode": {
+     "en": "Team owner view",
+     "max": 29
+    },
+    "pinReqAll": {
+     "en": "6-digit PIN (required)"
+    },
+    "prTitle": {
+     "en": "Forgotten PIN",
+     "max": 25
+    },
+    "prWants": {
+     "en": "{n} forgot their PIN. Reset it and they set a new one on their next visit.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "prReset": {
+     "en": "Reset PIN",
+     "max": 18
+    },
+    "prDone": {
+     "en": "PIN reset for {n}",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "arAsk": {
+     "en": "Ask to become approver"
+    },
+    "arPending": {
+     "en": "Request sent",
+     "max": 24
+    },
+    "arPendingSub": {
+     "en": "Waiting for the current approver"
+    },
+    "arCancel": {
+     "en": "Withdraw",
+     "max": 16
+    },
+    "arNeedPin": {
+     "en": "Set a PIN first to ask to become approver"
+    },
+    "arSent": {
+     "en": "Request sent to the approver"
+    },
+    "arTitle": {
+     "en": "Approver request",
+     "max": 31
+    },
+    "arWants": {
+     "en": "{n} asks to become the team's approver. If you accept, the role moves to them.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "arAccept": {
+     "en": "Accept",
+     "max": 13
+    },
+    "arDecline": {
+     "en": "Decline",
+     "max": 15
+    },
+    "arAccepted": {
+     "en": "{n} is now the approver",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "addLogo": {
+     "en": "Add logo",
+     "max": 16
+    },
+    "apSwitchSub": {
+     "en": "Approves everyone else's days"
+    },
+    "hmAway1": {
+     "en": "1 person away",
+     "max": 25
+    },
+    "hmAway": {
+     "en": "{n} away",
+     "ph": [
+      "{n}"
+     ],
+     "max": 16,
+     "note": "'{n} away' = n people away that day."
+    },
+    "hmHol": {
+     "en": "Public holiday",
+     "max": 27
+    },
+    "hmHolVac": {
+     "en": "Holiday + vacation"
+    },
+    "hmWe": {
+     "en": "Weekend",
+     "max": 15
+    },
+    "apOffT": {
+     "en": "Approvals are off for this team"
+    },
+    "apOffD": {
+     "en": "Choose who approves. Everyone else's days then show as waiting until they are approved."
+    },
+    "apPick": {
+     "en": "Choose the approver"
+    },
+    "apTurnOn": {
+     "en": "Turn on approvals"
+    },
+    "apApprovedN": {
+     "en": "Approved: {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 25
+    },
+    "apOneByOne": {
+     "en": "One by one",
+     "max": 20
+    },
+    "apBulk": {
+     "en": "Approve all without clashes ({n})",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "apTabWait": {
+     "en": "Waiting",
+     "max": 15
+    },
+    "apTabOk": {
+     "en": "Approved",
+     "max": 16
+    },
+    "apNoneOk": {
+     "en": "Nothing approved yet."
+    },
+    "apRevoke": {
+     "en": "Withdraw approval"
+    },
+    "apKeys": {
+     "en": "Keys: A approve · R ask for changes · J / K move"
+    },
+    "jobRole": {
+     "en": "Job title",
+     "max": 18,
+     "note": "Job title (e.g. Designer), set by the team owner."
+    },
+    "jobRolePh": {
+     "en": "e.g. Designer (optional)"
+    },
+    "ptoHelp": {
+     "en": "PTO = paid time off: the vacation days this person gets per year. The days they book count against it."
+    },
+    "creatorHint": {
+     "en": "Add yourself first: you'll be this team's approver, and only you can change your PIN."
+    },
+    "pinReq": {
+     "en": "6-digit PIN (required for you)"
+    },
+    "pinOpt": {
+     "en": "6-digit PIN (optional)"
+    },
+    "visitsLbl": {
+     "en": "visits",
+     "max": 13
+    },
+    "regDefault": {
+     "en": "{r} (default)",
+     "ph": [
+      "{r}"
+     ],
+     "max": 25
+    },
+    "anTitle": {
+     "en": "Team analytics {y}",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "anOut": {
+     "en": "2 or more people away"
+    },
+    "ttApproved": {
+     "en": "approved",
+     "max": 16
+    },
+    "ttUnapproved": {
+     "en": "approval removed",
+     "max": 31
+    },
+    "inbox": {
+     "en": "Approvals",
+     "max": 18,
+     "note": "Tab name for the approvals list."
+    },
+    "inboxTitle": {
+     "en": "Approval inbox",
+     "max": 27
+    },
+    "inboxWaiting": {
+     "en": "Waiting: {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 24
+    },
+    "inboxBadge": {
+     "en": "Plans waiting for approval: {n}",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "approve": {
+     "en": "Approve",
+     "max": 15
+    },
+    "changes": {
+     "en": "Ask for changes",
+     "max": 29
+    },
+    "approveAll": {
+     "en": "Approve all",
+     "max": 22
+    },
+    "swipeHint": {
+     "en": "Swipe right to approve, left to ask for changes"
+    },
+    "dayLbl": {
+     "en": "day",
+     "max": 10
+    },
+    "daysLbl": {
+     "en": "days",
+     "max": 10
+    },
+    "coverOk": {
+     "en": "Coverage OK",
+     "max": 22
+    },
+    "coverWarn": {
+     "en": "Days over the limit: {n}",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "worst": {
+     "en": "Busiest: {d} · {a} away",
+     "ph": [
+      "{d}",
+      "{a}"
+     ]
+    },
+    "notePh": {
+     "en": "What should change? (optional)"
+    },
+    "send": {
+     "en": "Send",
+     "max": 10
+    },
+    "cancel": {
+     "en": "Cancel",
+     "max": 13
+    },
+    "allDone": {
+     "en": "All caught up",
+     "max": 25
+    },
+    "allDoneSub": {
+     "en": "No plans are waiting for approval."
+    },
+    "changesComment": {
+     "en": "Changes requested: {note}",
+     "ph": [
+      "{note}"
+     ]
+    },
+    "changesNoNote": {
+     "en": "Changes requested"
+    },
+    "approvedToast": {
+     "en": "Approved: {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 25
+    },
+    "requestedToast": {
+     "en": "Change request sent to {n}",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "tt": {
+     "en": "Time travel",
+     "max": 22,
+     "note": "Feature name: browse and restore earlier versions of the team's calendar."
+    },
+    "ttSub": {
+     "en": "Earlier versions of this team from the last 30 days. Pick one to see what changed since."
+    },
+    "ttEmpty": {
+     "en": "No earlier versions yet. While the team changes, a version is saved every hour and kept for 30 days."
+    },
+    "ttLoading": {
+     "en": "Loading…",
+     "max": 16
+    },
+    "ttErr": {
+     "en": "Could not load versions. Try again."
+    },
+    "ttSince": {
+     "en": "Changes since then"
+    },
+    "ttNone": {
+     "en": "Nothing changed in {y} since this version.",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "ttJoined": {
+     "en": "Joined since: {names}",
+     "ph": [
+      "{names}"
+     ]
+    },
+    "ttLeft": {
+     "en": "Removed since: {names}",
+     "ph": [
+      "{names}"
+     ]
+    },
+    "ttRenamed": {
+     "en": "renamed from {from}",
+     "ph": [
+      "{from}"
+     ]
+    },
+    "ttTeamRenamed": {
+     "en": "Team renamed: {from} → {to}",
+     "ph": [
+      "{from}",
+      "{to}"
+     ]
+    },
+    "ttLogo": {
+     "en": "Logo changed",
+     "max": 24
+    },
+    "ttRestore": {
+     "en": "Restore {y} to this version",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "ttConfirm": {
+     "en": "Everyone's {y} days and approvals go back to this version, and people removed since come back. Nobody is removed, other years and team settings stay as they are, and you can undo right after.",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "ttRestoreNow": {
+     "en": "Yes, restore",
+     "max": 24
+    },
+    "ttRestored": {
+     "en": "Restored to the version from {d}",
+     "ph": [
+      "{d}"
+     ]
+    },
+    "ttNow": {
+     "en": "Now",
+     "max": 10
+    },
+    "ttPick": {
+     "en": "Pick a version",
+     "max": 27
+    },
+    "wr": {
+     "en": "Wrapped",
+     "max": 15,
+     "note": "Feature name: a playful year-in-review story (like a music app's yearly recap). May stay 'Wrapped' if natural."
+    },
+    "wrCta": {
+     "en": "Your {y} Wrapped",
+     "ph": [
+      "{y}"
+     ],
+     "max": 31
+    },
+    "wrCtaSub": {
+     "en": "Your team's year in time off, unwrapped."
+    },
+    "wrSoFar": {
+     "en": "so far",
+     "max": 13
+    },
+    "wrS1": {
+     "en": "Let's see how you rested."
+    },
+    "wrS2a": {
+     "en": "Together you took"
+    },
+    "wrS2b": {
+     "en": "days off",
+     "max": 16
+    },
+    "wrS2c": {
+     "en": "That's about {w} weeks of rest.",
+     "ph": [
+      "{w}"
+     ]
+    },
+    "wrS3a": {
+     "en": "Longest break",
+     "max": 25
+    },
+    "wrS3b": {
+     "en": "days in a row",
+     "max": 25
+    },
+    "wrS4a": {
+     "en": "Favourite month",
+     "max": 29
+    },
+    "wrS4c": {
+     "en": "when the team was away the most"
+    },
+    "wrS5a": {
+     "en": "Smartest bridge",
+     "max": 29
+    },
+    "wrS5b": {
+     "en": "leave days → days off in a row"
+    },
+    "wrS6a": {
+     "en": "Your team, by vacation style"
+    },
+    "wrS7a": {
+     "en": "Busiest day",
+     "max": 22
+    },
+    "wrS7b": {
+     "en": "away at the same time"
+    },
+    "wrEnd1": {
+     "en": "That's a wrap",
+     "max": 25,
+     "note": "Closing line of the year-in-review story; a pun on 'wrap' is not required."
+    },
+    "wrEnd2": {
+     "en": "Here's to a restful {y}.",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "wrShare": {
+     "en": "Share",
+     "max": 11
+    },
+    "wrSave": {
+     "en": "Save image",
+     "max": 20
+    },
+    "wrReplay": {
+     "en": "Replay",
+     "max": 13
+    },
+    "wrClose": {
+     "en": "Close",
+     "max": 11
+    },
+    "wrNext": {
+     "en": "Next",
+     "max": 10
+    },
+    "wrPrev": {
+     "en": "Previous",
+     "max": 16
+    },
+    "wrPause": {
+     "en": "Pause",
+     "max": 11
+    },
+    "wrPlay": {
+     "en": "Play",
+     "max": 10
+    },
+    "wrNotEnough": {
+     "en": "Not enough days planned for a Wrapped yet. Add some vacation days first."
+    },
+    "pSummer": {
+     "en": "Summer lover",
+     "max": 24,
+     "note": "Playful persona title in the year-in-review story."
+    },
+    "pWinter": {
+     "en": "Winter escaper",
+     "max": 27,
+     "note": "Playful persona title."
+    },
+    "pWeekender": {
+     "en": "Long-weekend pro",
+     "max": 31
+    },
+    "pMarathon": {
+     "en": "Marathon rester",
+     "max": 29
+    },
+    "pSpring": {
+     "en": "Spring chaser",
+     "max": 25,
+     "note": "Playful persona title."
+    },
+    "pSteady": {
+     "en": "Steady planner",
+     "max": 27,
+     "note": "Playful persona title for someone who spreads days evenly."
+    },
+    "tdOut": {
+     "en": "Out today",
+     "max": 18
+    },
+    "tdNone": {
+     "en": "Everyone's in",
+     "max": 25,
+     "note": "Nobody is away today."
+    },
+    "tdBack": {
+     "en": "back {d}",
+     "ph": [
+      "{d}"
+     ],
+     "max": 16,
+     "note": "Lower-case, after a name: 'back 14 Dec'."
+    },
+    "tdNext": {
+     "en": "Next holiday",
+     "max": 24
+    },
+    "tdToday": {
+     "en": "Today",
+     "max": 11
+    },
+    "tdTomorrow": {
+     "en": "Tomorrow",
+     "max": 16
+    },
+    "tdInN": {
+     "en": "In {n} days",
+     "ph": [
+      "{n}"
+     ],
+     "max": 22
+    },
+    "tdNoHol": {
+     "en": "No more public holidays this year"
+    },
+    "tdLeft": {
+     "en": "Days left",
+     "max": 18
+    },
+    "tdPick": {
+     "en": "Select yourself in the list to see your balance"
+    },
+    "tdOf": {
+     "en": "of {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 13,
+     "note": "After a number: '12 of 25'."
+    },
+    "tdNoPto": {
+     "en": "Set an allowance to see what's left"
+    },
+    "tdClash": {
+     "en": "Coverage",
+     "max": 16
+    },
+    "tdClashOn": {
+     "en": "{a} away on {d}",
+     "ph": [
+      "{a}",
+      "{d}"
+     ],
+     "max": 29
+    },
+    "tdClashOk": {
+     "en": "No clashes in the next 30 days"
+    },
+    "celebrate": {
+     "en": "{n} days off in a row. Enjoy!",
+     "ph": [
+      "{n}"
+     ]
+    }
+   }
+  },
+  "COFFEE": {
+   "where": "'Buy me a coffee' donation button.",
+   "file": "components/CoffeeButton.tsx",
+   "strings": {
+    "cta": {
+     "en": "Buy me a coffee",
+     "max": 29
+    },
+    "tab": {
+     "en": "opens buymeacoffee.com in a new tab"
+    }
+   }
+  },
+  "SHARE": {
+   "where": "'Recommend this tool' share section.",
+   "file": "components/ShareSection.tsx",
+   "strings": {
+    "cof": {
+     "en": "Free, no ads, made by one person. If it saves your team time, you can buy me a coffee."
+    },
+    "cofCta": {
+     "en": "Buy me a coffee",
+     "max": 29
+    },
+    "cofTab": {
+     "en": "opens buymeacoffee.com in a new tab"
+    },
+    "title": {
+     "en": "Recommend this tool"
+    },
+    "sub": {
+     "en": "Know a team that plans vacations? Send them the planner."
+    },
+    "copy": {
+     "en": "Copy link",
+     "max": 18
+    },
+    "copied": {
+     "en": "Copied",
+     "max": 13
+    },
+    "more": {
+     "en": "More…",
+     "max": 11
+    },
+    "email": {
+     "en": "Email",
+     "max": 11
+    },
+    "qr": {
+     "en": "QR code",
+     "max": 15
+    },
+    "qrHint": {
+     "en": "Scan to open the planner"
+    },
+    "msg": {
+     "en": "Team Vacation Planner – free team leave calendar with public holidays for 61 countries, no login"
+    },
+    "failed": {
+     "en": "Copy failed – select the link and copy it"
+    }
+   }
+  },
+  "PROMO": {
+   "where": "Card promoting Workoșenie, a sister product (keep the name Workoșenie unchanged).",
+   "file": "components/WorkoseniePromo.tsx",
+   "strings": {
+    "q": {
+     "en": "Want to do more?",
+     "max": 31
+    },
+    "name": {
+     "en": "Meet Workoșenie",
+     "max": 29
+    },
+    "sub": {
+     "en": "Shift rotas, time records and every absence type for small companies, in any country."
+    },
+    "feats": {
+     "en": [
+      "Rotas and swaps",
+      "Time records",
+      "Leave balances",
+      "Works in any country"
+     ],
+     "items": 4,
+     "note": "Exactly 4 short feature chips, in order."
+    },
+    "cta": {
+     "en": "Discover Workoșenie"
+    },
+    "fine": {
+     "en": "12 months free, then €10/month per company",
+     "note": "Keep '€10' and the meaning: 12 months free, then €10 per month per company."
+    }
+   }
+  }
+ }
+}

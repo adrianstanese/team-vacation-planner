@@ -15,7 +15,7 @@ import "./frontpage.css";
 import { buildSheets } from "@/lib/xlsxSheets";
 import { planImport } from "@/lib/importPlan";
 import { findBridges } from "@/lib/bridges";
-import { X, textLang, dateLocale } from "@/lib/extraText";
+import { X, textLang, dateLocale, isRtl } from "@/lib/extraText";
 // Loaded only when first opened (keeps the first page load small)
 import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
 
@@ -342,6 +342,12 @@ const HC_TX={
   it:{ph:"Festività",off:"Giorno libero per",wk:"cade nel fine settimana",mn:"Data lunare – può spostarsi di un giorno"},
   bg:{ph:"Официален празник",off:"Почивен ден за",wk:"пада се в събота или неделя",mn:"Лунна дата – може да се измести с един ден"},
   ar:{ph:"عطلة رسمية",off:"يوم عطلة لـ",wk:"يصادف عطلة نهاية الأسبوع",mn:"تاريخ قمري – قد يتغير بيوم واحد"},
+/*i18n:bn*/bn:{"ph":"সরকারি ছুটি","off":"ছুটি পাচ্ছেন:","wk":"সপ্তাহান্তে পড়েছে","mn":"চাঁদ দেখার ওপর নির্ভরশীল – এক দিন এদিক-ওদিক হতে পারে"},/*/i18n:bn*/
+/*i18n:hi*/hi:{"ph":"सार्वजनिक अवकाश","off":"इनके लिए छुट्टी:","wk":"वीकेंड पर पड़ता है","mn":"चाँद पर आधारित तारीख़ – एक दिन आगे-पीछे हो सकती है"},/*/i18n:hi*/
+/*i18n:ja*/ja:{"ph":"祝日","off":"休みのメンバー:","wk":"週末と重なります","mn":"月の満ち欠けで決まる日付 – 1日前後することがあります"},/*/i18n:ja*/
+/*i18n:ru*/ru:{"ph":"Праздничный день","off":"Отдыхают:","wk":"выпадает на выходные","mn":"Дата по лунному календарю – может сдвинуться на день"},/*/i18n:ru*/
+/*i18n:ur*/ur:{"ph":"سرکاری تعطیل","off":"چھٹی برائے","wk":"ویک اینڈ پر آتی ہے","mn":"چاند پر مبنی تاریخ – ایک دن آگے پیچھے ہو سکتی ہے"},/*/i18n:ur*/
+/*i18n:zh*/zh:{"ph":"法定节假日","off":"放假成员：","wk":"适逢周末","mn":"依月相而定的日期，可能前后相差一天"},/*/i18n:zh*/
 };
 
 // For one date: each country (and region) in the team that has a holiday, its name and who is off
@@ -355,10 +361,11 @@ function holidayInfo(key,members,year,names){
   });
   return Object.values(groups).map(g=>{
     const rows=(names[g.cc]&&names[g.cc].h&&names[g.cc].h[key])||[];
-    let pick=rows.find(r=>!r[3]||!r[3].length)||rows.find(r=>r[3]&&r[3].some(x=>g.regions.has(x)))||rows[0];
+    const isP=r=>String(r[2]||"").includes("P");
+    let pick=rows.find(r=>isP(r)&&(!r[3]||!r[3].length))||rows.find(r=>isP(r)&&r[3]&&r[3].some(x=>g.regions.has(x)))||rows.find(r=>!r[3]||!r[3].length)||rows.find(r=>r[3]&&r[3].some(x=>g.regions.has(x)))||rows[0];
     const local=pick?pick[0]:holName(key);const en=pick?pick[1]:"";
     const lx=LUNAR_EXTRA[g.cc]&&LUNAR_EXTRA[g.cc][year];
-    const lunar=!!(lx&&lx.split(",").indexOf(key.slice(5,7)+key.slice(8,10))>=0&&!(FIXED[g.cc]||[]).includes(key.slice(5)));
+    const lunar=!!(lx&&lx.split(",").indexOf(key.slice(5,7)+key.slice(8,10))>=0&&!(FIXED[g.cc]||[]).includes(key.slice(5)))||/\(estimated\)/i.test(String(local)+" "+String(en));
     return{cc:g.cc,local,en:en&&en!==local?en:"",who:g.who,lunar};
   });
 }
@@ -384,7 +391,7 @@ function HolidayCard({info,dateKey,rect,lang,th,onClose,onHover=null}){
   let when="";try{when=dt.toLocaleDateString(lang==="en"?"en-GB":lang,{weekday:"long",day:"numeric",month:"long",year:"numeric"});}catch(e){when=dateKey;}
   const weekend=dt.getDay()===0||dt.getDay()===6;
   // Portal to <body>: the month cards use backdrop-filter, which would trap and clip a fixed-position card
-  return createPortal(<div ref={popRef} popover="manual" className="tvp-pop" role="tooltip" aria-label={L.ph} onMouseEnter={()=>onHover&&onHover(true)} onMouseLeave={()=>onHover&&onHover(false)} dir={lang==="ar"?"rtl":"ltr"} style={{position:"fixed",top:"auto",right:"auto",bottom:"auto",margin:0,left,width:W,...pos,zIndex:400,background:th.sf,border:"1px solid "+th.bd,borderRadius:14,boxShadow:"0 12px 32px rgba(30,27,75,.18)",padding:"12px 14px",fontFamily:F,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,animation:"popIn .15s ease-out"}}>
+  return createPortal(<div ref={popRef} popover="manual" className="tvp-pop" role="tooltip" aria-label={L.ph} onMouseEnter={()=>onHover&&onHover(true)} onMouseLeave={()=>onHover&&onHover(false)} dir={isRtl(lang)?"rtl":"ltr"} style={{position:"fixed",top:"auto",right:"auto",bottom:"auto",margin:0,left,width:W,...pos,zIndex:400,background:th.sf,border:"1px solid "+th.bd,borderRadius:14,boxShadow:"0 12px 32px rgba(30,27,75,.18)",padding:"12px 14px",fontFamily:F,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,animation:"popIn .15s ease-out"}}>
     <div style={{fontSize:13,fontWeight:700,color:th.tx,marginBottom:2,textTransform:"capitalize"}}>{when}</div>
     <div style={{fontSize:11,color:th.t3,marginBottom:8}}>{L.ph}{weekend?" · "+L.wk:""}</div>
     {info.map(g=><div key={g.cc} style={{display:"flex",gap:8,alignItems:"flex-start",padding:"6px 0",borderTop:"1px solid "+th.bl}}>
@@ -407,7 +414,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
   const[fd,setFd]=useState(()=>year===CY&&month===CM?CD:1);
   const focusDay=n=>{setFd(n);requestAnimationFrame(()=>{const g=gridRef.current;const el=g&&g.querySelector('[data-day="'+n+'"]');if(el)el.focus();});};
   const onCellKey=(e,day,isHolDay)=>{
-    const nDays=dim(year,month);const rtl=textLang()==="ar";
+    const nDays=dim(year,month);const rtl=isRtl();
     const step={ArrowRight:rtl?-1:1,ArrowLeft:rtl?1:-1,ArrowDown:7,ArrowUp:-7}[e.key];
     if(step!==undefined||e.key==="Home"||e.key==="End"){
       e.preventDefault();
@@ -1190,7 +1197,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
 function YearNav({yr,onYear,th,small=false}){
   if(!onYear)return <span style={{fontSize:small?10:18,fontWeight:700,color:small?th.t3:th.tx}}>{yr}</span>;
   // Arrows follow reading direction (Arabic is right-to-left); targets at least 24×24 px
-  const rtl=textLang()==="ar";const back=rtl?"›":"‹",fwd=rtl?"‹":"›";
+  const rtl=isRtl();const back=rtl?"›":"‹",fwd=rtl?"‹":"›";
   const bs=(on)=>({padding:small?"2px 7px":"5px 12px",minWidth:24,minHeight:24,borderRadius:small?6:8,fontSize:small?11:12,fontWeight:700,fontFamily:F,cursor:"pointer",border:on?`1.5px solid ${th.ac}`:`1px solid ${th.gbd}`,background:on?th.al:th.gbg,color:on?th.ac:th.t3,whiteSpace:"nowrap",lineHeight:1.4});
   if(!small)return <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"center",gap:10,width:"100%"}}>
     <div style={{justifySelf:"end"}}>{yr>YEAR_MIN&&<button onClick={()=>onYear(yr-1)} aria-label={String(yr-1)} style={bs(false)}>{back+" "+(yr-1)}</button>}</div>
@@ -1258,6 +1265,12 @@ const UP_TX={
   it:{t:"Prossime 2 settimane",none:"Nessuno è assente nelle prossime 2 settimane.",copy:"Copia riepilogo",copied:"Copiato",head:"chi è assente"},
   bg:{t:"Следващите 2 седмици",none:"Никой не отсъства през следващите 2 седмици.",copy:"Копирайте обобщението",copied:"Копирано",head:"кой отсъства"},
   ar:{t:"الأسبوعان القادمان",none:"لا أحد غائب في الأسبوعين القادمين.",copy:"نسخ الملخص",copied:"تم النسخ",head:"من غائب"},
+/*i18n:bn*/bn:{"t":"আগামী 2 সপ্তাহ","none":"আগামী 2 সপ্তাহে কেউ ছুটিতে নেই।","copy":"সারসংক্ষেপ কপি করুন","copied":"কপি হয়েছে","head":"কে কে ছুটিতে"},/*/i18n:bn*/
+/*i18n:hi*/hi:{"t":"अगले 2 हफ़्ते","none":"अगले 2 हफ़्तों में कोई छुट्टी पर नहीं है।","copy":"सारांश कॉपी करें","copied":"कॉपी हो गया","head":"कौन छुट्टी पर है"},/*/i18n:hi*/
+/*i18n:ja*/ja:{"t":"今後2週間","none":"今後2週間、不在のメンバーはいません。","copy":"概要をコピー","copied":"コピーしました","head":"不在予定"},/*/i18n:ja*/
+/*i18n:ru*/ru:{"t":"Ближайшие 2 недели","none":"В ближайшие 2 недели никто не отсутствует.","copy":"Копировать сводку","copied":"Скопировано","head":"кто отсутствует"},/*/i18n:ru*/
+/*i18n:ur*/ur:{"t":"اگلے 2 ہفتے","none":"اگلے 2 ہفتوں میں کوئی غیر حاضر نہیں۔","copy":"خلاصہ کاپی کریں","copied":"کاپی ہو گیا","head":"کون غیر حاضر ہے"},/*/i18n:ur*/
+/*i18n:zh*/zh:{"t":"未来2周","none":"未来2周内无人不在岗。","copy":"复制摘要","copied":"已复制","head":"不在岗人员"},/*/i18n:zh*/
 };
 
 function upcomingAway(members,fromKey,days){
@@ -1276,7 +1289,7 @@ function ComingUp({team,th,lang}){
   const copy=async()=>{const end=(()=>{const p=pk(today);const d=new Date(p.y,p.m,p.d+13,12);return dk(d.getFullYear(),d.getMonth(),d.getDate());})();
     const txt=team.name+" – "+L.head+" ("+f(today)+" – "+f(end)+")\n"+(runs.length?runs.map(r=>"• "+r.m.name+": "+range(r)).join("\n"):L.none);
     try{await navigator.clipboard.writeText(txt);setCopied(true);setTimeout(()=>setCopied(false),2000);}catch(e){}};
-  return <div dir={lang==="ar"?"rtl":"ltr"} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",padding:"8px 12px",background:th.gbg,border:"1px solid "+th.gbd,borderRadius:10,marginBottom:10,fontFamily:F}}>
+  return <div dir={isRtl(lang)?"rtl":"ltr"} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",padding:"8px 12px",background:th.gbg,border:"1px solid "+th.gbd,borderRadius:10,marginBottom:10,fontFamily:F}}>
     <span style={{fontSize:12,fontWeight:700,color:th.tx,marginInlineEnd:4}}>{L.t}</span>
     {runs.length===0&&<span style={{fontSize:12,color:th.t3}}>{L.none}</span>}
     {runs.slice(0,8).map((r,i)=>{const c=MC[r.mi%MC.length];return <span key={i} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 10px",borderRadius:999,background:c.b,color:c.t,fontSize:12,fontWeight:600}}>{r.m.name}<span style={{fontWeight:500,opacity:.85}}>{range(r)}</span></span>;})}
@@ -1298,6 +1311,12 @@ const NY_TX={
   it:{plan:"È ora di pianificare il {y}",sub:"Le festività {y} di tutti sono pronte. Iniziate a scegliere le ferie.",open:"Apri {y}",later:"Non ora",delBtn:"Elimina team…",delT:"Eliminare questo team per tutti?",delB:"Chi ha il link perderà l'accesso a {n}. Non potrai annullare.",delType:"Scrivi il nome del team per confermare",delGo:"Elimina per tutti",cancel:"Annulla",removed:"Team eliminato"},
   bg:{plan:"Време е да планирате {y}",sub:"Празниците за {y} на всички са готови. Започнете да избирате дни.",open:"Отворете {y}",later:"Не сега",delBtn:"Изтрийте екипа…",delT:"Да изтрия ли екипа за всички?",delB:"Всички с линка губят достъп до {n}. Не можете да отмениш.",delType:"Въведете името на екипа за потвърждение",delGo:"Изтрийте за всички",cancel:"Отказ",removed:"Екипът е изтрит"},
   ar:{plan:"حان وقت التخطيط لعام {y}",sub:"عطل الجميع لعام {y} جاهزة. ابدأوا باختيار أيام الإجازة.",open:"افتح {y}",later:"ليس الآن",delBtn:"حذف الفريق…",delT:"حذف هذا الفريق للجميع؟",delB:"سيفقد كل من لديه الرابط الوصول إلى {n}. لا يمكنك التراجع.",delType:"اكتب اسم الفريق للتأكيد",delGo:"حذف للجميع",cancel:"إلغاء",removed:"تم حذف الفريق"},
+/*i18n:bn*/bn:{"plan":"{y}-এর পরিকল্পনার সময় হলো","sub":"সবার {y} সালের সরকারি ছুটি তৈরি আছে। ছুটির দিন বাছাই শুরু করুন।","open":"{y} খুলুন","later":"এখন নয়","delBtn":"টিম মুছুন…","delT":"সবার জন্য এই টিম মুছে ফেলবেন?","delB":"লিংক আছে এমন সবাই {n}-এ ঢোকার সুযোগ হারাবেন। আপনি এটি আর ফিরিয়ে আনতে পারবেন না।","delType":"নিশ্চিত করতে টিমের নাম লিখুন","delGo":"সবার জন্য মুছুন","cancel":"বাতিল","removed":"টিম মুছে ফেলা হয়েছে"},/*/i18n:bn*/
+/*i18n:hi*/hi:{"plan":"{y} की प्लानिंग का समय","sub":"सबके {y} के सार्वजनिक अवकाश तैयार हैं। छुट्टी के दिन चुनना शुरू करें।","open":"{y} खोलें","later":"अभी नहीं","delBtn":"टीम डिलीट करें…","delT":"यह टीम सबके लिए डिलीट करें?","delB":"जिनके पास भी लिंक है, वे {n} को नहीं खोल पाएँगे। आप इसे वापस नहीं ला सकेंगे।","delType":"पुष्टि के लिए टीम का नाम लिखें","delGo":"सबके लिए डिलीट करें","cancel":"रद्द करें","removed":"टीम डिलीट हो गई"},/*/i18n:hi*/
+/*i18n:ja*/ja:{"plan":"{y}年の計画を始めましょう","sub":"全員の{y}年の祝日を用意しました。休暇の日付を選びましょう。","open":"{y}年を開く","later":"あとで","delBtn":"チームを削除…","delT":"このチームを全員から削除しますか?","delB":"リンクを知っている全員が{n}にアクセスできなくなります。この操作をご自身で元に戻すことはできません。","delType":"確認のためチーム名を入力してください","delGo":"全員から削除","cancel":"キャンセル","removed":"チームを削除しました"},/*/i18n:ja*/
+/*i18n:ru*/ru:{"plan":"Пора планировать {y} год","sub":"Праздничные дни на {y} год для всех участников уже загружены. Можно выбирать дни отпуска.","open":"Открыть {y}","later":"Не сейчас","delBtn":"Удалить команду…","delT":"Удалить эту команду для всех?","delB":"Все, у кого есть ссылка, потеряют доступ к команде «{n}». Вы не сможете отменить это действие.","delType":"Для подтверждения введите название команды","delGo":"Удалить для всех","cancel":"Отмена","removed":"Команда удалена"},/*/i18n:ru*/
+/*i18n:ur*/ur:{"plan":"{y} کی منصوبہ بندی کا وقت","sub":"سب کی {y} کی سرکاری تعطیلات تیار ہیں۔ چھٹی کے دن چننا شروع کریں۔","open":"{y} کھولیں","later":"ابھی نہیں","delBtn":"ٹیم حذف کریں…","delT":"یہ ٹیم سب کے لیے حذف کریں؟","delB":"لنک رکھنے والے ہر فرد کی {n} تک رسائی ختم ہو جائے گی۔ آپ اسے واپس نہیں لا سکیں گے۔","delType":"تصدیق کے لیے ٹیم کا نام لکھیں","delGo":"سب کے لیے حذف کریں","cancel":"منسوخ","removed":"ٹیم حذف ہو گئی"},/*/i18n:ur*/
+/*i18n:zh*/zh:{"plan":"该规划{y}年了","sub":"所有人的{y}年法定节假日已准备就绪，开始挑选休假日吧。","open":"打开{y}年","later":"暂不","delBtn":"删除团队…","delT":"要为所有人删除此团队吗？","delB":"所有拥有链接的人都将无法再访问{n}。您无法自行撤销此操作。","delType":"请输入团队名称以确认","delGo":"为所有人删除","cancel":"取消","removed":"团队已删除"},/*/i18n:zh*/
 };
 
 function NextYearPrompt({team,yr,onYear,th,lang}){
@@ -1306,7 +1325,7 @@ function NextYearPrompt({team,yr,onYear,th,lang}){
   useEffect(()=>{let h=true;try{h=localStorage.getItem(key)==="1";}catch(e){}const id=setTimeout(()=>setHidden(h),0);return()=>clearTimeout(id);},[key]);
   if(hidden||!onYear||yr!==CY||CM<10||ny>YEAR_MAX)return null;
   const hide=()=>{try{localStorage.setItem(key,"1");}catch(e){}setHidden(true);};
-  return <div dir={lang==="ar"?"rtl":"ltr"} style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 14px",borderRadius:12,marginBottom:10,background:"linear-gradient(135deg,rgba(124,58,237,.10),rgba(16,185,129,.08))",border:"1px solid "+th.gbd,fontFamily:F}}>
+  return <div dir={isRtl(lang)?"rtl":"ltr"} style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 14px",borderRadius:12,marginBottom:10,background:"linear-gradient(135deg,rgba(124,58,237,.10),rgba(16,185,129,.08))",border:"1px solid "+th.gbd,fontFamily:F}}>
     <div style={{flex:"1 1 220px"}}><div style={{fontSize:14,fontWeight:700,color:th.tx}}>{L.plan.replace("{y}",ny)}</div><div style={{fontSize:12,color:th.t2}}>{L.sub.replace("{y}",ny)}</div></div>
     <button onClick={()=>onYear(ny)} style={{padding:"8px 16px",minHeight:36,borderRadius:999,border:"none",background:th.ac,color:th.ti||"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:F}}>{L.open.replace("{y}",ny)} →</button>
     <button onClick={hide} style={{padding:"8px 10px",minHeight:36,borderRadius:999,border:"none",background:"none",color:th.t2,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:F}}>{L.later}</button>
@@ -1863,7 +1882,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
             <span style={{fontSize:11,color:ac.t,opacity:.7}}>{t.tap}</span>
           </div>
           <button onClick={()=>setHalfMode(h=>!h)} aria-pressed={halfMode} title={X("halfTitle")} style={{padding:"6px 12px",borderRadius:20,border:"1.5px solid "+ac.d,background:halfMode?ac.d:"transparent",color:halfMode?"#fff":ac.t,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>{halfMode?X("halfOn"):X("halfDay")}</button>
-          <button onClick={()=>{setAId(null);setHalfMode(false);flash(am.name+": "+fmtDays(usedOf(am))+" "+((usedOf(am)===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>Done · {fmtDays(usedOf(am))} {(usedOf(am)===1)?t.dy:t.dys}</button>
+          <button onClick={()=>{setAId(null);setHalfMode(false);flash(am.name+": "+fmtDays(usedOf(am))+" "+((usedOf(am)===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>{V("prCodeOk")} · {fmtDays(usedOf(am))} {(usedOf(am)===1)?t.dy:t.dys}</button>
         </div>}
 
         {/* Holiday Clash Warning */}
@@ -2013,7 +2032,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
 
     {/* CSV Import Modal */}
     {delOpen&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}} onClick={()=>setDelOpen(false)}>
-      <div role="alertdialog" aria-modal="true" aria-label={NY.delT} dir={lang==="ar"?"rtl":"ltr"} onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:420,width:"100%",padding:22,boxShadow:th.sl,boxSizing:"border-box",fontFamily:F}}>
+      <div role="alertdialog" aria-modal="true" aria-label={NY.delT} dir={isRtl(lang)?"rtl":"ltr"} onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:420,width:"100%",padding:22,boxShadow:th.sl,boxSizing:"border-box",fontFamily:F}}>
         <TrapScope onClose={()=>setDelOpen(false)}/>
         <h3 style={{margin:"0 0 8px",fontSize:16,fontWeight:700,color:"#B91C1C"}}>{NY.delT}</h3>
         <p style={{margin:"0 0 12px",fontSize:13,color:th.t2,lineHeight:1.5}}>{NY.delB.replace("{n}",team.name||"")}</p>

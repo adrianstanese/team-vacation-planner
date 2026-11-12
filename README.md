@@ -2,12 +2,12 @@
 
 **Live:** [https://www.vacationplanner.team](https://www.vacationplanner.team)
 
-Free team vacation planning tool — 55 countries, 11 languages, public holidays 2026-2035. No login required.
+Free team vacation planning tool — 61 countries, 17 languages, public holidays 2026-2035. No login required.
 
 ## Features
 - Visual calendar with drag-to-select vacation days
-- 55 countries with public holidays (2026–2035)
-- 11 languages (EN, FR, DE, ES, PT, RO, HU, SV, IT, BG, AR)
+- 61 countries with public holidays (2026–2035)
+- 17 languages (EN, FR, DE, ES, PT, RO, HU, SV, IT, BG, AR, ZH, HI, BN, RU, UR, JA)
 - Business Trips module with separate calendar
 - Heatmap, Timeline, Coverage, and Analytics views
 - PDF export with approval workflow
