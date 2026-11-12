@@ -8,8 +8,8 @@ import { getSql, type Sql } from "@/lib/db";
 
 export const COOKIE = "tvp_admin";
 const SESSION_HOURS = 8;
-const MAX_IP_FAILS = 5;        // per IP per 15 minutes
-const MAX_GLOBAL_FAILS = 200;  // all IPs per hour: caps distributed guessing without letting strangers lock the admin out cheaply
+// No per-IP lock (removed 2026-11-12 at the owner's request: it locked the owner out while resetting the login).
+const MAX_GLOBAL_FAILS = 200;  // all IPs per hour: the only cap on guessing, so keep the admin password long
 
 export function adminConfigured(): boolean {
   return !!(process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD_HASH);
@@ -127,11 +127,8 @@ export async function purgeOld(sql: Sql) {
 // Records the attempt FIRST, then counts it (race-safe: parallel guesses all count). Cleared on success.
 export async function tooManyAttempts(sql: Sql, ip: string): Promise<boolean> {
   await sql`INSERT INTO admin_attempts (ip) VALUES (${ip})`;
-  const [a] = await sql`SELECT
-      COUNT(*) FILTER (WHERE ip = ${ip} AND at > now() - interval '15 minutes')::int AS mine,
-      COUNT(*) FILTER (WHERE at > now() - interval '1 hour')::int AS everyone
-    FROM admin_attempts WHERE at > now() - interval '1 hour'`;
-  return Number(a?.mine || 0) > MAX_IP_FAILS || Number(a?.everyone || 0) > MAX_GLOBAL_FAILS;
+  const [a] = await sql`SELECT COUNT(*)::int AS everyone FROM admin_attempts WHERE at > now() - interval '1 hour'`;
+  return Number(a?.everyone || 0) > MAX_GLOBAL_FAILS;
 }
 
 export async function clearFailures(sql: Sql, ip: string) {

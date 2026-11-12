@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
     const ip = clientIp(req);
     if (await tooManyAttempts(sql, ip)) {
       await sleep(600);
-      return json({ error: "Too many attempts. Wait 15 minutes and try again." }, 429);
+      return json({ error: "Too many attempts on this site in the last hour. Try again later." }, 429);
     }
     const ok = checkCredentials(String(body.username || "").slice(0, 64), String(body.password || "").slice(0, 200));
     if (!ok) {
