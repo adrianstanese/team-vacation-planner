@@ -210,6 +210,25 @@ export function carryInfo(m: CarryMember, year: number, baseYear: number, limit:
   return { carry: typed != null ? typed : auto, auto, manual: typed != null, left };
 }
 
+// Which year-end prompt belongs on the page of year `yr`, given today's year and month (0 = January):
+//   pack = "close this year": in December for the year that is ending, in January and February for the year
+//          that has just ended; not once that year is locked (it is closed already), and not for a year before
+//          the team's first year
+//   back = on the new year's page in January and February (where a team opens by default): the way back to last
+//          year, while last year is still unlocked and the team already existed then
+// null = no prompt.
+export function yearEndPrompt(yr: number, todayYear: number, todayMonth: number, viewLocked: boolean,
+  raw: { year?: number; locked?: boolean; lockY?: Record<string, boolean> } | null, minYear: number): { mode: "pack" | "back"; year: number } | null {
+  const ending = (yr === todayYear && todayMonth === 11) || (yr === todayYear - 1 && todayMonth <= 1);
+  if (ending) return viewLocked || (!!raw && !!raw.year && yr < raw.year) ? null : { mode: "pack", year: yr };
+  const prev = todayYear - 1;
+  if (yr !== todayYear || todayMonth > 1 || !raw || prev < minYear) return null;
+  const base = raw.year || todayYear;
+  if (prev < base) return null;
+  const prevLocked = prev === base ? raw.locked === true : !!(raw.lockY && raw.lockY[String(prev)]);
+  return prevLocked ? null : { mode: "back", year: prev };
+}
+
 // Average coverage of a year, the one definition used on screen, in the PDF and in Excel: over the year's working
 // days (Mon–Fri, or every day in a 7-day team), the share of the team at work. At work = not on leave (a half day
 // counts as half away) and not on their own public holiday. (The reports used "1 − leave days ÷ (people × 260)",

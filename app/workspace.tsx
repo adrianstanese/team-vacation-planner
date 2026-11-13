@@ -9,7 +9,7 @@ import CoffeeButton from "@/components/CoffeeButton";
 import nextDynamic from "next/dynamic";
 import TodayTiles from "@/components/v3/TodayTiles";
 import { V } from "@/lib/v3Text";
-import { nextLeaveDay, pendingApprovals, streaksOf, avgCoverage, addDays, dateOf } from "@/lib/v3Util";
+import { nextLeaveDay, pendingApprovals, streaksOf, avgCoverage, addDays, dateOf, yearEndPrompt } from "@/lib/v3Util";
 import { withTransition, celebrate, buzz } from "@/lib/motion";
 import "./frontpage.css";
 import { buildSheets } from "@/lib/xlsxSheets";
@@ -27,6 +27,7 @@ const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr
 const TimeTravel=nextDynamic(()=>import("@/components/v3/TimeTravel"),{ssr:false});
 
 const Wrapped=nextDynamic(()=>import("@/components/v3/Wrapped"),{ssr:false});
+const YearEnd=nextDynamic(()=>import("@/components/v3/YearEnd"),{ssr:false});
 const ApprovalsView=nextDynamic(()=>import("@/components/v3/ApprovalsView"),{ssr:false});
 
 // Public holidays of a member for a year, cached by country + region
@@ -1358,11 +1359,31 @@ function NextYearPrompt({team,yr,onYear,th,lang}){
   const L=NY_TX[lang]||NY_TX.en;const ny=yr+1;const key="tvp-ny-"+team.id+"-"+ny;
   const[hidden,setHidden]=useState(true);
   useEffect(()=>{let h=true;try{h=localStorage.getItem(key)==="1";}catch(e){}const id=setTimeout(()=>setHidden(h),0);return()=>clearTimeout(id);},[key]);
-  if(hidden||!onYear||yr!==CY||CM<10||ny>YEAR_MAX)return null;
+  // November only: in December the year-end prompt takes this place (its last step opens the next year)
+  if(hidden||!onYear||yr!==CY||CM!==10||ny>YEAR_MAX)return null;
   const hide=()=>{try{localStorage.setItem(key,"1");}catch(e){}setHidden(true);};
   return <div dir={isRtl(lang)?"rtl":"ltr"} style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 14px",borderRadius:12,marginBottom:10,background:"linear-gradient(135deg,rgba(124,58,237,.10),rgba(16,185,129,.08))",border:"1px solid "+th.gbd,fontFamily:F}}>
     <div style={{flex:"1 1 220px"}}><div style={{fontSize:14,fontWeight:700,color:th.tx}}>{L.plan.replace("{y}",ny)}</div><div style={{fontSize:12,color:th.t2}}>{L.sub.replace("{y}",ny)}</div></div>
     <button onClick={()=>onYear(ny)} style={{padding:"8px 16px",minHeight:36,borderRadius:999,border:"none",background:th.ac,color:th.ti||"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:F}}>{L.open.replace("{y}",ny)} →</button>
+    <button onClick={hide} style={{padding:"8px 10px",minHeight:36,borderRadius:999,border:"none",background:"none",color:th.t2,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:F}}>{L.later}</button>
+  </div>;
+}
+
+// Year-end prompt (the rule is yearEndPrompt in lib/v3Util): "close this year" opens the year-end pack; on the new
+// year's page in January it offers the way back to last year instead. "Not now" hides it for that year on this device.
+function YearEndPrompt({team,rawTeam,yr,onYear,onOpen,th,lang}){
+  const L=NY_TX[lang]||NY_TX.en;
+  const p=yearEndPrompt(yr,CY,CM,!!team.locked,rawTeam,YEAR_MIN);
+  const key="tvp-ye-"+team.id+"-"+(p?p.year:yr);
+  const[hidden,setHidden]=useState(true);
+  useEffect(()=>{let h=true;try{h=localStorage.getItem(key)==="1";}catch{}const id=setTimeout(()=>setHidden(h),0);return()=>clearTimeout(id);},[key]);
+  if(hidden||!p||(p.mode==="back"&&!onYear))return null;
+  const hide=()=>{try{localStorage.setItem(key,"1");}catch{}setHidden(true);};
+  return <div dir={isRtl(lang)?"rtl":"ltr"} style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",padding:"10px 14px",borderRadius:12,marginBottom:10,background:"linear-gradient(135deg,rgba(245,158,11,.12),rgba(124,58,237,.08))",border:"1px solid "+th.gbd,fontFamily:F}}>
+    <div style={{flex:"1 1 220px"}}><div style={{fontSize:14,fontWeight:700,color:th.tx}}>{V("yeTitle",{y:p.year})}</div><div style={{fontSize:12,color:th.t2}}>{V("yeSub",{y:p.year,n:p.year+1})}</div></div>
+    {p.mode==="pack"
+      ?<button onClick={onOpen} style={{padding:"8px 16px",minHeight:36,borderRadius:999,border:"none",background:th.ac,color:th.ti||"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:F}}>{V("yeBtn")} →</button>
+      :<button onClick={()=>onYear(p.year)} style={{padding:"8px 16px",minHeight:36,borderRadius:999,border:"none",background:th.ac,color:th.ti||"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:F}}>{L.open.replace("{y}",p.year)} →</button>}
     <button onClick={hide} style={{padding:"8px 10px",minHeight:36,borderRadius:999,border:"none",background:"none",color:th.t2,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:F}}>{L.later}</button>
   </div>;
 }
@@ -1494,7 +1515,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const hNames=useHolidayNames(team.members.map(m=>m.country));
   const holInfo=key=>holidayInfo(key,team.members,yr,hNames);
   // ─── v3: approval inbox, time travel, Wrapped, Today tiles ───
-  const[showInbox,setShowInbox]=useState(false);const[showTT,setShowTT]=useState(false);const[showWr,setShowWr]=useState(false);
+  const[showInbox,setShowInbox]=useState(false);const[showTT,setShowTT]=useState(false);const[showWr,setShowWr]=useState(false);const[showYE,setShowYE]=useState(false);
   const colorOf=useCallback(id=>{const i=team.members.findIndex(m=>m.id===id);return MC[(i<0?0:i)%MC.length];},[team.members]);
   const holInfoCb=useCallback(key=>holidayInfo(key,team.members,yr,hNames),[team.members,yr,hNames]);
   const holOf=useCallback(m=>holSetOf(m,yr),[yr]);
@@ -1871,6 +1892,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       <Btn th={th} v="ghost" sz="sm" onClick={undo} disabled={!historyRef.current.length} style={{fontSize:11}}>↩ {X("undo")}</Btn>
       <Btn th={th} v="ghost" sz="sm" onClick={redo} disabled={!redoRef.current.length} style={{fontSize:11}}>↪ {X("redo")}</Btn>
       <Btn th={th} v="ghost" sz="sm" icon={null} disabled={false} onClick={()=>setShowTT(true)} style={{fontSize:11}}>⏳ {V("tt")}</Btn>
+      {yr<=CY&&yr>=((rawTeam&&rawTeam.year)||yr)&&<Btn th={th} v="ghost" sz="sm" icon={null} disabled={false} onClick={()=>setShowYE(true)} style={{fontSize:11}}>🗓️ {V("yeBtn")}</Btn>}
       <div style={{width:1,height:20,background:th.bd}}/>
       {isAdmin&&mayLock&&<Btn th={th} v="ghost" sz="sm" icon={locked?"unlock":"lock"} onClick={toggleLock}>{locked?t.unlock:t.lock}</Btn>}
       {locked&&!mayLock&&<span role="status" style={{display:"inline-flex",alignItems:"center",gap:5,padding:"6px 10px",fontSize:12,fontWeight:600,color:th.t2,fontFamily:F}}><Ic n="lock" s={13} c={th.t2}/>{t.locked}</span>}
@@ -1997,6 +2019,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         })()}
 
         <NextYearPrompt team={team} yr={yr} onYear={onYear} th={th} lang={lang}/>
+        <YearEndPrompt team={team} rawTeam={rawTeam} yr={yr} onYear={onYear} onOpen={()=>setShowYE(true)} th={th} lang={lang}/>
         {!(view==="cal"&&yr===CY)&&<WhosOutBanner team={rawTeam||team} th={th} t={t}/>}
         <ComingUp team={rawTeam||team} th={th} lang={lang}/>
         {view==="cal"&&!am&&team.members.length>0&&!locked&&<div style={{background:th.al,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:th.ac,fontWeight:500}}>{t.sel}</div>}
@@ -2060,6 +2083,10 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         {showInbox&&<ApprovalInbox open onClose={()=>setShowInbox(false)} team={team} yr={yr} threshold={threshold} th={th} colorOf={colorOf} onApprove={approveIds} onRequest={requestChanges}/>}
         {showTT&&<TimeTravel open onClose={()=>setShowTT(false)} teamId={team.id} team={team} yr={yr} th={th} toView={raw=>teamForYear(raw,yr)} onRestore={restoreVersion}/>}
         {showWr&&<Wrapped open onClose={()=>setShowWr(false)} team={team} yr={yr} holOf={holOf} sevenDay={!!team.w7} logo={safeLogo(team.logo)}/>}
+        {showYE&&<YearEnd open onClose={()=>setShowYE(false)} team={team} raw={rawTeam} yr={yr} lastYear={YEAR_MAX} th={th} lockLabel={t.lock} unlockLabel={t.unlock} pdfLabel={t.pdf} mayLock={mayLock} onLock={toggleLock}
+          onCarryMax={v=>{const nt={...team};if(v)nt.carryMax=v;else delete nt.carryMax;updateWithHistory(nt);}}
+          onXlsx={()=>exportXLSX(team,t)} onPdf={()=>R("generatePDFReport")(team,t)}
+          onNextYear={onYear&&yr<YEAR_MAX?()=>{setShowYE(false);onYear(yr+1);}:null}/>}
         <FadeIn delay={200}><VisitCounter th={th}/></FadeIn>
         <BottomDuo th={th} lang={lang} compact/>
 </main>

@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 687,
+ "strings": 706,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -2762,6 +2762,112 @@
      "ph": [
       "{n}"
      ]
+    },
+    "yeTitle": {
+     "en": "Close {y}",
+     "ph": [
+      "{y}"
+     ],
+     "max": 18
+    },
+    "yeSub": {
+     "en": "Lock the year, carry over unused days, download it and open {n}.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "yeBtn": {
+     "en": "Year-end pack",
+     "max": 25
+    },
+    "yeLeftT": {
+     "en": "Days left in {y}",
+     "ph": [
+      "{y}"
+     ],
+     "max": 31
+    },
+    "yeLeftSum": {
+     "en": "People with days left: {p} · days left in total: {d}",
+     "ph": [
+      "{p}",
+      "{d}"
+     ]
+    },
+    "yeLeftNone": {
+     "en": "No allowances are set, so there are no days left to count."
+    },
+    "yeAllow": {
+     "en": "Allowance",
+     "max": 18
+    },
+    "yeTaken": {
+     "en": "Taken",
+     "max": 11
+    },
+    "yeLeft": {
+     "en": "Left",
+     "max": 10
+    },
+    "yeInto": {
+     "en": "Into {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 16
+    },
+    "yeCarryT": {
+     "en": "Carry over into {n}",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "yeCarryHelp": {
+     "en": "Unused days move into {n} up to this limit. At 0 they move only for people who already have days from an earlier year typed on their card. A number typed on a person's card for {n} always wins.",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "yeDlT": {
+     "en": "Download {y}",
+     "ph": [
+      "{y}"
+     ],
+     "max": 24
+    },
+    "yeLockT": {
+     "en": "Lock {y}",
+     "ph": [
+      "{y}"
+     ],
+     "max": 16
+    },
+    "yeLockHelp": {
+     "en": "Once locked, nobody can change days in {y}. It can be unlocked again.",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "yeLockNo": {
+     "en": "Only the owner or the approver can lock the year."
+    },
+    "yeLockedOk": {
+     "en": "{y} is locked.",
+     "ph": [
+      "{y}"
+     ],
+     "max": 27
+    },
+    "yeOpenT": {
+     "en": "Open {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 16
+    },
+    "yeDone": {
+     "en": "Done",
+     "max": 10
     }
    }
   },

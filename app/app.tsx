@@ -11,7 +11,8 @@ import { mergeTeam } from "@/lib/merge";
 import { X, setTextLang, textLang, dateLocale, isRtl, monthShort } from "@/lib/extraText";
 import TrapScope from "@/components/TrapScope";
 import { LANG_META } from "@/lib/langMeta";
-import { isPlannerPath, nameLocale, pickLang, withLang } from "@/lib/langs";
+import { indexable, isPlannerPath, nameLocale, pickLang, withLang } from "@/lib/langs";
+import { TEMPLATE_LINK, TEMPLATE_PATH, TEMPLATE_YEAR } from "@/lib/templateLinks";
 import { PAGE_TX } from "@/lib/pageText";
 import { V } from "@/lib/v3Text";
 import { nextLeaveDay, carryInfo } from "@/lib/v3Util";
@@ -1645,7 +1646,7 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
       <div className="wrap"><BottomDuo th={th} lang={lang} provenRead/></div>
     </main>
     {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a full page load on purpose: the privacy page is English and must not inherit the language this screen set on <html> */}
-    <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><a href={"mailto:"+CONTACT_EMAIL} style={{color:"var(--ink-2)",fontWeight:600,minHeight:44,display:"inline-flex",alignItems:"center"}}>{L.contact}: {CONTACT_EMAIL}</a><a href="/privacy" style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{X("privacy")}</a></div></footer>
+    <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><a href={"mailto:"+CONTACT_EMAIL} style={{color:"var(--ink-2)",fontWeight:600,minHeight:44,display:"inline-flex",alignItems:"center"}}>{L.contact}: {CONTACT_EMAIL}</a>{TEMPLATE_PATH[lang]&&<a href={TEMPLATE_PATH[lang]} rel={indexable(lang,"template")?undefined:"nofollow"} style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{TEMPLATE_LINK[lang].replace("{y}",String(TEMPLATE_YEAR))}</a>}<a href="/privacy" style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{X("privacy")}</a></div></footer>
     {children}
   </div>;
 }

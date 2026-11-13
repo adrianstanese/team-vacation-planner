@@ -56,5 +56,9 @@ export function withLang(lang: string, loc: { pathname: string; search: string; 
 // Languages whose pages search engines may index. A language is added here only after a native speaker has read its
 // texts; until then its address works for people and asks search engines to leave it out. Unreviewed translations
 // in a search index do a site more harm than good.
-export const INDEXED_LANGS: ReadonlySet<string> = new Set(["en"]);
-export const indexable = (lang: string): boolean => INDEXED_LANGS.has(lang);
+// The list is kept per page as well: a new page ships closed and is opened here once it has been checked.
+//   home     = the planner's front page in that language
+//   template = the leave planner template page
+const OPEN_PAGES: Record<string, readonly string[]> = { en: ["home"] };
+export const INDEXED_LANGS: ReadonlySet<string> = new Set(Object.keys(OPEN_PAGES).filter(l => OPEN_PAGES[l].includes("home")));
+export const indexable = (lang: string, page = "home"): boolean => !!OPEN_PAGES[lang] && OPEN_PAGES[lang].includes(page);
