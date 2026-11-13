@@ -117,7 +117,7 @@ function Detail({ id, onClose, onChanged, flash }: { id: string; onClose: () => 
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 18 }}>
       <a href={`/#team=${id}`} target="_blank" rel="noopener" style={{ textDecoration: "none" }}><Btn small tone="primary">Open team</Btn></a>
       <a href={`/api/admin?op=export&id=${id}`} style={{ textDecoration: "none" }}><Btn small>Download JSON</Btn></a>
-      <Btn small onClick={() => act({ action: "extend" }, "Expiry extended by 24 months")}>Extend 24 months</Btn>
+      <Btn small onClick={() => act({ action: "extend" }, "Kept for 36 more months")}>Keep 36 more months</Btn>
       <Btn small onClick={async () => {
         if (t.hasOwner && !window.confirm("This team already has an owner. A new link replaces the old owner key. Continue?")) return;
         const r = await api("/api/admin", { op: "action", id, action: "ownerLink" });

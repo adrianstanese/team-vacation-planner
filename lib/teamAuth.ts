@@ -6,11 +6,24 @@
 //   change any member. A save that changes a PIN-protected member without one of them is reverted for that member.
 import { createHash, createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
 import { getSql, type Sql } from "@/lib/db";
+import { cleanTeam } from "@/lib/teamShape";
 
 type Member = { id: string; pinHash?: string; hasPin?: boolean; [k: string]: unknown };
 export type TeamDoc = { id?: string; ownerHash?: string; hasOwner?: boolean; members?: Member[]; [k: string]: unknown };
 
 const ITER = 120_000;
+
+// How long a team is kept after it was last used (opened or saved). Until Nov 2026 the rule was "24 months after
+// it was created", whether it was in use or not.
+export const KEEP_MONTHS = 36;
+// Teams created under the old rule get their date moved once: last save + 36 months, never earlier than the date
+// they already had. Guarded by a row in app_secrets, so it runs a single time however many servers start.
+export async function retention36(sql: Sql) {
+  await sql`CREATE TABLE IF NOT EXISTS app_secrets (k text PRIMARY KEY, v text NOT NULL)`;
+  await sql`INSERT INTO app_secrets (k, v) VALUES ('retention36', 'pending') ON CONFLICT (k) DO NOTHING`;
+  const mine = await sql`UPDATE app_secrets SET v = 'done' WHERE k = 'retention36' AND v = 'pending' RETURNING k`;
+  if (mine.length) await sql`UPDATE teams SET expires_at = GREATEST(COALESCE(expires_at, now()), COALESCE(updated_at, now()) + INTERVAL '36 months')`;
+}
 
 let ready: Promise<Sql> | null = null;
 export async function authDb(): Promise<Sql> {
@@ -24,6 +37,7 @@ export async function authDb(): Promise<Sql> {
     // Earlier versions of each team (time travel / recovery), at most one per hour plus one before any big loss
     await sql`CREATE TABLE IF NOT EXISTS team_versions (vid bigserial PRIMARY KEY, id text NOT NULL, data jsonb NOT NULL, at timestamptz NOT NULL DEFAULT now())`;
     await sql`CREATE INDEX IF NOT EXISTS team_versions_id_at ON team_versions (id, at DESC)`;
+    await retention36(sql);
     return sql;
   })().catch(e => { ready = null; throw e; });
   return ready;
@@ -144,8 +158,12 @@ function yearsWithMoreLeave(old: Member, next: Member): Set<string> {
 //   approval (approved, apY) = while the team has an approver, only the approver or the owner sets it. A member's
 //                              own PIN session cannot approve itself, and leave a member adds to an approved plan
 //                              puts that year back to "waiting" (`approved` = the team's own year, `apY` = others)
-//   approver/isApprover/lock = only the owner, the current (PIN-protected) approver, or anyone while the team
+//   approver/isApprover      = only the owner, the current (PIN-protected) approver, or anyone while the team
 //                              has neither an owner nor an approver yet
+//   lock (locked, lockY)     = the owner or the approver; in a team with neither, any signed-in member. A year that
+//                              is locked before and after a save keeps every member's days of that year as stored
+//   everything team-wide     = (name, logo, colours, limits, comments, trips…) needs the owner key or the PIN
+//                              session of any member of the team; the link alone no longer changes them
 export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | null, incoming: TeamDoc, auth: { tokens?: Record<string, string>; owner?: string; legacy?: boolean }): Promise<{ doc: TeamDoc; reverted: string[]; adjusted: boolean }> {
   const legacyOk = !!auth.legacy && Date.now() < LEGACY_UNTIL;
   const inById = new Map((Array.isArray(incoming.members) ? incoming.members : []).filter(m => m && typeof m === "object").map(m => [m.id, m]));
@@ -186,6 +204,29 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   const full = async (id: string) => (id === creatorId ? await self(id) : owner || await self(id));
   const reverted = new Set<string>();
 
+  // Someone who has proved who they are: the owner key, or the PIN session of any member of this team
+  let sessionOk: boolean | null = null;
+  const anySession = async () => {
+    if (sessionOk === null) {
+      sessionOk = !!owner;
+      if (!sessionOk) for (const m of storedMembers) { if (m.pinHash && (tok[m.id] || legacyOk) && await self(m.id)) { sessionOk = true; break; } }
+    }
+    return sessionOk;
+  };
+  // Team-wide fields (everything on the team that has no rule of its own) keep their stored value unless the save
+  // comes with such a proof. Compared after the same clean-up the incoming copy went through, so an old team
+  // stored before that clean-up existed is not mistaken for a change.
+  const OWN_RULES = new Set(["id", "members", "trips", "approver", "locked", "lockY", "approverReq", "pinResets", "creatorId", "log", "createdAt", "ownerHash", "hasOwner", "year"]);
+  const was = stored ? cleanTeam({ ...stored }) as TeamDoc : null;
+  if (stored && was && !(await anySession())) {
+    let changed = false;
+    for (const k of new Set([...Object.keys(was), ...Object.keys(doc)])) {
+      if (OWN_RULES.has(k)) continue;
+      if (JSON.stringify(canon(was[k]) ?? null) !== JSON.stringify(canon(doc[k]) ?? null)) { changed = true; if (k in stored) doc[k] = stored[k]; else delete doc[k]; }
+    }
+    if (changed) reverted.add("team");
+  }
+
   // Team-level protected fields
   const noAuthority = stored && !stored.ownerHash && !stored.approver && !storedMembers.some(m => m.isApprover);
   // Teams with a creator: only the current approver (own PIN session) may hand the approver role over, normally by
@@ -195,9 +236,20 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   if (stored && !mayManage) {
     if ("approver" in stored) doc.approver = stored.approver; else delete doc.approver;
   }
-  if (stored?.ownerHash && !owner) {
+  // Locking and unlocking a year: the owner or the approver; in a team that has neither, any signed-in member
+  const baseYear = String(stored?.year ?? new Date().getUTCFullYear());
+  const lockState = (d: TeamDoc | null) => JSON.stringify([d?.locked === true, Object.entries((d?.lockY && typeof d.lockY === "object" ? d.lockY : {}) as Record<string, unknown>).filter(([, v]) => v === true).map(([y]) => y).sort()]);
+  if (stored && !(owner || await approver() || (noAuthority && await anySession()))) {
+    if (lockState(stored) !== lockState(doc)) adjusted = true;
     for (const k of ["locked", "lockY"]) { if (k in stored) doc[k] = stored[k]; else delete doc[k]; }
   }
+  // Years that are locked before this save and still locked after it: nobody's days of those years change.
+  // (A save that unlocks a year, or one that locks it, may carry changes: they were made while it was open.)
+  const lockedYears = (d: TeamDoc | null) => { const y = new Set<string>(); if (d?.locked === true) y.add(baseYear); if (d?.lockY && typeof d.lockY === "object") for (const [k, v] of Object.entries(d.lockY as Record<string, unknown>)) if (v === true) y.add(k); return y; };
+  const stillLocked = lockedYears(doc);
+  const frozen = stored ? [...lockedYears(stored)].filter(y => stillLocked.has(y)) : [];
+  const inFrozen = (d: string) => frozen.some(y => d.startsWith(y + "-"));
+  const dayList = (v: unknown) => (Array.isArray(v) ? v.filter((d): d is string => typeof d === "string") : []);
   // Approver request (teams with a creator): a PIN member may ask for themself or withdraw their own request; the
   // current approver may clear it (accept or decline). Anything else keeps the stored value.
   const reqKey = (r: unknown) => { const o = r as { id?: unknown; at?: unknown } | null; return o && typeof o.id === "string" ? o.id + "|" + String(o.at || "") : ""; };
@@ -231,7 +283,6 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   // Job titles: only the owner or the creator (with their PIN session) may set them; teams without an owner as before
   const mayRoles = !stored || !stored.ownerHash || owner || (creatorId ? await self(creatorId) : false);
   const approverId = typeof stored?.approver === "string" && stored.approver ? stored.approver : null;
-  const baseYear = String(stored?.year ?? new Date().getUTCFullYear());
   const out: Member[] = [];
   for (const m of Array.isArray(incoming.members) ? incoming.members : []) {
     if (!m || typeof m !== "object" || typeof m.id !== "string") continue;
@@ -279,6 +330,14 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
       }
       if (approvalOf(next) !== sent) adjusted = true;
     }
+    // A locked year is closed: this member's days and half days of that year stay as stored
+    if (frozen.length) {
+      for (const key of ["days", "half"] as const) {
+        const sentList = dayList(next[key]);
+        const kept = [...sentList.filter(d => !inFrozen(d)), ...dayList(old?.[key]).filter(inFrozen)];
+        if (JSON.stringify([...sentList].sort()) !== JSON.stringify([...kept].sort())) { adjusted = true; next[key] = kept; }
+      }
+    }
     out.push(next);
   }
   // A protected member can only be removed with their token or the owner key; one without a PIN only by the
@@ -292,9 +351,26 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   if (Array.isArray(incoming.members) || stored?.members) doc.members = out;
   if (doc.creatorId && !out.some(m => m.id === doc.creatorId)) delete doc.creatorId;
   if (typeof doc.approver === "string" && !out.some(m => m.id === doc.approver)) doc.approver = null;
+  // Approvals switched on by this save (the team had no approver, now it has one): leave booked until now stays
+  // approved, in every year that has any. From here on the rule above applies: more leave needs the approver.
+  if (stored && !approverId && typeof doc.approver === "string" && doc.approver) {
+    for (let i = 0; i < out.length; i++) {
+      const m: Member = { ...out[i] };
+      const sent = approvalOf(m);
+      const years = new Set(dayList(m.days).map(d => d.slice(0, 4)));
+      if (years.has(baseYear)) m.approved = true;
+      const other = [...years].filter(y => y !== baseYear);
+      if (other.length) { const a = { ...((m.apY && typeof m.apY === "object" ? m.apY : {}) as Record<string, unknown>) }; for (const y of other) a[y] = true; m.apY = a; }
+      if (approvalOf(m) !== sent) { adjusted = true; out[i] = m; }
+    }
+    doc.members = out;
+  }
 
-  // Trips of PIN-protected members follow the member's rights
-  if (Array.isArray(incoming.trips) || Array.isArray(stored?.trips)) {
+  // Trips need a signed-in member or the owner; those of PIN-protected members also follow that member's rights
+  if (stored && !(await anySession())) {
+    if (JSON.stringify(canon(was?.trips) ?? null) !== JSON.stringify(canon(incoming.trips) ?? null)) reverted.add("team");
+    if ("trips" in stored) doc.trips = stored.trips; else delete doc.trips;
+  } else if (Array.isArray(incoming.trips) || Array.isArray(stored?.trips)) {
     const prot = new Set(storedMembers.filter(m => m.pinHash).map(m => m.id));
     const oldTrips = (Array.isArray(stored?.trips) ? stored!.trips as Trip[] : []).filter(t => t && typeof t === "object");
     const oldById = new Map(oldTrips.map(t => [String(t.id), t]));

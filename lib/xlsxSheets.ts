@@ -14,6 +14,7 @@ export type XlsxInput = {
   countryName: (cc?: string) => string;
   months: string[]; dayLabels: string[];      // Monday-first
   generated: string;                          // pre-formatted date
+  coverage?: number;                          // average coverage in %, worked out by the caller (lib/v3Util avgCoverage)
   sevenDay?: boolean;                         // the team works 7 days a week (weekends are bookable days)
 };
 
@@ -64,7 +65,7 @@ export function buildSheets(x: XlsxInput): Sheet[] {
   ms.forEach((m, i) => m.days.forEach(d => { (who[d] ||= []).push(i); }));
   const overlaps = Object.keys(who).filter(d => who[d].length >= 2).sort();
   const total = ms.reduce((s, m) => s + m.used, 0);
-  const cover = Math.round((1 - total / ((ms.length * 260) || 1)) * 100);
+  const cover = typeof x.coverage === "number" ? x.coverage : Math.round((1 - total / ((ms.length * 260) || 1)) * 100);
 
   // Dashboard
   const dash: Cell[][] = [

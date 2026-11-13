@@ -180,6 +180,26 @@ export function nextClash(team: TeamView, from: string, threshold: number, horiz
   return null;
 }
 // Who comes back next: the earliest end of a leave range that is running today
+// Average coverage of a year, the one definition used on screen, in the PDF and in Excel: over the year's working
+// days (Mon–Fri, or every day in a 7-day team), the share of the team at work. At work = not on leave (a half day
+// counts as half away) and not on their own public holiday. (The reports used "1 − leave days ÷ (people × 260)",
+// which ignored public holidays and assumed 260 working days, so the same team showed two different figures.)
+export function avgCoverage(members: Member[], year: number, sevenDay: boolean, holOf: (m: Member) => Iterable<string>): number {
+  const n = members.length;
+  if (!n) return 100;
+  const hol = members.map(m => new Set(holOf(m))), days = members.map(m => new Set(m.days || [])), half = members.map(m => new Set(m.half || []));
+  let sum = 0, count = 0;
+  for (const d = new Date(year, 0, 1, 12); d.getFullYear() === year; d.setDate(d.getDate() + 1)) {
+    const wd = d.getDay();
+    if (!sevenDay && (wd === 0 || wd === 6)) continue;
+    const k = keyOf(d);
+    let present = 0;
+    for (let i = 0; i < n; i++) { if (hol[i].has(k)) continue; present += days[i].has(k) ? (half[i].has(k) ? 0.5 : 0) : 1; }
+    sum += present / n; count++;
+  }
+  return count ? Math.round((sum / count) * 100) : 100;
+}
+
 // Who is away today and the day each is back at work: the first day after today that is neither leave nor,
 // in a Mon–Fri team, a weekend or one of that person's public holidays. (It used to be simply the day after the
 // last leave day in a row: off Thursday and Friday meant "back Saturday", and leave that went on after the

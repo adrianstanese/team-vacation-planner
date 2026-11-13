@@ -9,7 +9,7 @@ import CoffeeButton from "@/components/CoffeeButton";
 import nextDynamic from "next/dynamic";
 import TodayTiles from "@/components/v3/TodayTiles";
 import { V } from "@/lib/v3Text";
-import { nextLeaveDay, pendingApprovals, streaksOf } from "@/lib/v3Util";
+import { nextLeaveDay, pendingApprovals, streaksOf, avgCoverage } from "@/lib/v3Util";
 import { withTransition, celebrate, buzz } from "@/lib/motion";
 import "./frontpage.css";
 import { buildSheets } from "@/lib/xlsxSheets";
@@ -20,7 +20,7 @@ import { X, textLang, dateLocale, isRtl, monthShort } from "@/lib/extraText";
 import { icsText, icsStamp } from "@/lib/ics";
 import TrapScope from "@/components/TrapScope";
 // Loaded only when first opened (keeps the first page load small)
-import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, sheetCell, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
+import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, INK, onFills, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, sheetCell, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
 
 const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr:false});
 
@@ -111,6 +111,7 @@ function exportXLSX(team, t){
     var mod = await import("write-excel-file/universal");
     var sheets = buildSheets({
       teamName: team.name||"", year: yr, members: team.members, holidays: hols,
+      coverage: avgCoverage(team.members, yr, !!team.w7, function(m){return m.country?getAllHolidays(m,yr):[];}),
       colors: MC.map(function(c){return c.d;}),
       countryName: function(cc){ var co = cc ? EU_C.find(function(c){return c.c===cc;}) : null; return co ? co.n : ""; },
       months: t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"],
@@ -489,18 +490,18 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           const isHol=(holSet&&holSet.has(key));
 
           // Team overview colors + overlap visibility
-          var vacBg = "transparent", vacColor = th.tx, vacWeight = 400, vacBorder = "2px solid transparent", vacShadow = "none", showCount = 0;
+          var vacBg = "transparent", vacColor = th.tx, vacWeight = 400, vacBorder = "2px solid transparent", vacShadow = "none", showCount = 0, vacChip = false;
           var others = mh.filter(function(x){return !am || x.id!==am.id;});
           if(isA && ac) {
             // Selected member's day — solid fill (half day: half filled)
-            vacBg = (am.half||[]).includes(key) ? "linear-gradient(135deg," + ac.d + " 50%," + ac.d + "45 50%)" : ac.d; vacColor = "#fff"; vacWeight = 800; vacBorder = "2px solid " + ac.d; vacShadow = "0 2px 8px " + ac.d + "40";
+            vacBg = (am.half||[]).includes(key) ? "linear-gradient(135deg," + ac.d + " 50%," + ac.d + "45 50%)" : ac.d; vacColor = ac.o; vacChip = (am.half||[]).includes(key); vacWeight = 800; vacBorder = "2px solid " + ac.d; vacShadow = "0 2px 8px " + ac.d + "40";
             // If others also have this day, add a dot indicator
             if(others.length>0) { showCount = others.length + 1; }
           } else if(am && !isA && others.length > 0) {
             // A member is selected but this isn't their day — show others faintly
             if(others.length === 1) {
               var mcF = MC[members.indexOf(others[0])%MC.length];
-              vacBg = mcF.d + "25"; vacColor = mcF.d; vacWeight = 600;
+              vacBg = mcF.d + "25"; vacColor = th.dk ? mcF.b : mcF.t; vacWeight = 600;
             } else if(others.length === 2) {
               var mcF1 = MC[members.indexOf(others[0])%MC.length];
               var mcF2 = MC[members.indexOf(others[1])%MC.length];
@@ -511,18 +512,18 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
           } else if(!am && mh.length === 1) {
             // No member selected, 1 person — solid color
             var mc1 = MC[members.indexOf(mh[0])%MC.length];
-            vacBg = (mh[0].half||[]).includes(key) ? "linear-gradient(135deg," + mc1.d + " 50%," + mc1.d + "45 50%)" : mc1.d; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 6px " + mc1.d + "35";
+            vacBg = (mh[0].half||[]).includes(key) ? "linear-gradient(135deg," + mc1.d + " 50%," + mc1.d + "45 50%)" : mc1.d; vacColor = mc1.o; vacChip = (mh[0].half||[]).includes(key); vacWeight = 800; vacShadow = "0 2px 6px " + mc1.d + "35";
           } else if(!am && mh.length === 2) {
             var mcA = MC[members.indexOf(mh[0])%MC.length];
             var mcB = MC[members.indexOf(mh[1])%MC.length];
-            vacBg = "linear-gradient(135deg," + mcA.d + " 50%," + mcB.d + " 50%)"; vacColor = "#fff"; vacWeight = 800; showCount = 2;
+            vacBg = "linear-gradient(135deg," + mcA.d + " 50%," + mcB.d + " 50%)"; vacColor = onFills([mcA,mcB]); vacChip = !vacColor; vacWeight = 800; showCount = 2;
           } else if(!am && mh.length === 3) {
             var mc3a = MC[members.indexOf(mh[0])%MC.length];
             var mc3b = MC[members.indexOf(mh[1])%MC.length];
             var mc3c = MC[members.indexOf(mh[2])%MC.length];
-            vacBg = "linear-gradient(135deg," + mc3a.d + " 33%," + mc3b.d + " 33% 66%," + mc3c.d + " 66%)"; vacColor = "#fff"; vacWeight = 800; showCount = 3;
+            vacBg = "linear-gradient(135deg," + mc3a.d + " 33%," + mc3b.d + " 33% 66%," + mc3c.d + " 66%)"; vacColor = onFills([mc3a,mc3b,mc3c]); vacChip = !vacColor; vacWeight = 800; showCount = 3;
           } else if(!am && mh.length >= 4) {
-            vacBg = "#EF4444"; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 8px rgba(239,68,68,0.3)"; showCount = mh.length;
+            vacBg = "#DC2626"; vacColor = "#fff"; vacWeight = 800; vacShadow = "0 2px 8px rgba(220,38,38,0.3)"; showCount = mh.length;
           }
 
           if(isHol && !isA && mh.length===0) { vacBg = th.hc; vacColor = th.ht; vacWeight = 700; }
@@ -554,7 +555,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
               backgroundColor:String(vacBg).indexOf("gradient(")>=0?"transparent":vacBg, backgroundImage:[pendingStripe,String(vacBg).indexOf("gradient(")>=0?vacBg:""].filter(Boolean).join(",")||"none", border:vacBorder, transition:"background .1s",
               opacity:past&&mh.length===0&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
               boxShadow:vacShadow+(th.bg==="#0B0F1A"&&(isA||mh.length>0)?",0 0 8px "+(isA&&ac?ac.d+"35":mh.length>0?MC[members.indexOf(mh[0])%MC.length].d+"25":""):"")}}>
-            <span style={{fontSize:compact?11:12,fontWeight:isTd?700:vacWeight,color:isTd&&mh.length===0?th.ac:vacColor,fontFamily:F,lineHeight:1}}>{day}</span>
+            <span style={{fontSize:compact?11:12,fontWeight:isTd?700:vacWeight,color:isTd&&mh.length===0?th.ac:vacChip?INK:vacColor,fontFamily:F,lineHeight:1,...(vacChip?{background:"rgba(255,255,255,.9)",borderRadius:6,padding:"2px 4px"}:{})}}>{day}</span>
             {showCount>0&&<span style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:"#fff",color:"#EF4444",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #EF4444"}}>{showCount}</span>}
             {team&&team.comments&&team.comments[key]&&setCommentDay&&<span onClick={function(e){e.stopPropagation();setCommentDay(key);}} style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50)",width:4,height:4,borderRadius:"50%",background:"#8B5CF6"}}/>}
             {(function(){if(!_tripSet.has(key))return null;var _travelers=[];if(team&&team.trips)(team.trips).forEach(function(tr){if(!tr.start||!tr.end||!tr.member)return;var d1=new Date(tr.start+"T12:00:00"),d2=new Date(tr.end+"T12:00:00"),cur=new Date(year,month,day);if(cur>=d1&&cur<=d2){var mi=members.findIndex(function(m2){return m2.id===tr.member;});if(mi>=0)_travelers.push(MC[mi%MC.length]);}});if(!_travelers.length)return null;var tc=_travelers[0].d;return <svg width="10" height="10" viewBox="0 0 24 24" style={{position:"absolute",bottom:0,right:0,filter:"drop-shadow(0 0 1px #fff)"}}><path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0011.5 2 1.5 1.5 0 0010 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill={tc}/></svg>;})()} 
@@ -726,7 +727,7 @@ function CoverageView({team,th,t}) {
     </div>
     <div style={{display:"flex",gap:12,marginTop:20,flexWrap:"wrap",justifyContent:"center"}}>
       {[
-        {label:t.avgCov,value:`${Math.round(weeks.reduce((s2,w)=>s2+w.coverage,0)/(weeks.length||1))}%`,color:"#10B981"},
+        {label:t.avgCov,value:`${avgCoverage(mem,yr,!!team.w7,m=>m.country?getAllHolidays(m,yr):[])}%`,color:"#10B981"},
         {label:t.lowWeek,value:`${weeks.length?Math.min(...weeks.map(w=>w.coverage)):100}%`,color:"#DC2626"},
         {label:t.weeksLow,value:weeks.filter(w=>w.coverage<70).length,color:th.wm},
       ].map((s2,i)=> <div key={i} style={{background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rXs,padding:"12px 20px",textAlign:"center",backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
@@ -778,7 +779,7 @@ function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename
 
   if(isEditing) return <div style={{display:"flex",flexDirection:"column",gap:6,padding:"8px 10px",background:c.b,borderRadius:8,border:`1.5px solid ${c.d}`}}>
     <div style={{display:"flex",alignItems:"center",gap:8}}>
-      <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:700,flexShrink:0}}>{(en||"?")[0].toUpperCase()}</div>
+      <div style={{width:28,height:28,borderRadius:"50%",background:c.d,display:"flex",alignItems:"center",justifyContent:"center",color:c.o,fontSize:12,fontWeight:700,flexShrink:0}}>{(en||"?")[0].toUpperCase()}</div>
       <input autoFocus value={en} onChange={e=>setEn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&en.trim())onFinishRename(en.trim());if(e.key==="Escape")onFinishRename(m.name);}} onBlur={()=>en.trim()?onFinishRename(en.trim()):onFinishRename(m.name)} maxLength={30} style={{flex:1,border:"none",background:"transparent",fontSize:13,fontWeight:600,fontFamily:F,color:c.t,outline:"none",padding:"3px 0"}}/>
     </div>
     <CountrySelect value={m.country} onChange={onCountryChange} th={th} t={t}/>
@@ -1128,7 +1129,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
         var endD=tr.end?new Date(tr.end+"T12:00:00"):null;
         var fmtD=function(d){if(!d)return"";return d.getDate()+" "+(t.M||["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"])[d.getMonth()];};
         return <div key={tr.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:th.gbg,borderRadius:10,border:"1px solid "+th.gbd,transition:"all .15s"}} onMouseEnter={function(e){e.currentTarget.style.borderColor="#D97706";}} onMouseLeave={function(e){e.currentTarget.style.borderColor=th.gbd;}}>
-          <div style={{width:36,height:36,borderRadius:"50%",background:mc.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:14,fontWeight:700,flexShrink:0}}>{m?m.name[0].toUpperCase():"?"}</div>
+          <div style={{width:36,height:36,borderRadius:"50%",background:mc.d,display:"flex",alignItems:"center",justifyContent:"center",color:mc.o,fontSize:14,fontWeight:700,flexShrink:0}}>{m?m.name[0].toUpperCase():"?"}</div>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:13,fontWeight:600,color:th.tx}}>{m?m.name:"?"}</div>
             <div style={{fontSize:11,color:th.t3,display:"flex",flexWrap:"wrap",gap:4,marginTop:2}}>
@@ -1609,6 +1610,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       return{...mm,approved:true};
     }),log:addLogEntry(team,"All members approved")});
   };
+  // Locking and unlocking: the owner or the approver; in a team with neither, any signed-in member (the server
+  // applies the same rule, so the button is only shown to those it will work for)
+  const mayLock=!!getOwner(team.id)||unlockedIsApprover||(!team.hasOwner&&!team.approver&&!team.members.some(x=>x.isApprover)&&!!unlockedId);
   const toggleLock=()=>updateWithHistory({...team,locked:!team.locked,log:addLogEntry(team,team.locked?"Board unlocked":"Board locked")});
 
   const am=team.members.find(m=>m.id===aId);const ai=am?team.members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
@@ -1795,7 +1799,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       <Btn th={th} v="ghost" sz="sm" onClick={redo} disabled={!redoRef.current.length} style={{fontSize:11}}>↪ {X("redo")}</Btn>
       <Btn th={th} v="ghost" sz="sm" icon={null} disabled={false} onClick={()=>setShowTT(true)} style={{fontSize:11}}>⏳ {V("tt")}</Btn>
       <div style={{width:1,height:20,background:th.bd}}/>
-      {isAdmin&&<Btn th={th} v="ghost" sz="sm" icon={locked?"unlock":"lock"} onClick={toggleLock}>{locked?t.unlock:t.lock}</Btn>}
+      {isAdmin&&mayLock&&<Btn th={th} v="ghost" sz="sm" icon={locked?"unlock":"lock"} onClick={toggleLock}>{locked?t.unlock:t.lock}</Btn>}
+      {locked&&!mayLock&&<span role="status" style={{display:"inline-flex",alignItems:"center",gap:5,padding:"6px 10px",fontSize:12,fontWeight:600,color:th.t2,fontFamily:F}}><Ic n="lock" s={13} c={th.t2}/>{t.locked}</span>}
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>R("generatePDFReport")(team,t)}>{t.pdf}</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>downloadTeamICS(team)}>Team .ics</Btn>
       <Btn th={th} v="ghost" sz="sm" icon="download" onClick={()=>exportCSV(team,t)}>CSV</Btn>
@@ -1889,19 +1894,19 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         {team.members.length>0&&view==="cal"&&<div style={{marginBottom:10,padding:"8px 12px",background:th.gbg,borderRadius:G.rXs,border:`1px solid ${th.gbd}`,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
           <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
             {team.members.map((m,i)=>{const c=MC[i%MC.length];const co=m.country?EU_C.find(x=>x.c===m.country):null;
-              return <div key={m.id} onClick={()=>setAId(m.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",background:aId===m.id?c.b:th.sh,borderRadius:14,fontSize:10,fontWeight:500,color:c.t,cursor:"pointer",border:aId===m.id?`1.5px solid ${c.d}40`:"1.5px solid transparent"}}><div style={{width:6,height:6,borderRadius:"50%",background:c.d}}/>{co?co.f+" ":""}{m.name} ({fmtDays(usedOf(m))})</div>;})}
+              return <div key={m.id} onClick={()=>setAId(m.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",background:aId===m.id?c.b:th.sh,borderRadius:14,fontSize:10,fontWeight:500,color:aId!==m.id&&th.dk?c.b:c.t,cursor:"pointer",border:aId===m.id?`1.5px solid ${c.d}40`:"1.5px solid transparent"}}><div style={{width:6,height:6,borderRadius:"50%",background:c.d}}/>{co?co.f+" ":""}{m.name} ({fmtDays(usedOf(m))})</div>;})}
             <div style={{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:14,fontSize:10,color:th.ht,background:th.hc}}><div style={{width:6,height:6,borderRadius:3,background:th.ht}}/> {t.holiday}</div>
           </div>
         </div>}
 
         {view==="cal"&&am&&<div style={{background:ac.b,borderRadius:12,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:8,border:`1px solid ${ac.d}30`,flexWrap:"wrap",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:22,height:22,borderRadius:"50%",background:ac.d,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:10,fontWeight:700}}>{am.name[0].toUpperCase()}</div>
+            <div style={{width:22,height:22,borderRadius:"50%",background:ac.d,display:"flex",alignItems:"center",justifyContent:"center",color:ac.o,fontSize:10,fontWeight:700}}>{am.name[0].toUpperCase()}</div>
             <span style={{fontSize:12,fontWeight:600,color:ac.t}}>{t.ed}: {am.name}</span>
             <span style={{fontSize:11,color:ac.t,opacity:.7}}>{t.tap}</span>
           </div>
           <button onClick={()=>setHalfMode(h=>!h)} aria-pressed={halfMode} title={X("halfTitle")} style={{padding:"6px 12px",borderRadius:20,border:"1.5px solid "+ac.d,background:halfMode?ac.d:"transparent",color:halfMode?"#fff":ac.t,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>{halfMode?X("halfOn"):X("halfDay")}</button>
-          <button onClick={()=>{setAId(null);setHalfMode(false);flash(am.name+": "+fmtDays(usedOf(am))+" "+((usedOf(am)===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>{V("prCodeOk")} · {fmtDays(usedOf(am))} {(usedOf(am)===1)?t.dy:t.dys}</button>
+          <button onClick={()=>{setAId(null);setHalfMode(false);flash(am.name+": "+fmtDays(usedOf(am))+" "+((usedOf(am)===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:ac.o,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>{V("prCodeOk")} · {fmtDays(usedOf(am))} {(usedOf(am)===1)?t.dy:t.dys}</button>
         </div>}
 
         {/* Holiday Clash Warning */}

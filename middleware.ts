@@ -5,7 +5,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const WINDOW_MS = 60_000; // 1 minute
-const MAX_REQUESTS = 60;  // 60 requests per minute per IP
+// Per address, and a whole office shares one address: 60 a minute made twenty colleagues picking days at the same
+// time wait for each other. Team ids cannot be guessed (128 random bits) and PIN tries have their own limit per
+// member, so this only has to stop a script hammering the API.
+const MAX_REQUESTS = 240;
 
 // In-memory rate limit store (per edge instance)
 const rateMap = new Map<string, { count: number; resetAt: number }>();

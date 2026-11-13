@@ -257,7 +257,7 @@ html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-
 /* Signed-in chip + greyed-out colleagues */
 .tvp-me { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; padding: 7px 10px; border: 1px solid; border-radius: 12px; font-size: 12px; font-weight: 600; }
 .tvp-me button { background: none; border: none; font: inherit; font-weight: 800; cursor: pointer; padding: 0; }
-.tvp-mrow.tvp-dim { opacity: .42; filter: grayscale(.85); cursor: not-allowed; }
+.tvp-mrow.tvp-dim { opacity: .64; filter: grayscale(.85); cursor: not-allowed; }
 .tvp-mrow.tvp-dim.on { opacity: .8; filter: none; cursor: default; }
 .tvp-mrow.tvp-dim[aria-disabled="true"] { pointer-events: auto; }
 

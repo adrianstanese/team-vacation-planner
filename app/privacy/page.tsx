@@ -43,7 +43,7 @@ export default function Privacy() {
       <p>We keep your preferences, your list of teams, team owner keys and temporary PIN sessions in your browser&apos;s storage. They stay on your device and are used only to make the tool work. No cookies are used, except a sign-in cookie for the site administrator.</p>
 
       <h2 style={h2}>How long</h2>
-      <p>Teams are deleted 24 months after they are created. A deleted team stays restorable for 30 days and is then erased. Earlier versions of a team are erased after 30 days, at once when the team is erased, and on request (we then also remove you from them). The admin action log is kept for 12 months. Security attempt logs are kept for one day.</p>
+      <p>A team is kept for as long as it is used. It is deleted only after nobody has opened or changed it for 36 months. A deleted team stays restorable for 30 days and is then erased. Earlier versions of a team are erased after 30 days, at once when the team is erased, and on request (we then also remove you from them). The admin action log is kept for 12 months. Security attempt logs are kept for one day.</p>
 
       <h2 style={h2}>Where</h2>
       <p>Data is hosted by Vercel Inc. (website) and Neon (database). Where data is processed outside the EU, transfers rely on the EU–US Data Privacy Framework or the European Commission&apos;s standard contractual clauses.</p>

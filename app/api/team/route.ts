@@ -17,7 +17,12 @@ export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
   if (!ID.test(id)) return NextResponse.json(null, { headers: NO_STORE });
-  const rows = await sql`SELECT data, updated_at::text AS v FROM teams WHERE id = ${id} AND expires_at > NOW()`;
+  // A team is kept until it has been unused for 36 months, and opening it is use: the date moves on, at most once
+  // a month per team (so reading stays a read almost every time). The version (updated_at) is not touched.
+  const rows = await sql`WITH touch AS (
+      UPDATE teams SET expires_at = NOW() + INTERVAL '36 months'
+      WHERE id = ${id} AND expires_at > NOW() AND expires_at < NOW() + INTERVAL '35 months')
+    SELECT data, updated_at::text AS v FROM teams WHERE id = ${id} AND expires_at > NOW()`;
   if (rows.length === 0) return NextResponse.json(null, { headers: NO_STORE });
   return NextResponse.json(publicTeam(rows[0].data as TeamDoc), { headers: { ...NO_STORE, "X-Updated-At": String(rows[0].v || "") } });
 }
@@ -52,7 +57,7 @@ export async function PUT(request: NextRequest) {
     }
     const { doc, reverted, adjusted } = await guardIncoming(sql, id, stored, incoming, auth);
     if (cur.length) {
-      const rows = await sql`UPDATE teams SET data = ${JSON.stringify(doc)}::jsonb, updated_at = NOW()
+      const rows = await sql`UPDATE teams SET data = ${JSON.stringify(doc)}::jsonb, updated_at = NOW(), expires_at = NOW() + INTERVAL '36 months'
         WHERE id = ${id} AND updated_at::text = ${cur[0].v} RETURNING updated_at::text AS v`;
       if (!rows.length) continue; // someone saved in between: re-read and re-check
       if (stored) await snapshot(sql, id, stored, doc);
@@ -68,7 +73,7 @@ export async function PUT(request: NextRequest) {
     // The creator becomes the owner: the key is returned once and only its hash is stored
     const { key, hash } = newOwnerKey();
     doc.ownerHash = hash;
-    const rows = await sql`INSERT INTO teams (id, data, updated_at, expires_at) VALUES (${id}, ${JSON.stringify(doc)}::jsonb, NOW(), NOW() + INTERVAL '24 months')
+    const rows = await sql`INSERT INTO teams (id, data, updated_at, expires_at) VALUES (${id}, ${JSON.stringify(doc)}::jsonb, NOW(), NOW() + INTERVAL '36 months')
       ON CONFLICT (id) DO NOTHING RETURNING updated_at::text AS v`;
     if (!rows.length) continue;
     return NextResponse.json({ ok: true, v: rows[0].v, reverted, owner: key }, { headers: NO_STORE });
@@ -92,7 +97,7 @@ async function snapshot(sql: Sql, id: string, before: TeamDoc, after: TeamDoc) {
     const big = (after.members || []).length < (before.members || []).length || dayCount(after) < dayCount(before) - 10;
     const [sz] = await sql`SELECT pg_total_relation_size('team_versions')::bigint AS b,
       (SELECT COALESCE(SUM(pg_column_size(data)), 0) FROM team_versions WHERE id = ${id})::bigint AS t,
-      (SELECT expires_at > now() + interval '23 months 23 days' FROM teams WHERE id = ${id}) AS young`;
+      (SELECT (data->>'createdAt') > to_char((now() - interval '7 days') AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') FROM teams WHERE id = ${id}) AS young`;
     const total = Number(sz?.b || 0);
     if (total > HARD_CEILING) { console.error("team_versions over its hard ceiling: snapshots paused", total); return; }
     if (total > SOFT_CEILING && sz?.young) { console.error("team_versions over its soft ceiling: no snapshot for a new team", id); return; }

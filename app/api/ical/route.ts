@@ -18,7 +18,11 @@ export async function GET(request: NextRequest) {
   let rows: Record<string, unknown>[];
   try {
     const sql = await getSql();
-    rows = await sql`SELECT data FROM teams WHERE id = ${id} AND expires_at > NOW()`;
+    // A calendar app fetching the feed is use of the team too (see the note in /api/team): at most one write a month
+    rows = await sql`WITH touch AS (
+        UPDATE teams SET expires_at = NOW() + INTERVAL '36 months'
+        WHERE id = ${id} AND expires_at > NOW() AND expires_at < NOW() + INTERVAL '35 months')
+      SELECT data FROM teams WHERE id = ${id} AND expires_at > NOW()`;
   } catch {
     console.error("ical: database unavailable");
     return new NextResponse("Temporarily unavailable", { status: 503, headers: { "Retry-After": "300" } });

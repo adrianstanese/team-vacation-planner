@@ -3,7 +3,7 @@
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { V } from "@/lib/v3Text";
 import { dateLocale, monthShort } from "@/lib/extraText";
-import { nextLeaveDay } from "@/lib/v3Util";
+import { nextLeaveDay, avgCoverage } from "@/lib/v3Util";
 import { EU_C, MC, dim, dk, esc, fdm, fileBase, pk, reportSafe, safeYear, withBusy, _fd, _fd2, getAllHolidays, isWe, usedOf } from "./app";
 
 // Day totals as the planner shows them: a half day counts 0.5
@@ -78,7 +78,7 @@ export function generatePDFReport(team, t) {
   html += '</div>';
 
   // Stats boxes
-  var avgCov = team.members.length > 0 ? Math.round((1 - totalDays / (team.members.length * 260)) * 100) : 100;
+  var avgCov = avgCoverage(team.members, yr, !!team.w7, function(m){return m.country?getAllHolidays(m,yr):[];});
   html += '<div class="stats">';
   html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">'+esc(V("rpTotal"))+'</div></div>';
   html += '<div class="stat"><div class="stat-val" style="color:#EF4444">'+overlaps.length+'</div><div class="stat-lbl">'+esc(V("rpOverlap"))+'</div></div>';
@@ -443,7 +443,7 @@ export function printReport(team, t) {
   html += '</div>';
 
   // Stats
-  var avgCov = team.members.length > 0 ? Math.round((1 - totalDays / (team.members.length * 260)) * 100) : 100;
+  var avgCov = avgCoverage(team.members, yr, !!team.w7, function(m){return m.country?getAllHolidays(m,yr):[];});
   html += '<div class="stats">';
   html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">'+esc(V("rpTotal"))+'</div></div>';
   html += '<div class="stat"><div class="stat-red">'+overlaps.length+'</div><div class="stat-lbl">'+esc(V("rpOverlap"))+'</div></div>';
@@ -591,7 +591,7 @@ export function exportXLSLegacy(team, t) {
   xml += '<Row><Cell ss:StyleID="sub"><Data ss:Type="String">'+yr+' | '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' | '+esc(V('rpGenOn',{d:new Date().toLocaleDateString(dateLocale())}))+'</Data></Cell></Row>\n';
   xml += '<Row></Row>\n';
   // Stats
-  xml += '<Row><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+totalDays+'</Data></Cell><Cell ss:StyleID="stat-red"><Data ss:Type="Number">'+overlaps.length+'</Data></Cell><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+team.members.length+'</Data></Cell><Cell ss:StyleID="stat-grn"><Data ss:Type="String">'+Math.round((1-totalDays/(team.members.length*260||1))*100)+'%</Data></Cell></Row>\n';
+  xml += '<Row><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+totalDays+'</Data></Cell><Cell ss:StyleID="stat-red"><Data ss:Type="Number">'+overlaps.length+'</Data></Cell><Cell ss:StyleID="stat-val"><Data ss:Type="Number">'+team.members.length+'</Data></Cell><Cell ss:StyleID="stat-grn"><Data ss:Type="String">'+avgCoverage(team.members, yr, !!team.w7, function(m){return m.country?getAllHolidays(m,yr):[];})+'%</Data></Cell></Row>\n';
   xml += '<Row><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">'+esc(V("rpTotal"))+'</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">'+esc(V("rpOverlap"))+'</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">'+esc(V("rpTeam"))+'</Data></Cell><Cell ss:StyleID="stat-lbl"><Data ss:Type="String">'+esc(V("rpAvgCov"))+'</Data></Cell></Row>\n';
   xml += '<Row></Row>\n';
   // Member summary

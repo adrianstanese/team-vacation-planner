@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "extend") {
-    const rows = await sql`UPDATE teams SET expires_at = GREATEST(COALESCE(expires_at, now()), now() + interval '24 months') WHERE id = ${id} RETURNING expires_at`;
+    const rows = await sql`UPDATE teams SET expires_at = GREATEST(COALESCE(expires_at, now()), now() + interval '36 months') WHERE id = ${id} RETURNING expires_at`;
     if (!rows.length) return json({ ok: false, error: "Team not found" }, 404);
     await logAction(sql, "extend", id);
     return json({ ok: true, expires_at: rows[0].expires_at });

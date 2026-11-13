@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 651,
+ "strings": 652,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -1273,7 +1273,7 @@
      "en": "Automatic Deletion"
     },
     "f37d": {
-     "en": "Teams are deleted 24 months after they are created. Deleted teams can be restored for 30 days, then are erased."
+     "en": "A team is kept for as long as it is used. It is deleted only after 36 months without use. Deleted teams can be restored for 30 days, then are erased."
     },
     "f38": {
      "en": "Where Data Is Stored"
@@ -1287,6 +1287,9 @@
    "where": "Assorted planner labels: PIN dialogs, import, groups, half days, cookie notice, exports.",
    "file": "lib/extraText.ts",
    "strings": {
+    "uaNote": {
+     "en": "Public holidays are suspended in Ukraine under martial law: no days off for now."
+    },
     "loadErr": {
      "en": "Couldn't load the team. Check your connection and try again."
     },
@@ -1517,7 +1520,7 @@
      "en": "Paste this code into any website to embed the team calendar:"
     },
     "stored": {
-     "en": "Teams are stored for 24 months. Bookmark this link to come back any time."
+     "en": "Your team is kept for as long as you use it, and for 36 months after that. Bookmark this link to come back any time."
     },
     "scanJoin": {
      "en": "Scan to open {n}",
@@ -2142,7 +2145,7 @@
      "en": "Approvals are off for this team"
     },
     "apOffD": {
-     "en": "Choose who approves. Everyone else's days then show as waiting until they are approved."
+     "en": "Choose who approves. Leave booked so far stays approved. Days added from now on show as waiting until they are approved."
     },
     "apPick": {
      "en": "Choose the approver"
