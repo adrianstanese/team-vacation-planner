@@ -1338,96 +1338,13 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
   </div>;
 }
 
-// ─── Contact / Feedback Modal ────────────────────────────────────
-function ContactModal({onClose, th, t}) {
-  const[email,setEmail]=useState("");
-  const[subject,setSubject]=useState("");
-  const[message,setMessage]=useState("");
-  const[sent,setSent]=useState(false);
+// Contact: a plain e-mail link on the front page (the pop-up form was removed on 2026-11-13).
+const CONTACT_EMAIL="contact@stanese.ro";
 
-  const subjects = [
-    { value: "feedback", label: t.subFeedback },
-    { value: "bug", label: t.subBug },
-    { value: "suggestion", label: t.subSuggestion },
-    { value: "question", label: t.subQuestion },
-    { value: "partnership", label: t.subPartner },
-    { value: "data", label: t.subData },
-    { value: "other", label: t.subOther },
-  ];
-
-  const canSend = email.trim() && email.includes("@") && subject && message.trim().length >= 10;
-
-  const handleSend = () => {
-    if (!canSend) return;
-    var to = ["adrian","stanese.ro"].join("@");
-    var sl = (subjects.find(function(s){return s.value===subject})||{}).label || subject;
-    var subjectLine = "[TVP] " + sl;
-    var body = "From: " + email + "\n\nSubject: " + subjectLine + "\n\n" + message + "\n\n---\nSent from Team Vacation Planner";
-    var mailto = "mailto:" + to + "?subject=" + encodeURIComponent(subjectLine) + "&body=" + encodeURIComponent(body);
-    window.open(mailto, "_blank");
-    setSent(true);
-    setTimeout(function() { setSent(false); onClose(); }, 2500);
-  };
-
-  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,padding:28,maxWidth:480,animation:"popIn .25s ease-out",width:"100%",boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      {/* Header */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:36,height:36,borderRadius:G.rXs,background:th.al,display:"flex",alignItems:"center",justifyContent:"center"}}><Ic n="mail" s={18} c={th.ac}/></div>
-          <div><div style={{fontSize:16,fontWeight:700,color:th.tx}}>{t.contactTitle}</div><div style={{fontSize:11,color:th.t3,marginTop:1}}>{t.contactSub}</div></div>
-        </div>
-        <button onClick={onClose} style={{background:th.sh,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={15} c={th.t2}/></button>
-      </div>
-
-      {sent ? <div style={{textAlign:"center",padding:"40px 20px"}}>
-        <div style={{fontSize:40,marginBottom:12}}>✉️</div>
-        <div style={{fontSize:16,fontWeight:700,color:th.tx,marginBottom:6}}>{t.thankYou}</div>
-        <div style={{fontSize:13,color:th.t2}}>{t.thankYouSub}</div>
-      </div> : <Fragment>
-        {/* Email */}
-        <label style={{fontSize:12,fontWeight:600,color:th.t2,marginBottom:4,display:"block"}}>{t.yourEmail} *</label>
-        <Inp th={th} value={email} onChange={setEmail} placeholder={t.emailPlaceholder} maxLength={100}/>
-
-        {/* Subject dropdown */}
-        <label style={{fontSize:12,fontWeight:600,color:th.t2,marginBottom:4,display:"block",marginTop:14}}>{t.subjectLabel} *</label>
-        <div style={{position:"relative"}}>
-          <select value={subject} onChange={e=>setSubject(e.target.value)} style={{
-            width:"100%",padding:"10px 14px",border:`1.5px solid ${th.gbd}`,borderRadius:G.rXs,fontSize:14,fontFamily:F,
-            outline:"none",background:th.gbg,color:subject?th.tx:th.t3,appearance:"none",cursor:"pointer",
-            backdropFilter:G.blur,WebkitBackdropFilter:G.blur,boxSizing:"border-box",
-          }}>
-            <option value="" disabled>{t.selectTopic}</option>
-            {subjects.map(s=> <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-          <div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><Ic n="chevR" s={14} c={th.t3}/></div>
-        </div>
-
-        {/* Message */}
-        <label style={{fontSize:12,fontWeight:600,color:th.t2,marginBottom:4,display:"block",marginTop:14}}>{t.messageLabel} *</label>
-        <textarea value={message} onChange={e=>setMessage(e.target.value)} placeholder={t.msgPlaceholder} rows={5} style={{
-          width:"100%",padding:"10px 14px",border:`1.5px solid ${th.gbd}`,borderRadius:G.rXs,fontSize:14,fontFamily:F,
-          outline:"none",background:th.gbg,color:th.tx,resize:"vertical",boxSizing:"border-box",lineHeight:1.5,
-          backdropFilter:G.blur,WebkitBackdropFilter:G.blur,
-        }}/>
-        <div style={{fontSize:10,color:th.t3,marginTop:4,textAlign:"right"}}>{message.length} {t.chars}</div>
-
-        {/* Send button */}
-        <div style={{marginTop:14}}>
-          <Btn th={th} onClick={handleSend} disabled={!canSend} icon="send" style={{width:"100%",justifyContent:"center"}}>
-            {t.sendFeedback}
-          </Btn>
-        </div>
-        <p style={{fontSize:10,color:th.t3,textAlign:"center",marginTop:10,lineHeight:1.5}}>
-          {t.emailNote}
-        </p>
-      </Fragment>}
-    </div>
-  </div>;
-}
-
-
-
+// English "how it works" and feature texts for the front page, handed down by the server page (app/page.tsx) so they
+// are in the first HTML. Other languages load lib/aboutText on demand, as the About page does.
+let ABOUT_EN=null;
+const FP_GROUPS=[{k:"calTitle",a:1,b:7},{k:"viewTitle",a:8,b:12},{k:"shareTitle",a:13,b:17},{k:"teamTitle",a:18,b:21},{k:"expTitle",a:22,b:29},{k:"designTitle",a:30,b:35},{k:"dataTitle",a:36,b:38}];
 
 function TodayHolidays({th,t}) {
   const today = new Date();
@@ -1514,7 +1431,7 @@ const FpIcon=({n,cls="i"})=>{const P={
   flag:<path d="M4 22V4M4 4h13l-2 4 2 4H4"/>};
   return <svg className={cls} viewBox="0 0 24 24" aria-hidden="true">{P[n]}</svg>;};
 
-function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTeam,onCreateTeam,onJoinTeam,yr,setYr,YRS,ww,setWw,name,setName,code,setCode,err,setErr,confirmDel,setConfirmDel,onAbout,onContact,onHolidays,th,children}){
+function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTeam,onCreateTeam,onJoinTeam,yr,setYr,YRS,ww,setWw,name,setName,code,setCode,err,setErr,confirmDel,setConfirmDel,onAbout,onHolidays,th,children}){
   const L=FP_TX[lang]||FP_TX.en;
   const[mode,setMode]=useState("create");
   const[stats,setStats]=useState(null);
@@ -1522,6 +1439,10 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
   const[cc,setCc]=useState("GB");
   const visits=useVisits();
   const langRef=useRef(null);
+  const[abx,setAbx]=useState(null);
+  useEffect(()=>{if(lang==="en"||abx)return;let on=true;import("@/lib/aboutText").then(m=>{if(on)setAbx(m.ABOUT_TX);}).catch(()=>{});return()=>{on=false;};},[lang,abx]);
+  // English comes with the page; another language shows once its texts have loaded (never a flash of English).
+  const a=lang==="en"?ABOUT_EN:(abx?(abx[lang]||ABOUT_EN):null);
   useEffect(()=>{
     let alive=true;
     const g=setTimeout(()=>{if(alive)setCc(guessCountry(lang));},0);
@@ -1560,7 +1481,7 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
     <header className="top"><div className="wrap">
       <span className="brand"><span className="logo"><FpIcon n="sun"/></span><span className="long">{t.brand}</span></span>
       <button className="ghost hide-s" onClick={onAbout}>{L.about}</button>
-      <button className="ghost hide-s" onClick={onContact}>{L.contact}</button>
+      <a className="ghost hide-s" href={"mailto:"+CONTACT_EMAIL} style={{textDecoration:"none"}}>{L.contact}</a>
       <details className="lang" ref={langRef} onKeyDown={e=>{if(e.key==="Escape"&&langRef.current&&langRef.current.open){langRef.current.open=false;const sm=langRef.current.querySelector("summary");if(sm)sm.focus();}}}>
         <summary className="ghost" aria-label={L.language+": "+(LANG_NAMES[lang]||lang)}><FpIcon n="globe"/>{(lang||"en").toUpperCase()}</summary>
         <ul>{Object.keys(LANG_NAMES).filter(k=>TX[k]).map(k=><li key={k}><button aria-current={k===lang?"true":undefined} onClick={()=>pickLang(k)}><b>{k.toUpperCase()}</b>{LANG_NAMES[k]}</button></li>)}</ul>
@@ -1639,23 +1560,32 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
           {vSorted.length>0&&<ul className="cty" aria-label={L.visits}>{vSorted.map(([k,v])=><li key={k}><span className="cc">{k}</span><span className="tr"><i style={{width:Math.max(4,Math.round(v/vMax*100))+"%"}}></i></span><span className="v">{fpFmt(v)}</span></li>)}</ul>}
         </div>
       </section>
+      {a&&<section className="wrap about">
+        <div className="card">
+          <h2>{a.howTitle}</h2>
+          <ol className="steps">{[[a.s1,a.s1d],[t.am,a.s2d],[a.s3,a.s3d],[a.s4,a.s4d],[a.s5,a.s5d]].map((s,i)=><li key={i}><b>{s[0]}</b><span>{s[1]}</span></li>)}</ol>
+        </div>
+        <div className="feat">{FP_GROUPS.map(g=><div className="card" key={g.k}>
+          <h2>{a[g.k]}</h2>
+          <ul>{Array.from({length:g.b-g.a+1},(_,i)=>g.a+i).map(n=><li key={n}><b>{a["f"+n]}</b><span>{a["f"+n+"d"]}</span></li>)}</ul>
+        </div>)}</div>
+      </section>}
       <div className="wrap"><BottomDuo th={th} lang={lang}/></div>
     </main>
-    <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><button onClick={onContact}>{L.contact}</button><a href="/privacy" style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{X("privacy")}</a></div></footer>
+    <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><a href={"mailto:"+CONTACT_EMAIL} style={{color:"var(--ink-2)",fontWeight:600,minHeight:44,display:"inline-flex",alignItems:"center"}}>{L.contact}: {CONTACT_EMAIL}</a><a href="/privacy" style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{X("privacy")}</a></div></footer>
     {children}
   </div>;
 }
 
 export function Landing({onCreateTeam,onJoinTeam,myTeams,onOpenTeam,onDeleteTeam,th,t,lang,setLang,theme,setTheme}){
-  const[name,setName]=useState("");const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[contact,setContact]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
+  const[name,setName]=useState("");const[yr,setYr]=useState(CY>=2026?CY:2026);const[code,setCode]=useState("");const[mode,setMode]=useState(null);const[err,setErr]=useState(null);const[holBr,setHolBr]=useState(false);const[about,setAbout]=useState(false);const[ww,setWw]=useState("5");const[confirmDel,setConfirmDel]=useState(null);
   const YRS=Array.from({length:10},(_,i)=>2026+i);
 
   if(about) return <AboutPage th={th} t={t} onBack={()=>setAbout(false)} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme}/>;
 
   return <FrontPage {...{t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTeam,onCreateTeam,onJoinTeam,yr,setYr,YRS,ww,setWw,name,setName,code,setCode,err,setErr,confirmDel,setConfirmDel}}
-    onAbout={()=>setAbout(true)} onContact={()=>setContact(true)} onHolidays={()=>setHolBr(true)} th={th}>
+    onAbout={()=>setAbout(true)} onHolidays={()=>setHolBr(true)} th={th}>
     {holBr&&<HolBrowser onClose={()=>setHolBr(false)} th={th} t={t} year={yr}/>}
-    {contact&&<ContactModal onClose={()=>setContact(false)} th={th} t={t}/>}
   </FrontPage>;
 }
 
@@ -1730,7 +1660,8 @@ function CookieNotice({th, t}) {
 }
 
 // ─── App ─────────────────────────────────────────────────────────
-export default function App(){
+export default function App({aboutEn=null}){
+  if(aboutEn)ABOUT_EN=aboutEn;
 
   const[screen,setScreen]=useState("home");const[team,setTeamRaw]=useState(null);const[viewYear,setViewYear]=useState(null);
   // Opening a team picks its year: "year=YYYY" in the link if present, else the default

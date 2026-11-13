@@ -162,6 +162,17 @@
 .fp .cty .tr{height:8px;border-radius:999px;background:var(--accent-wash);overflow:hidden}
 .fp .cty .tr i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#7C3AED,#6366F1)}
 .fp .cty .v{text-align:end;font-weight:700;font-variant-numeric:tabular-nums}
+/* How it works + features (front page sections below the holiday and numbers cards) */
+.fp .about{display:grid;gap:14px;padding-block:6px 8px}
+.fp .about .steps{list-style:none;counter-reset:fps;margin:14px 0 0;padding:0;display:grid;gap:14px}
+.fp .about .steps li{counter-increment:fps;display:flex;flex-direction:column;gap:4px;font-size:14px;line-height:1.5;color:var(--ink-2);border-top:2px solid var(--line);padding-top:10px}
+.fp .about .steps li::before{content:counter(fps,decimal-leading-zero);font:800 13px/1 var(--display);color:var(--muted)}
+.fp .about b{color:var(--head);font-weight:700}
+.fp .about .steps span::first-letter{text-transform:uppercase}
+.fp .about .feat{display:grid;gap:14px}
+.fp .about .feat ul{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px}
+.fp .about .feat li{display:flex;flex-direction:column;gap:2px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+@media (min-width:760px){.fp .about .steps{grid-template-columns:repeat(5,minmax(0,1fr))}.fp .about .feat{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .fp .foot{border-top:1px solid var(--line);padding-block:18px 26px;font-size:13px;color:var(--muted);margin-top:8px}
 .fp .foot .wrap{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
 .fp .foot .sp{margin-inline-end:auto;flex:1 1 100%}
