@@ -11,6 +11,8 @@ import { mergeTeam } from "@/lib/merge";
 import { X, setTextLang, textLang, dateLocale, isRtl, monthShort } from "@/lib/extraText";
 import TrapScope from "@/components/TrapScope";
 import { LANG_META } from "@/lib/langMeta";
+import { isPlannerPath, nameLocale, pickLang, withLang } from "@/lib/langs";
+import { PAGE_TX } from "@/lib/pageText";
 import { V } from "@/lib/v3Text";
 import { nextLeaveDay, carryInfo } from "@/lib/v3Util";
 // Loaded only when first opened (keeps the first page load small)
@@ -389,9 +391,18 @@ export const EU_C:{c:string;n:string;f:string;ne?:string}[]=[{c:"AL",n:"Albania"
 // The list is then put in that language's alphabetical order: it used to stay in the order the countries were added
 // (Europe A–Z, then sixteen more in no order), so "A-Z" in the holiday browser was not, and pickers were hard to scan.
 let EU_LANG="";
-export function localizeCountries(lang){if(lang===EU_LANG)return;EU_LANG=lang;let dn=null;try{dn=new Intl.DisplayNames([lang==="en"?"en-GB":lang],{type:"region"});}catch(e){}
+// What the server sent with the page for the page's own language: {lang, about, countries}.
+// - about: the "how it works" and feature texts, so they are in the first HTML (English at the root, each other
+//   language at its own address). A language the visitor switches to later loads lib/aboutText on demand.
+// - countries: the country names in that language, already in order. The first drawing in the browser must match
+//   the ready-made page exactly, whatever language data that browser has; its own data is used only after a switch.
+let PAGE0=null;
+export function localizeCountries(lang){if(lang===EU_LANG)return;EU_LANG=lang;
+  if(PAGE0&&PAGE0.lang===lang&&PAGE0.countries){const list=PAGE0.countries,pos={};list.forEach(function(r,i){pos[r[0]]=i;});
+    if(EU_C.every(function(c){return pos[c.c]!==undefined;})){EU_C.forEach(function(c){if(!c.ne)c.ne=c.n;c.n=list[pos[c.c]][1];});EU_C.sort(function(a,b){return pos[a.c]-pos[b.c];});return;}}
+  let dn=null;try{dn=new Intl.DisplayNames([nameLocale(lang)],{type:"region"});}catch(e){}
   EU_C.forEach(function(c){if(!c.ne)c.ne=c.n;let n=c.ne;try{if(dn&&lang!=="en"&&/^[A-Z]{2}$/.test(c.c)){const v=dn.of(c.c==="XK"?"XK":c.c);if(v&&v!==c.c)n=v;}}catch(e){}c.n=n;});
-  try{const col=new Intl.Collator(lang==="en"?"en-GB":lang);EU_C.sort(function(a,b){return col.compare(a.n,b.n);});}catch(e){EU_C.sort(function(a,b){return a.n<b.n?-1:a.n>b.n?1:0;});}}
+  try{const col=new Intl.Collator(nameLocale(lang));EU_C.sort(function(a,b){return col.compare(a.n,b.n);});}catch(e){EU_C.sort(function(a,b){return a.n<b.n?-1:a.n>b.n?1:0;});}}
 
 // ─── i18n (compact) ──────────────────────────────────────────────
 const LANGS={en:{f:"🇬🇧",l:"EN"},fr:{f:"🇫🇷",l:"FR"},de:{f:"🇩🇪",l:"DE"},es:{f:"🇪🇸",l:"ES"},pt:{f:"🇵🇹",l:"PT"},ro:{f:"🇷🇴",l:"RO"},hu:{f:"🇭🇺",l:"HU"},sv:{f:"🇸🇪",l:"SV"},it:{f:"🇮🇹",l:"IT"},bg:{f:"🇧🇬",l:"BG"},ar:{f:"🇦🇪",l:"AR"}};
@@ -1211,17 +1222,22 @@ const LangPk=({lang,set,th})=><div style={{display:"flex",gap:2,flexWrap:"wrap",
 
 export const LangDrop=({lang,set,th})=>{
   const cur=LANGS[lang]||LANGS.en;
-  return <div style={{position:"relative",display:"inline-block"}}>
-    <select aria-label="Language" value={lang} onChange={function(e){set(e.target.value);}} style={{
-      appearance:"none",WebkitAppearance:"none",MozAppearance:"none",
-      padding:"4px 24px 4px 8px",borderRadius:8,fontSize:12,fontWeight:600,fontFamily:F,
-      cursor:"pointer",border:"1px solid "+th.gbd,background:th.gbg,color:th.tx,
+  // The closed control stays short (flag and code, it sits in a narrow header); the list that opens names every
+  // language in the language itself. The real <select> lies invisible on top, so keyboard and screen readers work.
+  return <div className="tvp-langdrop" style={{position:"relative",display:"inline-flex",alignItems:"center",
+      height:24,boxSizing:"border-box",padding:"0 24px 0 8px",borderRadius:8,fontSize:12,fontWeight:600,fontFamily:F,lineHeight:1,whiteSpace:"nowrap",flexShrink:0,
+      border:"1px solid "+th.gbd,background:th.gbg,color:th.tx,
       backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",
       backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E\")",
       backgroundRepeat:"no-repeat",backgroundPosition:"right 8px center",backgroundSize:"10px 6px",
       transition:"border-color .2s"
     }} onMouseEnter={function(e){e.currentTarget.style.borderColor=th.ac;}} onMouseLeave={function(e){e.currentTarget.style.borderColor=th.gbd;}}>
-      {Object.entries(LANGS).map(function([k,v]){return <option key={k} value={k}>{v.f+" "+v.l}</option>;})}
+    <span aria-hidden="true">{cur.f+" "+cur.l}</span>
+    <select aria-label={(FP_TX[lang]||FP_TX.en).language} value={lang} onChange={function(e){set(e.target.value);}} style={{
+      position:"absolute",inset:0,width:"100%",height:"100%",opacity:0,cursor:"pointer",
+      appearance:"none",WebkitAppearance:"none",MozAppearance:"none",border:"none",margin:0,padding:0,fontSize:16,fontFamily:F
+    }}>
+      {Object.entries(LANGS).map(function([k,v]){return <option key={k} value={k} lang={k}>{LANG_NAMES[k]||v.l}</option>;})}
     </select>
   </div>;
 };
@@ -1386,9 +1402,14 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
 // Contact: a plain e-mail link on the front page (the pop-up form was removed on 2026-11-13).
 const CONTACT_EMAIL="contact@stanese.ro";
 
-// English "how it works" and feature texts for the front page, handed down by the server page (app/page.tsx) so they
-// are in the first HTML. Other languages load lib/aboutText on demand, as the About page does.
-let ABOUT_EN=null;
+// Keeps the address in step with the language on screen ("/de" for German, "/" for English) without loading
+// anything, so a copied link, a bookmark and a reload carry the language. Only on the planner's own addresses.
+function langToAddress(l){
+  try{const loc=window.location;if(!isPlannerPath(loc.pathname))return;
+    const url=withLang(l,loc);
+    if(url!==loc.pathname+loc.search+loc.hash)window.history.replaceState(null,"",url);
+  }catch{}
+}
 const FP_GROUPS=[{k:"calTitle",a:1,b:7},{k:"viewTitle",a:8,b:12},{k:"shareTitle",a:13,b:17},{k:"teamTitle",a:18,b:21},{k:"expTitle",a:22,b:29},{k:"designTitle",a:30,b:35},{k:"dataTitle",a:36,b:38}];
 
 function TodayHolidays({th,t}) {
@@ -1489,9 +1510,11 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
   const visits=useVisits();
   const langRef=useRef(null);
   const[abx,setAbx]=useState(null);
-  useEffect(()=>{if(lang==="en"||abx)return;let on=true;import("@/lib/aboutText").then(m=>{if(on)setAbx(m.ABOUT_TX);}).catch(()=>{});return()=>{on=false;};},[lang,abx]);
-  // English comes with the page; another language shows once its texts have loaded (never a flash of English).
-  const a=lang==="en"?ABOUT_EN:(abx?(abx[lang]||ABOUT_EN):null);
+  // The page's own language comes with the page; another language shows once its texts have loaded (never a flash
+  // of the wrong language).
+  const own=!!PAGE0&&PAGE0.lang===lang&&!!PAGE0.about;
+  useEffect(()=>{if(own||abx)return;let on=true;import("@/lib/aboutText").then(m=>{if(on)setAbx(m.ABOUT_TX);}).catch(()=>{});return()=>{on=false;};},[own,abx]);
+  const a=own?PAGE0.about:(abx?(abx[lang]||abx.en):null);
   useEffect(()=>{
     let alive=true;
     const g=setTimeout(()=>{if(alive){setCc(guessCountry(lang));setLive(true);}},0);
@@ -1621,6 +1644,7 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
       </section>}
       <div className="wrap"><BottomDuo th={th} lang={lang} provenRead/></div>
     </main>
+    {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a full page load on purpose: the privacy page is English and must not inherit the language this screen set on <html> */}
     <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><a href={"mailto:"+CONTACT_EMAIL} style={{color:"var(--ink-2)",fontWeight:600,minHeight:44,display:"inline-flex",alignItems:"center"}}>{L.contact}: {CONTACT_EMAIL}</a><a href="/privacy" style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{X("privacy")}</a></div></footer>
     {children}
   </div>;
@@ -1707,20 +1731,23 @@ function CookieNotice({th, t}) {
   };
   if (!show) return null;
   return <div role="region" aria-label={X("privacy")} style={{position:"fixed",bottom:0,left:0,right:0,zIndex:9999,padding:"12px 20px",background:"linear-gradient(135deg,rgba(76,29,149,0.97),rgba(79,70,229,0.97))",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",display:"flex",alignItems:"center",justifyContent:"center",gap:16,flexWrap:"wrap"}}>
+    {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a full page load on purpose: the privacy page is English and must not inherit the language this screen set on <html> */}
     <span style={{fontSize:12,color:"#F5F3FF",fontFamily:F,lineHeight:1.5,maxWidth:760}}>{X("cookie")} <a href="/privacy" style={{color:"#fff",fontWeight:700,textDecoration:"underline"}}>{X("privacy")}</a></span>
     <button onClick={accept} style={{minHeight:32,padding:"6px 18px",borderRadius:20,border:"1px solid rgba(255,255,255,0.35)",background:"rgba(255,255,255,0.2)",color:"#fff",fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>{X("gotIt")}</button>
   </div>;
 }
 
 // ─── App ─────────────────────────────────────────────────────────
-export default function App({aboutEn=null}){
-  if(aboutEn)ABOUT_EN=aboutEn;
+// pageLang: the language the address stands for ("en" at the root, "de" at /de); the server built the page in it.
+export default function App({pageLang:pl="en",about=null,countries=null}){
+  const pageLang=TX[pl]?pl:"en";
+  if(about)PAGE0={lang:pageLang,about,countries:countries&&countries.length?countries:null};
 
   const[screen,setScreen]=useState("home");const[team,setTeamRaw]=useState(null);const[viewYear,setViewYear]=useState(null);
   // Shown on the front page when a team could not be fetched (offline, server busy)
   const[notice,setNotice]=useState(null);
   // Opening a team picks its year: "year=YYYY" in the link if present, else the default
-  const setTeam=tm=>{let y=null;try{const lp=linkParams();const ym=lp.match(/[#&?]year=(\d{4})/);if(tm&&ym&&lp.indexOf("team="+tm.id)>=0)y=clampYear(parseInt(ym[1]));}catch(e){}setViewYear(y);setTeamRaw(tm);};const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState("en");const[theme,setTheme]=useState("light");
+  const setTeam=tm=>{let y=null;try{const lp=linkParams();const ym=lp.match(/[#&?]year=(\d{4})/);if(tm&&ym&&lp.indexOf("team="+tm.id)>=0)y=clampYear(parseInt(ym[1]));}catch(e){}setViewYear(y);setTeamRaw(tm);};const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState(pageLang);const[theme,setTheme]=useState("light");
   const th=TH[theme];const t=TX[lang];
   setTextLang(lang);localizeCountries(lang);
   useEffect(()=>{try{document.documentElement.lang=lang;document.documentElement.dir=isRtl(lang)?"rtl":"ltr";
@@ -1729,27 +1756,40 @@ export default function App({aboutEn=null}){
     if(fm&&fm.dir==="rtl"&&fm.fonts){if(!st){st=document.createElement("style");st.id="tvp-lang-font";document.head.appendChild(st);}st.textContent='html[lang="'+lang+'"] *{font-family:'+fm.fonts+',system-ui,sans-serif !important}';}else if(st){st.remove();}
   }catch(e){}},[lang]);
 
+  // True once the visitor has picked a language by hand in this visit (see the start-up effect below)
+  const picked=useRef(false);
+  // Leaving the planner for another page of the site without a page load (the admin link): <html> gets back the
+  // language the server sent, so an English page is not read out as German or laid out right-to-left.
+  useEffect(()=>()=>{try{document.documentElement.lang=pageLang;document.documentElement.dir=isRtl(pageLang)?"rtl":"ltr";const st=document.getElementById("tvp-lang-font");if(st)st.remove();}catch{}},[pageLang]);
+  // The tab title follows the language on screen. The page arrives with the title of its own address; after a
+  // switch this writes the new one and keeps it there, because the framework rewrites <title> when it finishes
+  // setting up the page head (which can be after the language was chosen).
+  useEffect(()=>{
+    const want=(PAGE_TX[lang]||PAGE_TX.en).title;if(!want)return;
+    const apply=()=>{try{if(document.title!==want)document.title=want;}catch{}};
+    apply();
+    if(lang===pageLang||typeof MutationObserver==="undefined")return;
+    const mo=new MutationObserver(apply);
+    mo.observe(document.head,{childList:true,subtree:true,characterData:true});
+    return()=>mo.disconnect();
+  },[lang,pageLang]);
+
   useEffect(()=>{(async()=>{
     const sl=await db.ld("drift-lang");const st=await db.ld("drift-theme");
-    // ?lang=xx in the address (the sitemap's language links) wins and is remembered
+    // Which language this visit shows (pickLang in lib/langs): a language named in the link (?lang=xx, which is
+    // also remembered), else the person's own earlier choice, else the language of the address (/de), else the
+    // browser's languages, else English. The browser's languages replaced a guess from the time zone, which gave
+    // French to everyone in Brussels and English to everyone outside a short list of cities. A language that was
+    // only guessed is not stored: the next visit guesses again, and a link in another language is still honoured.
     const ql=(()=>{try{const m=(window.location.search+"&"+window.location.hash).match(/[?&#]lang=([a-z]{2})\b/i);return m&&TX[m[1].toLowerCase()]?m[1].toLowerCase():null;}catch(e){return null;}})();
-    if(ql){setLang(ql);db.sv("drift-lang",ql);}else if(sl&&TX[sl]){setLang(sl);}else{
-      // Auto-detect language from timezone on first visit
-      const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"";
-      const tzLang={
-        "Europe/Stockholm":"sv","Europe/Gothenburg":"sv",
-        "Europe/Rome":"it","Europe/Vatican":"it",
-        "Europe/Sofia":"bg",
-        "Europe/Paris":"fr","Europe/Brussels":"fr","America/Guadeloupe":"fr",
-        "Europe/Berlin":"de","Europe/Vienna":"de","Europe/Zurich":"de",
-        "Europe/Madrid":"es","Europe/Canary":"es","America/Santiago":"es",
-        "Europe/Lisbon":"pt","America/Sao_Paulo":"pt","Atlantic/Madeira":"pt",
-        "Europe/Bucharest":"ro",
-        "Europe/Budapest":"hu",
-        "Asia/Tokyo":"ja","Asia/Shanghai":"zh","Europe/Moscow":"ru",
-      };
-      const detected=tzLang[tz];
-      if(detected&&TX[detected]){setLang(detected);db.sv("drift-lang",detected);}
+    let nl=pageLang;
+    try{nl=pickLang({query:ql,saved:sl&&TX[sl]?sl:null,pathname:window.location.pathname,browser:navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||""]});}catch{}
+    if(!TX[nl])nl=pageLang;
+    // Someone who picked a language by hand while the stored settings were still being read keeps that pick
+    if(!picked.current){
+      if(ql)db.sv("drift-lang",ql);
+      if(nl!==pageLang)setLang(nl);
+      langToAddress(nl);
     }
     // Theme: stored preference; on a first visit follow the device (dark mode → dark theme)
     if(st&&TH[st]){setTheme(st);}else{try{if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches)setTheme("dark");}catch(e){}}
@@ -1776,9 +1816,10 @@ export default function App({aboutEn=null}){
       // Silently track in my-teams for cleanup purposes (not displayed)
       if(!valid.find(x=>x.id===match[1])){const u=[...valid,{id:match[1],name:ld.name,year:ld.year,mc:ld.members.length}];setMyTeams(u);db.sv("my-teams",u);}
     }}
-  })();},[]);
+  })();},[pageLang]);
 
-  const cL=l=>{setLang(l);db.sv("drift-lang",l);};const cT=t=>{setTheme(t);db.sv("drift-theme",t);};
+  // A language picked by hand is remembered and shown in the address at once
+  const cL=l=>{picked.current=true;setLang(l);db.sv("drift-lang",l);langToAddress(l);};const cT=t=>{setTheme(t);db.sv("drift-theme",t);};
 
   const create=(name,year,ww)=>{const nt={id:gid(),name,year,members:[],createdAt:new Date().toISOString(),locked:false,w7:ww==="7"};setTeam(nt);setScreen("ws");opening.current=nt.id;window.location.hash=`team=${nt.id}`;const u=[...myTeams,{id:nt.id,name,year,mc:0}];setMyTeams(u);db.sv(`team:${nt.id}`,nt,true);db.sv("my-teams",u);
     // The creator becomes the team owner: the server returns the owner key with the first save (syncAccepted)

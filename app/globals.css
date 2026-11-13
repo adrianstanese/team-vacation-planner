@@ -291,6 +291,8 @@ html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-
 /* Status at a glance under a member's name: what is left, approval, notes */
 .tvp-mstat { display: flex; flex-wrap: wrap; gap: 1px 9px; margin: 3px 2px 0 41px; font-size: 11px; font-weight: 600; line-height: 1.35; }
 .tvp-mstat span + span::before { content: "·"; margin-inline-end: 9px; opacity: .55; font-weight: 400; }
+/* Language switcher inside a team: the visible chip shows the focus ring of the invisible <select> that lies on it */
+.tvp-langdrop:has(select:focus-visible) { outline: 2px solid #6D28D9; outline-offset: 2px; }
 /* Saved / Saving / Offline in the header */
 .tvp-sync { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 .tvp-sync i { width: 7px; height: 7px; border-radius: 50%; background: #22C55E; }

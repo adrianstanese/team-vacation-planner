@@ -6,6 +6,7 @@
 import { useEffect, useId, useState } from "react";
 import qrcode from "qrcode-generator";
 import { isRtl } from "@/lib/extraText";
+import { langPath } from "@/lib/langs";
 
 export const SITE_URL = "https://www.vacationplanner.team/";
 // "Buy me a coffee": a plain outbound link (no widget script, no tracking, no cookies), as in GadgetFit/InterviewPrep.
@@ -39,7 +40,7 @@ type Ch = { id: string; name: string; mark: string; color: string; href: string;
 export function shareChannels(url: string, msg: string, emailLabel: string, mobile: boolean): Ch[] {
   const e = encodeURIComponent;
   const all: Ch[] = [
-    { id: "whatsapp", name: "WhatsApp", mark: "W", color: "#25D366", href: `https://wa.me/?text=${e(`${msg} ${url}`)}`, external: true },
+    { id: "whatsapp", name: "WhatsApp", mark: "W", color: "#25D366", href: `https://api.whatsapp.com/send?text=${e(`${msg} ${url}`)}`, external: true },
     { id: "viber", name: "Viber", mark: "V", color: "#7360F2", href: `viber://forward?text=${e(`${msg} ${url}`)}`, external: false },
     { id: "telegram", name: "Telegram", mark: "T", color: "#229ED9", href: `https://t.me/share/url?url=${e(url)}&text=${e(msg)}`, external: true },
     { id: "linkedin", name: "LinkedIn", mark: "in", color: "#0A66C2", href: `https://www.linkedin.com/sharing/share-offsite/?url=${e(url)}`, external: true },
@@ -67,7 +68,8 @@ async function copyText(text: string): Promise<boolean> {
 
 export default function ShareSection({ th, lang = "en", compact = false }: { th: Th; lang?: string; compact?: boolean }) {
   const l = LABELS[lang] || LABELS.en;
-  const url = SITE_URL;
+  // The planner's front page in the language on screen: whoever opens the link starts in that language
+  const url = SITE_URL.replace(/\/$/, "") + langPath(lang);
   const [mobile, setMobile] = useState(false);
   const [canShare, setCanShare] = useState(false);
   const [copied, setCopied] = useState(false);

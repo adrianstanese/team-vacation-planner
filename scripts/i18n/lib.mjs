@@ -15,6 +15,7 @@ export const DICTS = [
   { id: "COFFEE", file: "components/CoffeeButton.tsx", marker: "const TX: Record<string, { cta: string; tab: string }> = " },
   { id: "SHARE", file: "components/ShareSection.tsx", marker: "const LABELS: Record<string, L> = " },
   { id: "PROMO", file: "components/WorkoseniePromo.tsx", marker: "const LABELS: Record<string, L> = " },
+  { id: "PAGE", file: "lib/pageText.ts", marker: "export const PAGE_TX: Record<string, Dict> = " },
 ];
 
 // Index of the brace that closes the one at `open` (string-aware).

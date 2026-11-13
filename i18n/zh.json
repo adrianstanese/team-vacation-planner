@@ -700,5 +700,15 @@
     "feats": ["排班与换班","工时记录","假期余额","适用于任何国家"],
     "cta": "了解 Workoșenie",
     "fine": "12个月免费，之后每家公司每月€10"
+  },
+  "PAGE": {
+    "title": "免费团队休假规划工具 | Team Vacation Planner",
+    "desc": "面向最多50人团队的免费休假规划工具：谁在休假一目了然，避免撞期。涵盖61个国家的法定节假日，无需登录。",
+    "feedCal": "{team} – 休假",
+    "feedVac": "{name} – 休假",
+    "feedPend": "{name} – 休假（待审批）",
+    "feedTrip": "{name} – 出差",
+    "feedMember": "成员",
+    "feedTeam": "团队"
   }
 }

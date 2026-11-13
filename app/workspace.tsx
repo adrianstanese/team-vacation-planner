@@ -864,7 +864,8 @@ function ShareModal({teamId,teamName,onClose,th,t}){
   const[cp,setCp]=useState(false);const[tab,setTab]=useState("link");
   const link=`${window.location.origin}${window.location.pathname}#team=${teamId}`;
   const embedCode=getEmbedCode(teamId);
-  const feedUrl=`${window.location.origin}/api/ical?team=${teamId}`;
+  // The feed's own labels ("vacation", "pending") follow the language of whoever copies the link
+  const feedUrl=`${window.location.origin}/api/ical?team=${teamId}${textLang()!=="en"?"&lang="+textLang():""}`;
   const webcalUrl=feedUrl.replace(/^https?:/,"webcal:");
   const copy=(text)=>{try{navigator.clipboard.writeText(text);}catch(e){};setCp(true);setTimeout(()=>setCp(false),2500);};
 
@@ -1881,7 +1882,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       <Btn th={th} v="ghost" sz="sm" onClick={()=>setShowCSVImport(true)}>{V("importLbl")}</Btn>
       <label title={X("carryTitle")} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2,fontWeight:600}}>{X("carryUpTo")}
         <input type="number" min="0" max="60" value={team.carryMax||0} onChange={e=>{const v=Math.max(0,Math.min(60,parseInt(e.target.value)||0));const nt={...team};if(v)nt.carryMax=v;else delete nt.carryMax;updateWithHistory(nt);}} style={{width:44,padding:"2px 4px",border:"1px solid "+th.gbd,borderRadius:4,background:th.sf,color:th.tx,fontSize:11}}/> {X("days")}</label>
-      {getOwner(team.id)?<button onClick={async()=>{const link=window.location.origin+"/#team="+team.id+"&owner="+getOwner(team.id);try{await navigator.clipboard.writeText(link);flash(X("ownerCopied"));}catch(e){window.prompt(X("ownerLink"),link);}}} title={X("ownerLinkHint")} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",color:"#047857",fontSize:11,fontWeight:700,fontFamily:F,cursor:"pointer"}}>★ {X("ownerYou")} · {X("ownerLink")}</button>:(team.hasOwner?<span style={{fontSize:11,color:th.t3}}>{X("ownerOther")}</span>:null)}
+      {getOwner(team.id)?<button onClick={async()=>{const link=window.location.origin+window.location.pathname+"#team="+team.id+"&owner="+getOwner(team.id);try{await navigator.clipboard.writeText(link);flash(X("ownerCopied"));}catch(e){window.prompt(X("ownerLink"),link);}}} title={X("ownerLinkHint")} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",color:"#047857",fontSize:11,fontWeight:700,fontFamily:F,cursor:"pointer"}}>★ {X("ownerYou")} · {X("ownerLink")}</button>:(team.hasOwner?<span style={{fontSize:11,color:th.t3}}>{X("ownerOther")}</span>:null)}
       {onDeleteForever&&(!team.hasOwner||getOwner(team.id))&&<Btn th={th} v="ghost" sz="sm" onClick={()=>{setDelText("");setDelOpen(true);}} style={{color:"#DC2626",borderColor:"#FECACA"}}>{NY.delBtn}</Btn>}
       <div style={{width:1,height:20,background:th.bd}}/>
       <div style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:th.t2}}>

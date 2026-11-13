@@ -1,6 +1,6 @@
 # Team Vacation Planner
 
-> Free team vacation planning tool for teams up to 50 people. No login required. Supports 61 countries with public holidays from 2026 to 2035. Regional holidays for Spain, Germany, Switzerland, Australia, and Canada.
+> Free team vacation planning tool for teams up to 50 people. No login required. Supports 61 countries with public holidays from 2026 to 2035. Regional holidays for Germany, Spain, Switzerland, the United Kingdom, Canada, Australia, India, and Bosnia and Herzegovina.
 
 ## What it does
 
@@ -9,8 +9,8 @@ Team Vacation Planner helps teams coordinate their time off. Team members add th
 ## Key features
 
 - 12-month calendar view with drag-to-select date ranges
-- Public holidays for 61 countries computed algorithmically
-- Regional holidays for Spain (17 communities), Germany (16 states), Switzerland (6 cantons), Australia (6 states), Canada (4 provinces)
+- Public holidays for 61 countries, 2026 to 2035
+- Regional holidays for Germany (16 states), Spain (19 regions), Switzerland (26 cantons), the United Kingdom (4 nations), Canada (13 provinces and territories), Australia (8 states and territories), India (28 states and territories), Bosnia and Herzegovina (3 regions)
 - PTO balance tracker with visual progress bar
 - Working days counter per member
 - Approval workflow mode for vacation requests
@@ -25,7 +25,7 @@ Team Vacation Planner helps teams coordinate their time off. Team members add th
 - 17 languages: English, French, German, Spanish, Portuguese, Romanian, Hungarian, Swedish, Italian, Bulgarian, Arabic, Chinese, Hindi, Bengali, Russian, Urdu, Japanese
 - 3 themes: Light, Dark, Pink with a frosted-glass design
 - No accounts, no login, no passwords
-- 24-month data retention with automatic cleanup
+- A team is kept while it is in use and removed after 36 months without use
 
 ## URL
 

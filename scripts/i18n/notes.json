@@ -10,7 +10,8 @@
     "V": "Newer features: approvals, 'Who are you?' gate, PIN reset, time travel (version history), Team Wrapped (year-in-review story), Today tiles, printed/PDF reports (keys starting rp).",
     "COFFEE": "'Buy me a coffee' donation button.",
     "SHARE": "'Recommend this tool' share section.",
-    "PROMO": "Card promoting Workoșenie, a sister product (keep the name Workoșenie unchanged)."
+    "PROMO": "Card promoting Workoșenie, a sister product (keep the name Workoșenie unchanged).",
+    "PAGE": "Texts outside the screens: the front page's title and description for browsers and search engines, and the labels inside the calendar feed people subscribe to."
   },
   "TX": {
     "mo": "Two-letter weekday abbreviation for Monday (calendar column header; keep to 1-3 characters).",
@@ -91,5 +92,15 @@
     "pSteady": "Playful persona title for someone who spreads days evenly.",
     "jobRole": "Job title (e.g. Designer), set by the team owner."
   },
-  "PROMO": { "feats": "Exactly 4 short feature chips, in order.", "fine": "Keep '€10' and the meaning: 12 months free, then €10 per month per company." }
+  "PROMO": { "feats": "Exactly 4 short feature chips, in order.", "fine": "Keep '€10' and the meaning: 12 months free, then €10 per month per company." },
+  "PAGE": {
+    "title": "Browser-tab and search-result title of the front page, about 60 characters: say what the tool is in the words people type into a search engine (free team leave planner), then ' | Team Vacation Planner'.",
+    "desc": "Search-result description of the front page: one or two sentences, at most about 160 characters.",
+    "feedCal": "Name of the subscribed calendar as Google Calendar or Outlook lists it. {team} is the team's name.",
+    "feedVac": "Title of a calendar entry for a person's vacation. {name} is the person.",
+    "feedPend": "Title of a calendar entry for vacation that is not approved yet.",
+    "feedTrip": "Title of a calendar entry for a business trip.",
+    "feedMember": "Stands in for a person who has no name.",
+    "feedTeam": "Stands in for a team that has no name."
+  }
 }

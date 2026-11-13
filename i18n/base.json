@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 679,
+ "strings": 687,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -2860,6 +2860,58 @@
     "fine": {
      "en": "12 months free, then €10/month per company",
      "note": "Keep '€10' and the meaning: 12 months free, then €10 per month per company."
+    }
+   }
+  },
+  "PAGE": {
+   "where": "Texts outside the screens: the front page's title and description for browsers and search engines, and the labels inside the calendar feed people subscribe to.",
+   "file": "lib/pageText.ts",
+   "strings": {
+    "title": {
+     "en": "Team Vacation Planner — Free Team Leave Calendar 2026–2035",
+     "note": "Browser-tab and search-result title of the front page, about 60 characters: say what the tool is in the words people type into a search engine (free team leave planner), then ' | Team Vacation Planner'."
+    },
+    "desc": {
+     "en": "Free team vacation planner for teams up to 50. Plan vacations, see who's away, avoid overlaps. 61 countries, regional holidays, public holidays 2026–2035, heatmap, timeline, coverage dashboard. No login required.",
+     "note": "Search-result description of the front page: one or two sentences, at most about 160 characters."
+    },
+    "feedCal": {
+     "en": "{team} – vacations",
+     "ph": [
+      "{team}"
+     ],
+     "note": "Name of the subscribed calendar as Google Calendar or Outlook lists it. {team} is the team's name."
+    },
+    "feedVac": {
+     "en": "{name} – vacation",
+     "ph": [
+      "{name}"
+     ],
+     "note": "Title of a calendar entry for a person's vacation. {name} is the person."
+    },
+    "feedPend": {
+     "en": "{name} – vacation (pending)",
+     "ph": [
+      "{name}"
+     ],
+     "note": "Title of a calendar entry for vacation that is not approved yet."
+    },
+    "feedTrip": {
+     "en": "{name} – business trip",
+     "ph": [
+      "{name}"
+     ],
+     "note": "Title of a calendar entry for a business trip."
+    },
+    "feedMember": {
+     "en": "Member",
+     "max": 13,
+     "note": "Stands in for a person who has no name."
+    },
+    "feedTeam": {
+     "en": "Team",
+     "max": 10,
+     "note": "Stands in for a team that has no name."
     }
    }
   }

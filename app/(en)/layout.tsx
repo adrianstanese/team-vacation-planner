@@ -1,30 +1,19 @@
-import "./globals.css";
+import "../globals.css";
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Figtree } from "next/font/google";
+import { display, body } from "../fonts";
+import { SITE_URL, SITE_NAME, OG_IMAGE, VIEWPORT } from "@/lib/site";
+import { PAGE_TX } from "@/lib/pageText";
 
-// Front-page fonts, self-hosted by next/font at build time (no runtime request to Google)
-const display = Plus_Jakarta_Sans({ subsets: ["latin", "latin-ext"], weight: ["700", "800"], variable: "--font-display", display: "swap" });
-const body = Figtree({ subsets: ["latin", "latin-ext"], weight: ["400", "600", "700", "800"], variable: "--font-body", display: "swap" });
+// Root layout of the English pages: the front page at "/", /privacy and /admin. Every other language has its own
+// root layout in app/[lang], so each address is served with its own language in the <html> tag.
+const DESCRIPTION = PAGE_TX.en.desc;
 
-const SITE_URL = "https://www.vacationplanner.team";
-const SITE_NAME = "Team Vacation Planner";
-const DESCRIPTION = "Free team vacation planner for teams up to 50. Plan vacations, see who's away, avoid overlaps. 61 countries, regional holidays, public holidays 2026–2035, heatmap, timeline, coverage dashboard. No login required.";
-const OG_IMAGE = `${SITE_URL}/og-image.png`;
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F2F1EE" },
-    { media: "(prefers-color-scheme: dark)", color: "#0B0F1A" },
-  ],
-};
+export const viewport: Viewport = VIEWPORT;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Team Vacation Planner — Free Team Leave Calendar 2026–2035",
+    default: PAGE_TX.en.title,
     template: "%s | Team Vacation Planner",
   },
   description: DESCRIPTION,
@@ -74,7 +63,7 @@ const jsonLd = {
       featureList: [
         "Team vacation calendar for up to 50 members",
         "Public holidays for 61 countries (2026–2035)",
-        "Regional holidays for Spain, Germany, Switzerland, Australia, Canada",
+        "Regional holidays for Germany, Spain, Switzerland, the United Kingdom, Canada, Australia, India, Bosnia and Herzegovina",
         "PTO balance tracker with progress bar",
         "Working days counter",
         "Approval workflow mode",
@@ -91,7 +80,7 @@ const jsonLd = {
         { "@type": "Question", name: "What is Team Vacation Planner?",
           acceptedAnswer: { "@type": "Answer", text: "A free web app that helps teams of up to 50 people plan and coordinate vacations. Shows public holidays for 61 countries with regional support, detects overlaps, and provides heatmap, timeline, and coverage views. No login required." }},
         { "@type": "Question", name: "How many countries are supported?",
-          acceptedAnswer: { "@type": "Answer", text: "61 countries across Europe, Middle East, South America, and Africa. Regional holidays for Spain (17 communities), Germany (16 states), Switzerland (6 cantons), Australia (6 states), and Canada (4 provinces)." }},
+          acceptedAnswer: { "@type": "Answer", text: "61 countries across Europe, the Middle East, Asia, the Americas, Africa and Australia. Regional holidays for Germany (16 states), Spain (19 regions), Switzerland (26 cantons), the United Kingdom (4 nations), Canada (13 provinces and territories), Australia (8 states and territories), India (28 states and territories) and Bosnia and Herzegovina (3 regions)." }},
         { "@type": "Question", name: "Do I need to create an account?",
           acceptedAnswer: { "@type": "Answer", text: "No. There are no accounts or passwords. Create a team and share its link; anyone with the link can view the team, and members can protect their own entries with a PIN." }},
         { "@type": "Question", name: "Is it really free?",

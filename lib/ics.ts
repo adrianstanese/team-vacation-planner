@@ -1,4 +1,6 @@
 // Builds the team calendar feed (RFC 5545). Pure functions, no I/O, so they can be tested directly.
+import { langPath } from "./langs";
+import { pageText } from "./pageText";
 
 type Member = { id: string; name?: string; days?: unknown[]; approved?: boolean; apY?: Record<string, boolean> };
 type Trip = { id?: string; member?: string; start?: string; end?: string; dest?: string; project?: string };
@@ -55,17 +57,21 @@ function isApproved(team: TeamDoc, m: Member, year: number): boolean {
   return year === base ? m.approved === true : !!(m.apY && m.apY[year]);
 }
 
-export function buildTeamFeed(team: TeamDoc, opts: { memberId?: string; origin: string; now?: Date }): string {
+// `lang` is the language of the entry titles and of the link back to the planner. A feed link without one stays in
+// English, so calendars that subscribed before languages existed see no change.
+export function buildTeamFeed(team: TeamDoc, opts: { memberId?: string; origin: string; now?: Date; lang?: string }): string {
   const stamp = (opts.now || new Date()).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const name = team.name || "Team";
+  const lang = opts.lang || "en";
+  const T = (key: string, vars?: Record<string, string>) => pageText(lang, key, vars);
+  const name = team.name || T("feedTeam");
   const members = (Array.isArray(team.members) ? team.members : []).filter(m => m && typeof m === "object" && (!opts.memberId || m.id === opts.memberId));
   const lines = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Team Vacation Planner//vacationplanner.team//EN",
     "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-    `X-WR-CALNAME:${esc(name + " – vacations")}`,
+    `X-WR-CALNAME:${esc(T("feedCal", { team: name }))}`,
     "X-PUBLISHED-TTL:PT6H", "REFRESH-INTERVAL;VALUE=DURATION:PT6H",
   ];
-  const link = `${opts.origin}/#team=${team.id}`;
+  const link = `${opts.origin}${langPath(lang)}#team=${team.id}`;
   for (const m of members) {
     const days = (m.days || []).filter((d): d is string => typeof d === "string");
     for (const [s, e] of toRanges(days)) {
@@ -82,22 +88,22 @@ export function buildTeamFeed(team: TeamDoc, opts: { memberId?: string; origin: 
         lines.push(
           "BEGIN:VEVENT", `UID:vac-${m.id}-${a}@vacationplanner.team`, `DTSTAMP:${stamp}`,
           `DTSTART;VALUE=DATE:${compact(a)}`, `DTEND;VALUE=DATE:${compact(nextDay(b))}`,
-          `SUMMARY:${esc(`${m.name || "Member"} – vacation${pending ? " (pending)" : ""}`)}`,
+          `SUMMARY:${esc(T(pending ? "feedPend" : "feedVac", { name: m.name || T("feedMember") }))}`,
           `DESCRIPTION:${esc(`${name}\n${link}`)}`, "TRANSP:TRANSPARENT", "END:VEVENT",
         );
       }
     }
   }
   const ids = new Set(members.map(m => m.id));
-  const nameOf = (id?: string) => (team.members || []).find(m => m.id === id)?.name || "Member";
+  const nameOf = (id?: string) => (team.members || []).find(m => m.id === id)?.name || T("feedMember");
   for (const tr of team.trips || []) {
     if (!tr.start || !tr.end || !DATE.test(tr.start) || !DATE.test(tr.end) || tr.end < tr.start) continue;
     if (opts.memberId && !ids.has(tr.member || "")) continue;
-    const what = ["business trip", tr.dest].filter(Boolean).join(": ");
+    const what = [T("feedTrip", { name: nameOf(tr.member) }), tr.dest].filter(Boolean).join(": ");
     lines.push(
       "BEGIN:VEVENT", `UID:trip-${tr.id || tr.start}-${tr.member}@vacationplanner.team`, `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${compact(tr.start)}`, `DTEND;VALUE=DATE:${compact(nextDay(tr.end))}`,
-      `SUMMARY:${esc(`${nameOf(tr.member)} – ${what}`)}`,
+      `SUMMARY:${esc(what)}`,
       `DESCRIPTION:${esc([name, tr.project, link].filter(Boolean).join("\n"))}`, "TRANSP:TRANSPARENT", "END:VEVENT",
     );
   }
