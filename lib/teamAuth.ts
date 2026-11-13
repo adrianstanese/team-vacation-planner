@@ -127,15 +127,26 @@ const LEGACY_UNTIL = Date.parse("2026-11-26T00:00:00Z");
 const LEGACY_HASH = /^[0-9a-f]{64}$/;
 type LogEntry = { t?: unknown; a?: unknown };
 type Trip = { id?: unknown; member?: unknown; [k: string]: unknown };
+// Years in which `next` books more leave than `old`: a new day, or a half day turned into a full one
+function yearsWithMoreLeave(old: Member, next: Member): Set<string> {
+  const list = (v: unknown) => (Array.isArray(v) ? v.filter((d): d is string => typeof d === "string") : []);
+  const had = new Set(list(old.days)), hadHalf = new Set(list(old.half)), half = new Set(list(next.half));
+  const years = new Set<string>();
+  for (const d of list(next.days)) if (!had.has(d) || (hadHalf.has(d) && !half.has(d))) years.add(d.slice(0, 4));
+  return years;
+}
 
 // Builds the document to store from what a browser sent: auth fields always come from the stored copy, and
 // changes the browser was not allowed to make are reverted (per member, per trip) and listed in `reverted`.
 //   full rights on a member  = that member's PIN token, or the owner key
 //   approver rights          = the PIN token of a member who is the approver AND has a PIN; may only change
 //                              approval fields (approved, apY) of other members
+//   approval (approved, apY) = while the team has an approver, only the approver or the owner sets it. A member's
+//                              own PIN session cannot approve itself, and leave a member adds to an approved plan
+//                              puts that year back to "waiting" (`approved` = the team's own year, `apY` = others)
 //   approver/isApprover/lock = only the owner, the current (PIN-protected) approver, or anyone while the team
 //                              has neither an owner nor an approver yet
-export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | null, incoming: TeamDoc, auth: { tokens?: Record<string, string>; owner?: string; legacy?: boolean }): Promise<{ doc: TeamDoc; reverted: string[] }> {
+export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | null, incoming: TeamDoc, auth: { tokens?: Record<string, string>; owner?: string; legacy?: boolean }): Promise<{ doc: TeamDoc; reverted: string[]; adjusted: boolean }> {
   const legacyOk = !!auth.legacy && Date.now() < LEGACY_UNTIL;
   const inById = new Map((Array.isArray(incoming.members) ? incoming.members : []).filter(m => m && typeof m === "object").map(m => [m.id, m]));
   const doc: TeamDoc = { ...incoming };
@@ -143,6 +154,13 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   // createdAt is server-owned
   if (stored) { if (stored.createdAt) doc.createdAt = stored.createdAt; else delete doc.createdAt; }
   else doc.createdAt = new Date().toISOString();
+  // The team's own year is fixed when the team is created. It decides what `approved` means (approved for that
+  // year), so a save that changed it would relabel every approval in the team, and needed no PIN to do it.
+  // The planner never changes it: other years are views of the same team.
+  if (stored) { if ("year" in stored) doc.year = stored.year; else delete doc.year; }
+  // Set when the approval rule below stored something else than the browser sent, so it can show the real state
+  let adjusted = false;
+  const approvalOf = (x: Member) => JSON.stringify([x.approved === true, Object.entries((x.apY && typeof x.apY === "object" ? x.apY : {}) as Record<string, unknown>).filter(([, v]) => v === true).map(([y]) => y).sort()]);
   if (stored?.ownerHash) doc.ownerHash = stored.ownerHash; else delete doc.ownerHash;
   const owner = validOwner(stored, auth.owner);
   const storedMembers = (stored?.members || []).filter(m => m && typeof m.id === "string");
@@ -212,6 +230,8 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
 
   // Job titles: only the owner or the creator (with their PIN session) may set them; teams without an owner as before
   const mayRoles = !stored || !stored.ownerHash || owner || (creatorId ? await self(creatorId) : false);
+  const approverId = typeof stored?.approver === "string" && stored.approver ? stored.approver : null;
+  const baseYear = String(stored?.year ?? new Date().getUTCFullYear());
   const out: Member[] = [];
   for (const m of Array.isArray(incoming.members) ? incoming.members : []) {
     if (!m || typeof m !== "object" || typeof m.id !== "string") continue;
@@ -240,6 +260,24 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
     if (old && !old.pinHash && strip(old) !== strip(next)) {
       const free = [...((owner || await approver()) ? APPROVAL_FIELDS : []), ...(mayManage ? ["isApprover"] : []), ...(mayRoles ? ["role"] : [])];
       if (without(old, free) !== without(next, free)) { out.push(old); reverted.add(m.id); continue; }
+    }
+    // Approval is the approver's call. Without approver rights the stored approval stays, a member added by a
+    // plain save starts as "waiting", and more leave on an approved plan needs a new approval for that year.
+    if (stored && approverId && m.id !== approverId && !(owner || await approver())) {
+      const sent = approvalOf(next);
+      if (!old) { next.approved = false; delete next.apY; }
+      else {
+        if ("approved" in old) next.approved = old.approved; else delete next.approved;
+        if (old.apY) next.apY = old.apY; else delete next.apY;
+        for (const y of yearsWithMoreLeave(old, next)) {
+          if (y === baseYear) next.approved = false;
+          else if (next.apY && (next.apY as Record<string, unknown>)[y]) {
+            const a = { ...(next.apY as Record<string, unknown>) }; delete a[y];
+            if (Object.keys(a).length) next.apY = a; else delete next.apY;
+          }
+        }
+      }
+      if (approvalOf(next) !== sent) adjusted = true;
     }
     out.push(next);
   }
@@ -279,11 +317,14 @@ export async function guardIncoming(sql: Sql, teamId: string, stored: TeamDoc | 
   if (stored) {
     const oldLog = (Array.isArray(stored.log) ? stored.log as LogEntry[] : []);
     const seen = new Set(oldLog.map(e => JSON.stringify(e)));
-    const maxT = oldLog.reduce((m, e) => (typeof e?.t === "string" && e.t > m ? e.t : m), "");
+    // Times come from the browser. One stamped in the future (wrong clock, or forged) would make every later,
+    // honest entry look "older" and be dropped: such entries are refused and never set the bar.
+    const notAfter = new Date(Date.now() + 5 * 60_000).toISOString();
+    const maxT = oldLog.reduce((m, e) => (typeof e?.t === "string" && e.t <= notAfter && e.t > m ? e.t : m), "");
     const fresh = (Array.isArray(incoming.log) ? incoming.log as LogEntry[] : [])
-      .filter(e => e && typeof e.t === "string" && typeof e.a === "string" && e.t >= maxT && !seen.has(JSON.stringify(e)))
+      .filter(e => e && typeof e.t === "string" && typeof e.a === "string" && e.t >= maxT && e.t <= notAfter && !seen.has(JSON.stringify(e)))
       .map(e => ({ t: String(e.t).slice(0, 40), a: String(e.a).slice(0, 200) }));
     doc.log = [...oldLog, ...fresh].slice(-50);
   }
-  return { doc, reverted: [...reverted] };
+  return { doc, reverted: [...reverted], adjusted };
 }

@@ -2,13 +2,24 @@
 // tested in isolation. Date keys are "YYYY-MM-DD" like everywhere else in the planner.
 
 export type Member = { id: string; name?: string; days?: string[]; half?: string[]; approved?: boolean; country?: string; pto?: number | null; carry?: number; group?: string; logo?: string };
-export type TeamView = { id?: string; name?: string; members: Member[]; approver?: string | null; threshold?: number; logo?: string; comments?: Record<string, unknown[]>; log?: unknown[] };
+export type TeamView = { id?: string; name?: string; members: Member[]; approver?: string | null; threshold?: number; logo?: string; comments?: Record<string, unknown[]>; log?: unknown[]; w7?: boolean };
 
 export const pad = (n: number) => String(n).padStart(2, "0");
 export const keyOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 export const dateOf = (k: string) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d, 12); };
 export const addDays = (k: string, n: number) => { const d = dateOf(k); d.setDate(d.getDate() + n); return keyOf(d); };
 const inYear = (k: string, yr: number) => typeof k === "string" && k.startsWith(yr + "-");
+
+// True when `b` is the next bookable day after `a`: the day after, or (teams on a Monday-to-Friday week) the first
+// working day after the weekend in between. Reports and exports use it to print booked days as periods. It replaces
+// "at most 3 days apart", which also joined a Monday with the Thursday after it and so printed working days nobody
+// had booked as part of the period (and a re-import of such a CSV booked them).
+export function nextLeaveDay(a: string, b: string, sevenDay: boolean): boolean {
+  if (!(b > a)) return false;
+  let c = addDays(a, 1);
+  if (!sevenDay) for (let i = 0; i < 2 && c < b; i++) { const wd = dateOf(c).getDay(); if (wd === 0 || wd === 6) c = addDays(c, 1); else break; }
+  return c === b;
+}
 
 // Days used: a half day counts 0.5
 export function used(m: Member, yr?: number): number {
@@ -169,14 +180,21 @@ export function nextClash(team: TeamView, from: string, threshold: number, horiz
   return null;
 }
 // Who comes back next: the earliest end of a leave range that is running today
-export function backSoon(team: TeamView, today: string): { name: string; back: string }[] {
-  const out: { name: string; back: string }[] = [];
+// Who is away today and the day each is back at work: the first day after today that is neither leave nor,
+// in a Mon–Fri team, a weekend or one of that person's public holidays. (It used to be simply the day after the
+// last leave day in a row: off Thursday and Friday meant "back Saturday", and leave that went on after the
+// weekend was cut short at the Friday.)
+export function backSoon(team: TeamView, today: string, holOf?: (m: Member) => Set<string>): { id: string; name: string; back: string }[] {
+  const out: { id: string; name: string; back: string }[] = [];
+  const seven = !!team.w7;
   for (const m of team.members) {
-    const ks = m.days || [];
-    if (!ks.includes(today)) continue;
-    let e = today;
-    while (ks.includes(addDays(e, 1))) e = addDays(e, 1);
-    out.push({ name: m.name || "?", back: addDays(e, 1) });
+    const ks = new Set(m.days || []);
+    if (!ks.has(today)) continue;
+    const hol = !seven && holOf ? holOf(m) : null;
+    const notAtWork = (k: string) => { if (ks.has(k)) return true; if (seven) return false; const wd = dateOf(k).getDay(); return wd === 0 || wd === 6 || !!(hol && hol.has(k)); };
+    let back = addDays(today, 1);
+    for (let n = 0; n < 400 && notAtWork(back); n++) back = addDays(back, 1);
+    out.push({ id: m.id, name: m.name || "?", back });
   }
   return out.sort((a, b) => a.back.localeCompare(b.back));
 }

@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { wrappedStats, dateOf, type TeamView, type Member, type Persona } from "@/lib/v3Util";
 import { V } from "@/lib/v3Text";
-import { dateLocale } from "@/lib/extraText";
+import { dateLocale, monthShort } from "@/lib/extraText";
 import "./v3.css";
 
 const DUR = 5600;
@@ -15,6 +15,10 @@ const THEMES = ["w-violet", "w-lime", "w-coral", "w-ocean", "w-gold", "w-pink", 
 
 const day = (k: string) => { try { return dateOf(k).toLocaleDateString(dateLocale(), { day: "numeric", month: "short" }); } catch { return k; } };
 const monthName = (i: number) => { try { return new Date(2026, i, 15).toLocaleDateString(dateLocale(), { month: "long" }); } catch { return String(i + 1); } };
+// One-character month label under the chart bars, from the language's own data (cutting the first letter off the
+// full name splits a syllable in Hindi and Bengali and leaves only "月" behind in Chinese and Japanese)
+// Languages that answer with a number there ("01", "1月") get the plain month number.
+const monthNarrow = (i: number) => { try { const s = new Date(2026, i, 15).toLocaleDateString(dateLocale(), { month: "narrow" }); return /\d/.test(s) ? String(i + 1) : s; } catch { return String(i + 1); } };
 const fmtN = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
 function CountUp({ to, run }: { to: number; run: boolean }) {
@@ -158,7 +162,7 @@ function Story({ team, yr, holOf, sevenDay, logo, onClose }: { team: TeamView; y
       {s.k === "month" && <>
         <p className="w-kick w-in1">{V("wrS4a")}</p>
         <h2 className="w-big w-cap w-in2">{monthName(st.topMonth)}</h2>
-        <div className="w-chart w-in3" aria-hidden="true">{months.map((n, m) => <span key={m}><i className={m === st.topMonth ? "w-hot" : ""} style={{ height: `${Math.max(4, Math.round((n / mx) * 100))}%`, animationDelay: `${m * 60}ms` }} /><b>{monthName(m).slice(0, 1)}</b></span>)}</div>
+        <div className="w-chart w-in3" aria-hidden="true">{months.map((n, m) => <span key={m}><i className={m === st.topMonth ? "w-hot" : ""} style={{ height: `${Math.max(4, Math.round((n / mx) * 100))}%`, animationDelay: `${m * 60}ms` }} /><b>{monthNarrow(m)}</b></span>)}</div>
         <p className="w-line w-in4">{V("wrS4c")}</p>
       </>}
       {s.k === "bridge" && st.bestBridge && <>
@@ -184,7 +188,7 @@ function Story({ team, yr, holOf, sevenDay, logo, onClose }: { team: TeamView; y
         <div className="w-sum w-in2">
           <div><b>{fmtN(st.totalDays)}</b><small>{V("wrS2b")}</small></div>
           {st.longest && <div><b>{st.longest.streak.length}</b><small>{V("wrS3b")}</small></div>}
-          <div><b className="w-cap">{monthName(st.topMonth).slice(0, 3)}</b><small>{V("wrS4a")}</small></div>
+          <div><b className="w-cap">{monthShort(st.topMonth)}</b><small>{V("wrS4a")}</small></div>
           {st.bestBridge && <div><b>{st.bestBridge.streak.leave}→{st.bestBridge.streak.length}</b><small>{V("wrS5a")}</small></div>}
         </div>
         <p className="w-line w-in3">{V("wrEnd2", { y: yr + 1 })}</p>

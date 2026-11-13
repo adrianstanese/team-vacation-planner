@@ -1,6 +1,8 @@
 // Builds the three sheets (Dashboard, Calendar, Timeline) of the Excel export as plain data for write-excel-file.
 // Pure: no DOM, no I/O, so it runs in the browser and in tests.
 
+import { nextLeaveDay } from "./v3Util";
+
 type Member = { id: string; name?: string; country?: string; days?: unknown[]; half?: unknown[] };
 type Cell = { value?: string | number; type?: typeof String | typeof Number; fontWeight?: "bold"; fontSize?: number; textColor?: string; backgroundColor?: string; align?: "left" | "center" | "right"; columnSpan?: number; height?: number; wrap?: boolean } | null;
 export type Sheet = { sheet: string; data: Cell[][]; columns: { width: number }[] };
@@ -12,6 +14,7 @@ export type XlsxInput = {
   countryName: (cc?: string) => string;
   months: string[]; dayLabels: string[];      // Monday-first
   generated: string;                          // pre-formatted date
+  sevenDay?: boolean;                         // the team works 7 days a week (weekends are bookable days)
 };
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -37,13 +40,13 @@ const S = { // styles mirror the old .xls export
 const str = (value: string, style: object = {}): Cell => ({ value, type: String, ...style });
 const num = (value: number, style: object = {}): Cell => ({ value, type: Number, ...style });
 
-export function periods(days: string[]): string[] {
-  // Same grouping as the old export: days up to 3 apart (a weekend) belong to one period
+export function periods(days: string[], sevenDay = false): string[] {
+  // Booked days in a row are one period; on a Monday-to-Friday week a period also runs across the weekend
   const sorted = days.slice().sort();
   const out: string[] = [];
   for (let i = 0; i < sorted.length; i++) {
     const start = sorted[i]; let end = start;
-    while (i + 1 < sorted.length && (Date.parse(sorted[i + 1]) - Date.parse(sorted[i])) / 864e5 <= 3) { i++; end = sorted[i]; }
+    while (i + 1 < sorted.length && nextLeaveDay(sorted[i], sorted[i + 1], sevenDay)) { i++; end = sorted[i]; }
     out.push(start === end ? start.slice(5) : `${start.slice(5)} to ${end.slice(5)}`);
   }
   return out;
@@ -73,7 +76,7 @@ export function buildSheets(x: XlsxInput): Sheet[] {
     [],
     [str("Member summary", { ...S.sect, columnSpan: 4 }), null, null, null],
     [str("Member", S.hdr), str("Country", S.hdr), str("Days", S.hdr), str("Periods", S.hdr)],
-    ...ms.map(m => [str(m.name || "", { fontWeight: "bold" }), str(x.countryName(m.country)), num(m.used), str(periods(m.days).join(", "))]),
+    ...ms.map(m => [str(m.name || "", { fontWeight: "bold" }), str(x.countryName(m.country)), num(m.used), str(periods(m.days, !!x.sevenDay).join(", "))]),
   ];
   if (overlaps.length) {
     dash.push([], [str(`Overlap days (${overlaps.length})`, { ...S.sect, columnSpan: 2 }), null], [str("Date", S.hdr), str("Members out", S.hdr)]);

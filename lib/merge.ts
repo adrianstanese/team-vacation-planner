@@ -72,13 +72,58 @@ function mergeLog(base: unknown, mine: unknown, theirs: unknown): unknown {
   return out.slice(-50);
 }
 
+// Lists of plain items without an id (the comments of one day): my removals and my additions are applied to
+// their list, so two people commenting on the same day at the same time both keep their comment.
+function mergeList(base: unknown, mine: unknown, theirs: unknown): unknown[] {
+  const B = Array.isArray(base) ? base : [], M = Array.isArray(mine) ? mine : [], T = Array.isArray(theirs) ? theirs : [];
+  const has = (list: unknown[], x: unknown) => list.some(y => same(x, y));
+  const removed = B.filter(x => !has(M, x));
+  const out = T.filter(x => !has(removed, x));
+  for (const x of M) if (!has(B, x) && !has(out, x)) out.push(x);
+  return out;
+}
+
 function mergeComments(base: unknown, mine: unknown, theirs: unknown): unknown {
   const b = isObj(base) ? base : {}, m = isObj(mine) ? mine : {}, t = isObj(theirs) ? theirs : {};
   if (!isObj(mine) && !isObj(theirs)) return undefined;
   const out: Obj = {};
   for (const k of new Set([...Object.keys(b), ...Object.keys(m), ...Object.keys(t)])) {
-    const v = !same(m[k], b[k]) ? m[k] : t[k];
+    // A day I did not touch keeps their list as it is
+    const v = same(m[k], b[k]) ? t[k] : mergeList(b[k], m[k], t[k]);
     if (v !== undefined && !(Array.isArray(v) && v.length === 0 && !(k in t))) out[k] = v;
+  }
+  return out;
+}
+
+// One member, merged field by field, then made consistent again:
+// - a half day only exists on a day that is still booked;
+// - an approval I gave does not cover days the member added after the version I was looking at. Those days were
+//   never seen by the approver, so the plan goes back to "waiting" for that year (`approved` = the team's own
+//   year, `apY[year]` = any other year).
+function mergeMember(b: Obj, m: Obj, t: Obj, baseYear: string): Obj {
+  const out = mergeFields(b, m, t, {
+    days: (x, y, z) => mergeSet(x, y, z),
+    half: (x, y, z) => mergeSet(x, y, z),
+  });
+  if (Array.isArray(out.half)) {
+    const booked = new Set(Array.isArray(out.days) ? out.days as string[] : []);
+    const half = (out.half as string[]).filter(d => booked.has(d));
+    if (half.length || "half" in t) out.half = half; else delete out.half;
+  }
+  // Unseen by me: a day they added, or a half day they turned into a full one (the server and the screen count
+  // that as more leave too)
+  const seen = new Set(Array.isArray(b.days) ? b.days as string[] : []);
+  const seenHalf = new Set(Array.isArray(b.half) ? b.half as string[] : []), theirHalf = new Set(Array.isArray(t.half) ? t.half as string[] : []);
+  const unseenYears = new Set((Array.isArray(t.days) ? t.days as unknown[] : [])
+    .filter((d): d is string => typeof d === "string" && (!seen.has(d) || (seenHalf.has(d) && !theirHalf.has(d)))).map(d => d.slice(0, 4)));
+  if (unseenYears.size) {
+    if (m.approved === true && b.approved !== true && baseYear && unseenYears.has(baseYear)) out.approved = false;
+    const mineY = isObj(m.apY) ? m.apY : {}, baseY = isObj(b.apY) ? b.apY : {};
+    if (isObj(out.apY)) {
+      const apY: Obj = { ...out.apY };
+      for (const y of unseenYears) if (mineY[y] === true && baseY[y] !== true) delete apY[y];
+      if (Object.keys(apY).length) out.apY = apY; else delete out.apY;
+    }
   }
   return out;
 }
@@ -86,11 +131,9 @@ function mergeComments(base: unknown, mine: unknown, theirs: unknown): unknown {
 export function mergeTeam(base: Obj | null, mine: Obj, theirs: Obj | null): Obj {
   if (!theirs) return mine;
   if (!base) return mine; // nothing to diff against: keep the user's view (old behaviour)
+  const baseYear = String(theirs.year ?? mine.year ?? new Date().getFullYear()); // a team without a year uses the current one, as everywhere else
   return mergeFields(base, mine, theirs, {
-    members: (b, m, t) => mergeById(b, m, t, (bb, mm, tt) => mergeFields(bb, mm, tt, {
-      days: (x, y, z) => mergeSet(x, y, z),
-      half: (x, y, z) => mergeSet(x, y, z),
-    })),
+    members: (b, m, t) => mergeById(b, m, t, (bb, mm, tt) => mergeMember(bb, mm, tt, baseYear)),
     trips: (b, m, t) => mergeById(b, m, t, (bb, mm, tt) => mergeFields(bb, mm, tt)),
     log: mergeLog,
     comments: mergeComments,

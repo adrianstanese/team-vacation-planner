@@ -2,7 +2,7 @@
 // when the person asked their device to reduce motion, or when the browser lacks the feature.
 const reduced = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-type VTDoc = Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } };
+type VTDoc = Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void>; ready?: Promise<void>; skipTransition?: () => void } };
 
 // Runs `update` inside a view transition. `dir` lets CSS slide ("next" / "prev") or morph ("open" / "home").
 export function withTransition(update: () => void, dir = "") {
@@ -11,10 +11,21 @@ export function withTransition(update: () => void, dir = "") {
   const html = d.documentElement;
   html.dataset.vt = dir || "view";
   html.classList.add("tvp-vt");
+  const done = () => { html.classList.remove("tvp-vt"); delete html.dataset.vt; };
+  // The browser runs the change when it draws the next frame. A page that is not being drawn (a window covered by
+  // another one, an embedded planner scrolled out of view) gets no frame, so the change would wait, possibly for
+  // good: after a short while it is applied without the animation. It never runs twice.
+  let ran = false;
+  const run = () => { if (ran) return; ran = true; update(); };
   try {
-    const t = d.startViewTransition(update);
-    t.finished.finally(() => { html.classList.remove("tvp-vt"); delete html.dataset.vt; });
-  } catch { html.classList.remove("tvp-vt"); delete html.dataset.vt; update(); }
+    const t = d.startViewTransition(run);
+    const late = setTimeout(() => { if (ran) return; try { t.skipTransition?.(); } catch { /* not supported */ } run(); done(); }, 350);
+    const end = () => { clearTimeout(late); done(); };
+    // A skipped transition (hidden tab, a newer transition starting) rejects these promises. The update itself
+    // still ran, so there is nothing to recover: swallow the rejection instead of leaving it unhandled.
+    t.ready?.catch(() => {});
+    t.finished.then(end, end);
+  } catch { done(); run(); }
 }
 
 // A short confetti burst from an element (or the screen centre), made of a few absolutely placed dots

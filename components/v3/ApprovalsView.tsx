@@ -3,7 +3,7 @@
 // person's plan on the right, keyboard shortcuts (A approve · R ask for changes · J/K move), bulk approval of plans
 // without clashes, and a way to turn approvals on for teams that have no approver yet. The server still decides who
 // may approve (lib/teamAuth.ts).
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { pendingApprovals, ranges, used, dateOf, addDays, type TeamView, type Member } from "@/lib/v3Util";
 import { V } from "@/lib/v3Text";
 import { dateLocale } from "@/lib/extraText";
@@ -42,9 +42,17 @@ export default function ApprovalsView({ team, yr, threshold, th, colorOf, onAppr
   const approveOne = (id: string) => { const i = pending.findIndex(p => p.member.id === id); onApprove([id]); const nx = pending[i + 1] || pending[i - 1]; setSel(nx ? nx.member.id : null); };
   const sendNote = () => { if (!cur) return; onRequest(cur.member, note.trim(), cur.ranges[0][0]); setNoteFor(null); setNote(""); };
 
+  // The single-letter shortcuts work only while keyboard focus is inside this view (WCAG 2.1.4). They used to answer
+  // a key pressed anywhere on the page, so a stray "a" approved the selected request. Opening the view puts the
+  // focus on it, so they are ready at once; clicking or tabbing elsewhere switches them off.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { const el = rootRef.current; if (el && !el.contains(document.activeElement)) el.focus({ preventScroll: true }); }, []);
+
   useEffect(() => {
     if (tab !== "wait" || !cur) return;
     const k = (e: KeyboardEvent) => {
+      const root = rootRef.current;
+      if (!root || !root.contains(document.activeElement)) return;
       const el = e.target as HTMLElement;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -106,7 +114,7 @@ export default function ApprovalsView({ team, yr, threshold, th, colorOf, onAppr
     </button>;
   };
 
-  return <div className="v3-ap">
+  return <div className="v3-ap" ref={rootRef} tabIndex={-1} style={{ outline: "none" }}>
     <div className="v3-ap-head">
       <div>
         <h2 style={{ color: th.tx }}>{V("inbox")}</h2>

@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website", locale: "en_US",
-    alternateLocale: ["fr_FR", "de_DE", "es_ES", "pt_PT", "ro_RO", "hu_HU", "sv_SE", "it_IT", "bg_BG"],
+    alternateLocale: ["fr_FR", "de_DE", "es_ES", "pt_PT", "ro_RO", "hu_HU", "sv_SE", "it_IT", "bg_BG", "ar_AR", "zh_CN", "hi_IN", "bn_IN", "ru_RU", "ur_PK", "ja_JP"],
     url: SITE_URL, siteName: SITE_NAME,
     title: "Team Vacation Planner — Free Team Leave Calendar for 2026–2035",
     description: DESCRIPTION,

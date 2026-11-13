@@ -2,8 +2,12 @@
 // so they load only when someone exports. Code unchanged.
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { V } from "@/lib/v3Text";
-import { dateLocale } from "@/lib/extraText";
-import { EU_C, MC, computeHolidays, dim, dk, esc, fdm, fileBase, pk, reportSafe, safeYear, withBusy, _fd, _fd2, getAllHolidays, isWe } from "./app";
+import { dateLocale, monthShort } from "@/lib/extraText";
+import { nextLeaveDay } from "@/lib/v3Util";
+import { EU_C, MC, dim, dk, esc, fdm, fileBase, pk, reportSafe, safeYear, withBusy, _fd, _fd2, getAllHolidays, isWe, usedOf } from "./app";
+
+// Day totals as the planner shows them: a half day counts 0.5
+const fmtD = n => Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
 
 export function generatePDFReport(team, t) {
   team = reportSafe(team);
@@ -13,13 +17,13 @@ export function generatePDFReport(team, t) {
 
   // Collect all holidays
   var allHols = {};
-  team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){allHols[h]=true;}); });
+  team.members.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){allHols[h]=true;}); });
 
   // Overlap analysis
   var allDays = {};
   team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
   var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
-  var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
+  var totalDays = 0; team.members.forEach(function(m){totalDays+=usedOf(m);});
 
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' - '+yr+'</title>';
   html += '<style>';
@@ -68,7 +72,7 @@ export function generatePDFReport(team, t) {
   html += '<div class="legend">';
   team.members.forEach(function(m,i){
     var c=MC[i%MC.length];
-    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
+    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+fmtD(usedOf(m))+'d)</span></div>';
   });
   html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">'+esc(V("rpHoliday"))+'</span></div>';
   html += '</div>';
@@ -148,9 +152,7 @@ export function generatePDFReport(team, t) {
     while(ri < sorted.length){
       var start = sorted[ri]; var end = start;
       while(ri+1 < sorted.length){
-        var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);
-        var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;
-        if(diff<=3){ri++;end=sorted[ri];}else break;
+        if(nextLeaveDay(sorted[ri],sorted[ri+1],!!team.w7)){ri++;end=sorted[ri];}else break;
       }
       if(start===end) ranges.push(start.slice(5));
       else ranges.push(start.slice(5)+' to '+end.slice(5));
@@ -158,7 +160,7 @@ export function generatePDFReport(team, t) {
     }
     html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+esc(m.name)+'</td>';
     html += '<td>'+(co?co.f+' '+co.n:'—')+'</td>';
-    html += '<td style="text-align:center;font-weight:700">'+sorted.length+'</td>';
+    html += '<td style="text-align:center;font-weight:700">'+fmtD(usedOf(m))+'</td>';
     html += '<td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
   });
   html += '</table>';
@@ -190,7 +192,7 @@ export function generateApprovedPDF(team, t) {
   team = reportSafe(team);
   var yr = safeYear(team);
   var MO = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var moS = MO.map(function(m){return m.slice(0,3);});
+  var moS = MO.map(function(_m,i){return monthShort(i);});
   var DL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
   var apr = team.approver ? team.members.find(function(m){return m.id===team.approver;}) : null;
   var aprName = apr ? apr.name : (t.approverLabel||"Approver");
@@ -201,28 +203,28 @@ export function generateApprovedPDF(team, t) {
     return m.approved===true && (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length > 0;
   });
   var tot = 0;
-  am.forEach(function(m){ tot += (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length; });
+  am.forEach(function(m){ tot += usedOf({days:(m.days||[]).filter(function(x){return x.startsWith(String(yr));}),half:m.half}); });
 
   // Labels
   var L = {
     title: t.approvalCert || "Approved Vacation Schedule",
     badge: "✓ " + (t.approved||"APPROVED"),
     members: t.mbs || "Members",
-    appDays: (t.approved||"Approved") + " " + (t.dys||"Days"),
+    appDays: V("rpDays") + " · " + (t.approved||"Approved"),
     avg: t.avgDays || "Avg/Person",
-    sect1: (t.approved||"Approved") + " " + (t.dys||"Days") + " — " + (t.summary||"Summary"),
+    sect1: (t.approved||"Approved") + " — " + (t.summary||"Summary"),
     member: t.mb || "Member",
     country: t.co || "Country",
     days: t.dys || "Days",
     pto: t.pto || "PTO",
-    periods: t.timeline || "Periods",
+    periods: V("rpPeriods"),
     sect2: t.cal || "Calendar",
-    we: t.sa || "Weekend",
+    we: t.we || "Weekend",
     hol: t.holiday || t.hol || "Holiday",
     vacation: t.onVac || "Vacation",
     approver: t.approverLabel || "Approver",
     ack: t.mb || "Team Member",
-    date: t.today || "Date"
+    date: V("rpDate")
   };
 
   var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' — '+L.title+' '+yr+'</title>';
@@ -297,18 +299,19 @@ export function generateApprovedPDF(team, t) {
     var co = EU_C.find(function(x){return x.c===m.country;});
     var mc = MC[team.members.indexOf(m)%MC.length];
     // Periods
-    var rng=[],rS=null,rP=null;
+    var rng=[],rS=null,rP=null,rK=null;
     days.forEach(function(d){
       var p=d.split("-");var dt=new Date(+p[0],+p[1]-1,+p[2]);
-      if(!rP){rS=d;rP=dt;return;}
-      if((dt-rP)/864e5<=3){rP=dt;}
-      else{rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));rS=d;rP=dt;}
+      if(!rP){rS=d;rP=dt;rK=d;return;}
+      if(nextLeaveDay(rK,d,!!team.w7)){rP=dt;rK=d;}
+      else{rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));rS=d;rP=dt;rK=d;}
     });
     if(rS)rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));
-    var ps=m.pto?days.length+"/"+m.pto:"–";
+    var usedN=usedOf({days:days,half:m.half});
+    var ps=m.pto?fmtD(usedN)+"/"+m.pto:"–";
     h+='<tr><td><span class="dot" style="background:'+mc.d+'"></span><strong>'+esc(m.name)+'</strong></td>';
     h+='<td>'+(co?co.f+" "+co.n:"–")+'</td>';
-    h+='<td style="text-align:center;font-weight:700;color:'+mc.d+';font-size:11px">'+days.length+'</td>';
+    h+='<td style="text-align:center;font-weight:700;color:'+mc.d+';font-size:11px">'+fmtD(usedN)+'</td>';
     h+='<td style="text-align:center;font-weight:600">'+ps+'</td>';
     h+='<td>'+rng.map(function(r){return '<span class="ch" style="color:'+mc.d+';background:'+mc.d+'10;border:1px solid '+mc.d+'30">'+r+'</span>';}).join("")+'</td></tr>';
   });
@@ -373,12 +376,12 @@ export function printReport(team, t) {
   var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
 
   var allHols = {};
-  team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){allHols[h]=true;}); });
+  team.members.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){allHols[h]=true;}); });
 
   var allDays = {};
   team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
   var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
-  var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
+  var totalDays = 0; team.members.forEach(function(m){totalDays+=usedOf(m);});
 
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' - '+yr+'</title>';
   html += '<style>';
@@ -434,7 +437,7 @@ export function printReport(team, t) {
   html += '<div class="legend">';
   team.members.forEach(function(m,i){
     var c=MC[i%MC.length];
-    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+((m.days||[]).length)+'d)</span></div>';
+    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+fmtD(usedOf(m))+'d)</span></div>';
   });
   html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">'+esc(V("rpHoliday"))+'</span></div>';
   html += '</div>';
@@ -510,10 +513,10 @@ export function printReport(team, t) {
     var ranges=[]; var ri=0;
     while(ri<sorted.length){
       var start=sorted[ri],end=start;
-      while(ri+1<sorted.length){var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;if(diff<=3){ri++;end=sorted[ri];}else break;}
+      while(ri+1<sorted.length){if(nextLeaveDay(sorted[ri],sorted[ri+1],!!team.w7)){ri++;end=sorted[ri];}else break;}
       if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
     }
-    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+esc(m.name)+'</td><td>'+(co?co.f+' '+co.n:'—')+'</td><td style="text-align:center;font-weight:700">'+sorted.length+'</td><td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
+    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+esc(m.name)+'</td><td>'+(co?co.f+' '+co.n:'—')+'</td><td style="text-align:center;font-weight:700">'+fmtD(usedOf(m))+'</td><td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
   });
   html += '</table>';
 
@@ -544,13 +547,13 @@ export function exportXLSLegacy(team, t) {
 
   // Collect holidays
   var allHols = {};
-  team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){allHols[h]=true;}); });
+  team.members.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){allHols[h]=true;}); });
 
   // Overlap analysis
   var allDays = {};
   team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
   var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
-  var totalDays = 0; team.members.forEach(function(m){totalDays+=(m.days||[]).length;});
+  var totalDays = 0; team.members.forEach(function(m){totalDays+=usedOf(m);});
 
   var xml = '<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
   xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
@@ -600,10 +603,10 @@ export function exportXLSLegacy(team, t) {
     var ranges = []; var ri = 0;
     while(ri<sorted.length){
       var start=sorted[ri],end=start;
-      while(ri+1<sorted.length){var curr=pk(sorted[ri]),next=pk(sorted[ri+1]);var diff=(new Date(next.y,next.m,next.d)-new Date(curr.y,curr.m,curr.d))/86400000;if(diff<=3){ri++;end=sorted[ri];}else break;}
+      while(ri+1<sorted.length){if(nextLeaveDay(sorted[ri],sorted[ri+1],!!team.w7)){ri++;end=sorted[ri];}else break;}
       if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
     }
-    xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+esc(m.name)+'</Data></Cell><Cell><Data ss:Type="String">'+(co?co.n:'')+'</Data></Cell><Cell><Data ss:Type="Number">'+sorted.length+'</Data></Cell><Cell><Data ss:Type="String">'+ranges.join(', ')+'</Data></Cell></Row>\n';
+    xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+esc(m.name)+'</Data></Cell><Cell><Data ss:Type="String">'+(co?co.n:'')+'</Data></Cell><Cell><Data ss:Type="Number">'+usedOf(m)+'</Data></Cell><Cell><Data ss:Type="String">'+ranges.join(', ')+'</Data></Cell></Row>\n';
   });
   // Overlaps
   if(overlaps.length){

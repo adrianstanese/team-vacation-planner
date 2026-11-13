@@ -50,13 +50,13 @@ export async function PUT(request: NextRequest) {
     if (stored && Array.isArray(stored.members) && stored.members.length && !Array.isArray(incoming.members)) {
       return NextResponse.json({ error: "Missing members" }, { status: 400, headers: NO_STORE });
     }
-    const { doc, reverted } = await guardIncoming(sql, id, stored, incoming, auth);
+    const { doc, reverted, adjusted } = await guardIncoming(sql, id, stored, incoming, auth);
     if (cur.length) {
       const rows = await sql`UPDATE teams SET data = ${JSON.stringify(doc)}::jsonb, updated_at = NOW()
         WHERE id = ${id} AND updated_at::text = ${cur[0].v} RETURNING updated_at::text AS v`;
       if (!rows.length) continue; // someone saved in between: re-read and re-check
       if (stored) await snapshot(sql, id, stored, doc);
-      return NextResponse.json({ ok: true, v: rows[0].v, reverted }, { headers: NO_STORE });
+      return NextResponse.json({ ok: true, v: rows[0].v, reverted, ...(adjusted ? { adjusted: true } : {}) }, { headers: NO_STORE });
     }
     // New team. A deleted team's id cannot be reused (its copy waits in the trash for 30 days).
     const trashed = await sql`SELECT 1 FROM team_trash WHERE id = ${id} LIMIT 1`;

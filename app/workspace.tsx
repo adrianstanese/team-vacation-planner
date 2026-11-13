@@ -9,15 +9,18 @@ import CoffeeButton from "@/components/CoffeeButton";
 import nextDynamic from "next/dynamic";
 import TodayTiles from "@/components/v3/TodayTiles";
 import { V } from "@/lib/v3Text";
-import { pendingApprovals, streaksOf } from "@/lib/v3Util";
+import { nextLeaveDay, pendingApprovals, streaksOf } from "@/lib/v3Util";
 import { withTransition, celebrate, buzz } from "@/lib/motion";
 import "./frontpage.css";
 import { buildSheets } from "@/lib/xlsxSheets";
 import { planImport } from "@/lib/importPlan";
 import { findBridges } from "@/lib/bridges";
-import { X, textLang, dateLocale, isRtl } from "@/lib/extraText";
+import { mergeTeam } from "@/lib/merge";
+import { X, textLang, dateLocale, isRtl, monthShort } from "@/lib/extraText";
+import { icsText, icsStamp } from "@/lib/ics";
+import TrapScope from "@/components/TrapScope";
 // Loaded only when first opened (keeps the first page load small)
-import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
+import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, sheetCell, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
 
 const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr:false});
 
@@ -55,10 +58,16 @@ const CSS_ANIMS = `
 .tvp-pop { animation: popIn .2s ease-out both; }
 .tvp-skel { animation: pulse 1.5s ease-in-out infinite; border-radius: 6px; }
 .tvp-glow { animation: glow 3s ease-in-out infinite; }
-.tvp-botnav { position:fixed; bottom:0; left:0; right:0; z-index:95; display:flex; justify-content:space-around; padding:6px 0 env(safe-area-inset-bottom,8px); }
+.tvp-botnav { position:fixed; bottom:0; left:0; right:0; z-index:95; display:flex; align-items:stretch; padding:6px 0 env(safe-area-inset-bottom,8px); }
+/* The view tabs swipe sideways when they do not fit (a phone shows about five of eight; the cut-off one and the fade say
+   there is more). Labels stay whole words on one line. Approvals sits outside the swiping part, always in view. */
+.tvp-botnav-scroll { flex:1 1 auto; min-width:0; display:flex; justify-content:space-around; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x proximity; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.tvp-botnav-scroll::-webkit-scrollbar { display:none; }
+.tvp-botnav-scroll.more { -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(to right,#000 calc(100% - 28px),transparent); }
+[dir="rtl"] .tvp-botnav-scroll.more { -webkit-mask-image:linear-gradient(to left,#000 calc(100% - 28px),transparent); mask-image:linear-gradient(to left,#000 calc(100% - 28px),transparent); }
 `;
 
-function workingDaysRemaining(member, year) {
+function workingDaysRemaining(member, year, sevenDay=false) {
   var today = new Date();
   var startM = today.getFullYear() === year ? today.getMonth() : 0;
   var startD = today.getFullYear() === year ? today.getDate() : 1;
@@ -75,7 +84,7 @@ function workingDaysRemaining(member, year) {
     for (var d = sd; d <= daysInMonth; d++) {
       var dt = new Date(year, m, d);
       var dow = dt.getDay();
-      if (dow === 0 || dow === 6) continue;
+      if (!sevenDay && (dow === 0 || dow === 6)) continue;
       var key = year + "-" + String(m+1).padStart(2,"0") + "-" + String(d).padStart(2,"0");
       if (holSet[key]) continue;
       if (vacSet[key]) continue;
@@ -96,7 +105,7 @@ async function teamAuth(body){try{const r=await fetch("/api/team/auth",{method:"
 // ─── Excel export (.xlsx) ────────────────────────────────────────
 function exportXLSX(team, t){
   var yr = safeYear(team);
-  var hols = new Set<string>(); team.members.forEach(function(m){ if(m.country) computeHolidays(m.country,yr).forEach(function(h){hols.add(h);}); });
+  var hols = new Set<string>(); team.members.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){hols.add(h);}); });
   var name = fileBase(team.name)+"_"+yr+".xlsx";
   return withBusy((async function(){
     var mod = await import("write-excel-file/universal");
@@ -106,7 +115,8 @@ function exportXLSX(team, t){
       countryName: function(cc){ var co = cc ? EU_C.find(function(c){return c.c===cc;}) : null; return co ? co.n : ""; },
       months: t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"],
       dayLabels: [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"],
-      generated: new Date().toLocaleDateString(),
+      generated: new Date().toLocaleDateString(dateLocale()),
+      sevenDay: !!team.w7,
     });
     var blob = await mod.default(sheets).toBlob();
     var url = URL.createObjectURL(blob);
@@ -117,13 +127,14 @@ function exportXLSX(team, t){
 
 // ─── ICS Export ──────────────────────────────────────────────────
 function generateICS(member, teamName) {
+  const stamp = icsStamp();
   const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TeamVacationPlanner//EN","CALSCALE:GREGORIAN"];
-  (member.days || []).sort().forEach(d => {
+  (member.days || []).slice().sort().forEach(d => {
     const p = pk(d);
     const start = `${p.y}${String(p.m+1).padStart(2,"0")}${String(p.d).padStart(2,"0")}`;
     const endDt = new Date(p.y, p.m, p.d + 1);
     const end = `${endDt.getFullYear()}${String(endDt.getMonth()+1).padStart(2,"0")}${String(endDt.getDate()).padStart(2,"0")}`;
-    lines.push("BEGIN:VEVENT",`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:${member.name} - Vacation`,`DESCRIPTION:Team: ${teamName}`,"END:VEVENT");
+    lines.push("BEGIN:VEVENT",`UID:${member.id}-${d}@tvp`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:${icsText(member.name)} - Vacation`,`DESCRIPTION:Team: ${icsText(teamName)}`,"TRANSP:TRANSPARENT","END:VEVENT");
   });
   lines.push("END:VCALENDAR");
   return lines.join("\r\n");
@@ -148,15 +159,16 @@ function getEmbedCode(teamId) {
 // ─── iCal Team Subscription Feed ─────────────────────────────────
 function generateTeamICS(team) {
   team = reportSafe(team);
-  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TeamVacationPlanner//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",`X-WR-CALNAME:${team.name} Vacations`];
+  const stamp = icsStamp();
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//TeamVacationPlanner//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",`X-WR-CALNAME:${icsText(team.name)} Vacations`];
   team.members.forEach(m => {
-    (m.days || []).sort().forEach(d => {
+    (m.days || []).slice().sort().forEach(d => {
       const p = pk(d);
       const start = `${p.y}${String(p.m+1).padStart(2,"0")}${String(p.d).padStart(2,"0")}`;
       const endDt = new Date(p.y, p.m, p.d + 1);
       const end = `${endDt.getFullYear()}${String(endDt.getMonth()+1).padStart(2,"0")}${String(endDt.getDate()).padStart(2,"0")}`;
       const uid = `${m.id}-${d}@tvp`;
-      lines.push("BEGIN:VEVENT",`UID:${uid}`,`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:${m.name} - Vacation`,`DESCRIPTION:Team: ${team.name}`,"TRANSP:TRANSPARENT","END:VEVENT");
+      lines.push("BEGIN:VEVENT",`UID:${uid}`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:${icsText(m.name)} - Vacation`,`DESCRIPTION:Team: ${icsText(team.name)}`,"TRANSP:TRANSPARENT","END:VEVENT");
     });
   });
   // Also add team holidays
@@ -169,7 +181,7 @@ function generateTeamICS(team) {
       const endDt = new Date(p.y, p.m, p.d + 1);
       const end = `${endDt.getFullYear()}${String(endDt.getMonth()+1).padStart(2,"0")}${String(endDt.getDate()).padStart(2,"0")}`;
       const co = EU_C.find(c => c.c === cc);
-      lines.push("BEGIN:VEVENT",`UID:hol-${cc}-${h}@tvp`,`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:🏛 ${holNameFor(cc,h)} (${(co&&co.n) || cc})`,`DESCRIPTION:${V("rpPubHol",{c:String((co&&co.n) || cc)})}`,"TRANSP:TRANSPARENT","END:VEVENT");
+      lines.push("BEGIN:VEVENT",`UID:hol-${cc}-${h}@tvp`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${start}`,`DTEND;VALUE=DATE:${end}`,`SUMMARY:🏛 ${icsText(holNameFor(cc,h))} (${icsText((co&&co.n) || cc)})`,`DESCRIPTION:${icsText(V("rpPubHol",{c:String((co&&co.n) || cc)}))}`,"TRANSP:TRANSPARENT","END:VEVENT");
     });
   });
   lines.push("END:VCALENDAR");
@@ -187,7 +199,8 @@ function downloadTeamICS(team) {
 // ─── Holiday Clash Detector ──────────────────────────────────────
 function detectHolidayClashes(member, year) {
   if (!member.country || !(member.days||[]).length) return [];
-  const hols = new Set(computeHolidays(member.country, year));
+  // The member's own holidays, regional ones included (a Scot's 2 January, a Bavarian's 6 January)
+  const hols = holSetOf(member, year);
   return member.days.filter(d => hols.has(d)).map(d => ({
     date: d,
     name: holNameFor(member.country, d, member.region),
@@ -215,32 +228,26 @@ function QRCode({ data, size = 160, th }) {
 function exportCSV(team, t) {
   team = reportSafe(team);
   const yr = safeYear(team);
+  // Quoted cells with inner quotes doubled; formula-like text is defused (sheetCell)
+  const q = v => '"' + sheetCell(v).replace(/"/g, '""') + '"';
   let csv = "Name,Country,Start Date,End Date\n";
   team.members.forEach(m => {
     const co = m.country ? (EU_C.find(c => c.c === m.country)||{}).n || m.country : "";
-    const sorted = [...(m.days || [])].sort();
-    // Group consecutive days into ranges
+    const sorted = [...new Set<string>(m.days || [])].sort();
+    // One row per period: booked days in a row, and across the weekend for a Monday-to-Friday team. The planner's
+    // own import reads a period the same way (every working day from start to end), so export → import is exact.
     let i = 0;
     while (i < sorted.length) {
       const start = sorted[i];
       let end = start;
-      while (i + 1 < sorted.length) {
-        const curr = pk(sorted[i]);
-        const next = pk(sorted[i + 1]);
-        const currDt = new Date(curr.y, curr.m, curr.d);
-        const nextDt = new Date(next.y, next.m, next.d);
-        const diff = (nextDt - currDt) / 86400000;
-        if (diff <= 3) { // Allow gaps of weekends
-          i++;
-          end = sorted[i];
-        } else break;
-      }
-      csv += `"${m.name}","${co}","${start}","${end}"\n`;
+      while (i + 1 < sorted.length && nextLeaveDay(sorted[i], sorted[i + 1], !!team.w7)) { i++; end = sorted[i]; }
+      csv += `${q(m.name)},${q(co)},${q(start)},${q(end)}\n`;
       i++;
     }
-    if (sorted.length === 0) csv += `"${m.name}","${co}","",""\n`;
+    if (sorted.length === 0) csv += `${q(m.name)},${q(co)},"",""\n`;
   });
-  const blob = new Blob([csv], { type: "text/csv" });
+  // UTF-8 byte order mark: without it Excel shows names with accents or non-Latin letters as garbage
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a"); a.href = url; a.download = `${fileBase(team.name)}_${yr}.csv`; a.click();
   URL.revokeObjectURL(url);
@@ -315,16 +322,21 @@ const Toast=({message:m,visible:v})=><div role="status" aria-live="polite" class
 // ─── Country Select ──────────────────────────────────────────────
 function CountrySelect({value,onChange,th,t}) {
   const[open,setOpen]=useState(false);const[search,setSearch]=useState("");
+  // Keyboard: Enter in the search box takes the first match, the arrow goes into the list, Escape closes; focus
+  // goes back to the button afterwards (it used to be dropped on the page, so the next Tab started from the top)
+  const btn=useRef(null);const list=useRef(null);
+  const close=()=>{setOpen(false);setSearch("");setTimeout(()=>{try{btn.current&&btn.current.focus();}catch(e){}},0);};
+  const pick=c=>{onChange(c);close();};
   const co=value?EU_C.find(c=>c.c===value):null;
   const filtered=EU_C.filter(c=>c.n.toLowerCase().includes(search.toLowerCase())||(c.ne||"").toLowerCase().includes(search.toLowerCase()));
   return <div style={{position:"relative"}}>
-    <button onClick={()=>setOpen(!open)} style={{width:"100%",padding:"8px 12px",border:`1.5px solid ${th.bd}`,borderRadius:8,background:th.sf,color:th.tx,fontFamily:F,fontSize:13,fontWeight:500,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:6}}>
+    <button ref={btn} type="button" aria-haspopup="listbox" aria-expanded={open} onClick={()=>setOpen(!open)} style={{width:"100%",padding:"8px 12px",border:`1.5px solid ${th.bd}`,borderRadius:8,background:th.sf,color:th.tx,fontFamily:F,fontSize:13,fontWeight:500,cursor:"pointer",textAlign:"start",display:"flex",alignItems:"center",gap:6}}>
       {co?<Fragment><span>{co.f}</span>{co.n}</Fragment>:<span style={{color:th.t3}}>{t.selC}</span>}
     </button>
     {open&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rXs,boxShadow:th.sm,zIndex:50,maxHeight:200,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,display:"flex",flexDirection:"column"}}>
-      <div style={{padding:6}}><input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder={X("search")} style={{width:"100%",padding:"6px 10px",border:`1px solid ${th.bd}`,borderRadius:6,fontSize:13,fontFamily:F,outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/></div>
-      <div style={{overflowY:"auto",maxHeight:160}}>
-        {filtered.map(c=> <button key={c.c} onClick={()=>{onChange(c.c);setOpen(false);setSearch("");}} style={{width:"100%",padding:"8px 12px",border:"none",background:c.c===value?th.al:"transparent",color:th.tx,fontFamily:F,fontSize:13,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:6}} onMouseEnter={e=>e.currentTarget.style.background=th.sh} onMouseLeave={e=>e.currentTarget.style.background=c.c===value?th.al:"transparent"}><span>{c.f}</span>{c.n}</button>)}
+      <div style={{padding:6}}><input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder={X("search")} aria-label={X("search")} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(filtered.length)pick(filtered[0].c);}else if(e.key==="Escape"){e.stopPropagation();close();}else if(e.key==="ArrowDown"){e.preventDefault();const f=list.current&&list.current.querySelector("button");if(f)f.focus();}}} style={{width:"100%",padding:"6px 10px",border:`1px solid ${th.bd}`,borderRadius:6,fontSize:13,fontFamily:F,outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/></div>
+      <div ref={list} role="listbox" aria-label={t.selC} onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();close();}else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();const b=[...list.current.querySelectorAll("button")];const i=b.indexOf(document.activeElement);const n=b[i+(e.key==="ArrowDown"?1:-1)];if(n)n.focus();}}} style={{overflowY:"auto",maxHeight:160}}>
+        {filtered.map(c=> <button key={c.c} type="button" role="option" aria-selected={c.c===value} onClick={()=>pick(c.c)} style={{width:"100%",padding:"8px 12px",border:"none",background:c.c===value?th.al:"transparent",color:th.tx,fontFamily:F,fontSize:13,cursor:"pointer",textAlign:"start",display:"flex",alignItems:"center",gap:6}} onMouseEnter={e=>e.currentTarget.style.background=th.sh} onMouseLeave={e=>e.currentTarget.style.background=c.c===value?th.al:"transparent"}><span>{c.f}</span>{c.n}</button>)}
       </div>
     </div>}
   </div>;
@@ -388,7 +400,7 @@ function HolidayCard({info,dateKey,rect,lang,th,onClose,onHover=null}){
   const estH=58+info.length*64;const below=rect.bottom+8+estH<vh||rect.top-8-estH<0;
   const pos=below?{top:rect.bottom+8}:{bottom:vh-rect.top+8};
   const p=pk(dateKey);const dt=new Date(p.y,p.m,p.d,12);
-  let when="";try{when=dt.toLocaleDateString(lang==="en"?"en-GB":lang,{weekday:"long",day:"numeric",month:"long",year:"numeric"});}catch(e){when=dateKey;}
+  let when="";try{when=dt.toLocaleDateString(dateLocale(lang),{weekday:"long",day:"numeric",month:"long",year:"numeric"});}catch(e){when=dateKey;}
   const weekend=dt.getDay()===0||dt.getDay()===6;
   // Portal to <body>: the month cards use backdrop-filter, which would trap and clip a fixed-position card
   return createPortal(<div ref={popRef} popover="manual" className="tvp-pop" role="tooltip" aria-label={L.ph} onMouseEnter={()=>onHover&&onHover(true)} onMouseLeave={()=>onHover&&onHover(false)} dir={isRtl(lang)?"rtl":"ltr"} style={{position:"fixed",top:"auto",right:"auto",bottom:"auto",margin:0,left,width:W,...pos,zIndex:400,background:th.sf,border:"1px solid "+th.bd,borderRadius:14,boxShadow:"0 12px 32px rgba(30,27,75,.18)",padding:"12px 14px",fontFamily:F,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,animation:"popIn .15s ease-out"}}>
@@ -440,7 +452,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
   const dayLabels=[t.mo,t.tu,t.we2,t.th,t.fr,t.sa,t.su];
 
   const[popDay,setPopDay]=useState(null);const handleMouseDown=(day)=>{if(!activeId||(isWe(year,month,day)&&!w7))return;setPopDay(day);setTimeout(function(){setPopDay(null);},200);dragRef.current={start:day,days:new Set([day]),adding:!(am&&am.days||[]).includes(dk(year,month,day))};onToggle(year,month,day);};
-  const handleMouseEnter=(day)=>{if(!dragRef.current||!activeId||(isWe(year,month,day)&&!w7))return;const{start,days:dragDays,adding}=dragRef.current;const lo=Math.min(start,day),hi=Math.max(start,day);const newDays=new Set();for(let d=lo;d<=hi;d++){if(!isWe(year,month,d)||w7)newDays.add(d);}const toProcess=[...newDays].filter(d=>!dragDays.has(d));toProcess.forEach(d=>{const key=dk(year,month,d);const hasDayAlready=(am&&am.days||[]).includes(key);if((adding&&!hasDayAlready)||(!adding&&hasDayAlready))onToggle(year,month,d);});dragRef.current.days=newDays;};
+  const handleMouseEnter=(day)=>{if(!dragRef.current||!activeId||(isWe(year,month,day)&&!w7))return;const{start,days:dragDays,adding}=dragRef.current;const lo=Math.min(start,day),hi=Math.max(start,day);const amHol=adding&&am&&!w7?holSetOf(am,year):null;const newDays=new Set();for(let d=lo;d<=hi;d++){if((!isWe(year,month,d)||w7)&&!(d!==start&&amHol&&amHol.has(dk(year,month,d))))newDays.add(d);}const toProcess=[...newDays].filter(d=>!dragDays.has(d));toProcess.forEach(d=>{const key=dk(year,month,d);const hasDayAlready=(am&&am.days||[]).includes(key);if((adding&&!hasDayAlready)||(!adding&&hasDayAlready))onToggle(year,month,d);});dragRef.current.days=newDays;};
   const handleMouseUp=()=>{dragRef.current=null;};
 
   useEffect(()=>{const up=()=>{dragRef.current=null;};window.addEventListener("mouseup",up);return()=>window.removeEventListener("mouseup",up);},[]);
@@ -539,7 +551,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
             aria-label={cellLabel}
             title={isHol&&holInfo?undefined:isHol?holNameAny(key):mh.length>0?mh.map(function(m){return m.name}).join(", "):""}
             style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:(we&&!w7)||!activeId?"default":"pointer",transition:"transform .12s",transform:day===popDay?"scale(1.15)":"",
-              background:vacBg, backgroundImage:pendingStripe||"none", border:vacBorder, transition:"background .1s",
+              backgroundColor:String(vacBg).indexOf("gradient(")>=0?"transparent":vacBg, backgroundImage:[pendingStripe,String(vacBg).indexOf("gradient(")>=0?vacBg:""].filter(Boolean).join(",")||"none", border:vacBorder, transition:"background .1s",
               opacity:past&&mh.length===0&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
               boxShadow:vacShadow+(th.bg==="#0B0F1A"&&(isA||mh.length>0)?",0 0 8px "+(isA&&ac?ac.d+"35":mh.length>0?MC[members.indexOf(mh[0])%MC.length].d+"25":""):"")}}>
             <span style={{fontSize:compact?11:12,fontWeight:isTd?700:vacWeight,color:isTd&&mh.length===0?th.ac:vacColor,fontFamily:F,lineHeight:1}}>{day}</span>
@@ -564,7 +576,7 @@ function HeatmapView({team,th,t,holSet}) {
 
   // Per-member holiday sets for "effective absence" (on holiday = not working)
   const memberHolDays={};
-  team.members.forEach(m=>{if(m.country){const hols=computeHolidays(m.country,yr);memberHolDays[m.id]=new Set(hols);}});
+  team.members.forEach(m=>{if(m.country)memberHolDays[m.id]=holSetOf(m,yr);});
 
   return <div>
     <div style={{textAlign:"center",marginBottom:12}}><span style={{fontSize:18,fontWeight:700,color:th.tx}}>{t.heatmap} — {yr}</span></div>
@@ -591,7 +603,7 @@ function HeatmapView({team,th,t,holSet}) {
 
               // Determine colors: holiday-only (blue), vacation-only (red), both (purple), weekend (gray)
               let bg,color,fw=400,title="";
-              if(we){
+              if(we&&!team.w7){
                 bg=th.sh;color=th.t3;
               } else if(isHol&&vacCount>0){
                 // Both holiday and vacation
@@ -628,7 +640,7 @@ function HeatmapView({team,th,t,holSet}) {
 function TimelineView({team,th,t}) {
   const yr=team.year||CY;
   const totalDays=(new Date(yr,11,31)-new Date(yr,0,1))/(86400000)+1;
-  const dayOfYear=(m,d)=>Math.floor((new Date(yr,m,d)-new Date(yr,0,1))/86400000);
+  const dayOfYear=(m,d)=>Math.round((new Date(yr,m,d)-new Date(yr,0,1))/86400000);
 
   // Group consecutive days into ranges
   const getRanges=(days)=>{
@@ -644,7 +656,7 @@ function TimelineView({team,th,t}) {
     <div style={{textAlign:"center",marginBottom:16}}><span style={{fontSize:18,fontWeight:700,color:th.tx}}>{t.timeline} — {yr}</span></div>
     {/* Month labels */}
     <div style={{position:"relative",height:24,marginBottom:8,marginLeft:110,marginRight:30}}>
-      {monthStarts.map(({m,pos},idx)=>{var next=idx<11?monthStarts[idx+1].pos:100;var center=(pos+next)/2;return <span key={m} style={{position:"absolute",left:center+"%",transform:"translateX(-50%)",fontSize:10,fontWeight:600,color:th.t3,fontFamily:F}}>{t.M[m].slice(0,3)}</span>;})}
+      {monthStarts.map(({m,pos},idx)=>{var next=idx<11?monthStarts[idx+1].pos:100;var center=(pos+next)/2;return <span key={m} style={{position:"absolute",left:center+"%",transform:"translateX(-50%)",fontSize:10,fontWeight:600,color:th.t3,fontFamily:F}}>{monthShort(m)}</span>;})}
     </div>
     {/* Member bars */}
     <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -660,7 +672,7 @@ function TimelineView({team,th,t}) {
               return <div key={ri} style={{position:"absolute",left:`${left}%`,width:`${Math.max(width,.5)}%`,top:2,bottom:2,background:c.d,borderRadius:3,opacity:.85}}/>;
             })}
           </div>
-          <span style={{fontSize:11,color:th.t3,fontFamily:FM,minWidth:30,textAlign:"right"}}>{(m.days||[]).length}d</span>
+          <span style={{fontSize:11,color:th.t3,fontFamily:FM,minWidth:30,textAlign:"end"}}>{fmtDays(usedOf(m))}d</span>
         </div>;
       })}
     </div>
@@ -682,10 +694,12 @@ function CoverageView({team,th,t}) {
   const dayCov=k=>{let present=0;mem.forEach((m,i)=>{if(hol[i].has(k))return;if(days[i].has(k))present+=half[i].has(k)?0.5:0;else present+=1;});return total?present/total:1;};
   const weeks=[];
   let d=new Date(yr,0,1);
-  while(d.getDay()!==1)d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);
-  while(d.getFullYear()===yr){
+  while(d.getDay()!==1)d=new Date(d.getFullYear(),d.getMonth(),d.getDate()-1);
+  const lastDay=new Date(yr,11,31);
+  while(d<=lastDay){
     const keys=[];
     for(let i=0;i<(team.w7?7:5);i++){const cd=new Date(d.getFullYear(),d.getMonth(),d.getDate()+i);if(cd.getFullYear()===yr)keys.push(dk(cd.getFullYear(),cd.getMonth(),cd.getDate()));}
+    if(!keys.length){d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+7);continue;}
     const covs=keys.map(dayCov);
     const coverage=Math.round((covs.reduce((a2,b2)=>a2+b2,0)/(covs.length||1))*100);
     const low=Math.round(Math.min(...covs)*100);
@@ -708,7 +722,7 @@ function CoverageView({team,th,t}) {
       })}
     </div>
     <div style={{display:"flex",justifyContent:"space-between",padding:"0 4px"}}>
-      {Array.from({length:12},(_,i)=> <span key={i} style={{fontSize:10,color:th.t3,fontWeight:600}}>{t.M[i].slice(0,3)}</span>)}
+      {Array.from({length:12},(_,i)=> <span key={i} style={{fontSize:10,color:th.t3,fontWeight:600}}>{monthShort(i)}</span>)}
     </div>
     <div style={{display:"flex",gap:12,marginTop:20,flexWrap:"wrap",justifyContent:"center"}}>
       {[
@@ -757,7 +771,7 @@ function ConflictAlerts({team,threshold,th,t}) {
   </div>;
 }
 
-function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null}){
+function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const dc=usedOf(m);const allow=m.pto?m.pto+(m.carry||0):0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
@@ -800,7 +814,7 @@ function MRow({member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditin
             :<em style={{color:th.tx}}>{m.role||"—"}</em>}</label>
       </div>
       {m.pto?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
-      {yr&&m.country&&<div className="tvp-meta" style={{color:th.t3}}>{workingDaysRemaining(m,yr)} {t.workDaysLeft||"work days left"} · {getAllHolidays(m,yr).length} {t.holCount||"holidays"}</div>}
+      {yr&&m.country&&<div className="tvp-meta" style={{color:th.t3}}>{workingDaysRemaining(m,yr,w7)} {t.workDaysLeft||"work days left"} · {getAllHolidays(m,yr).length} {t.holCount||"holidays"}</div>}
       {m.country&&REGIONS[m.country]&&<label className="tvp-fld"><span style={{color:th.t3}}>{t.region||"Region"}</span>
         <select value={m.region||""} onChange={function(e){onRegionChange(e.target.value||null);}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}>
           <option value="">{defaultRegionName(m.country)?V("regDefault",{r:defaultRegionName(m.country)}):(t.natOnly||"National only")}</option>
@@ -836,10 +850,11 @@ function ShareModal({teamId,teamName,onClose,th,t}){
   const copy=(text)=>{try{navigator.clipboard.writeText(text);}catch(e){};setCp(true);setTimeout(()=>setCp(false),2500);};
 
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,padding:28,maxWidth:480,animation:"popIn .25s ease-out",backdropFilter:G.blur,WebkitBackdropFilter:G.blur,width:"100%",boxShadow:th.sl}}>
+    <div role="dialog" aria-modal="true" aria-labelledby="tvp-share-t" onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,padding:28,maxWidth:480,animation:"popIn .25s ease-out",backdropFilter:G.blur,WebkitBackdropFilter:G.blur,width:"100%",boxShadow:th.sl}}>
+      <TrapScope onClose={onClose}/>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
-        <h3 style={{margin:0,fontSize:18,fontWeight:700,color:th.tx}}>{t.sht}</h3>
-        <button onClick={onClose} style={{background:th.sh,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={15} c={th.t2}/></button>
+        <h3 id="tvp-share-t" style={{margin:0,fontSize:18,fontWeight:700,color:th.tx}}>{t.sht}</h3>
+        <button onClick={onClose} aria-label={X("close")} style={{background:th.sh,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={15} c={th.t2}/></button>
       </div>
       {/* Tabs */}
       <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
@@ -924,7 +939,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
   var memberStats = members.map(function(m,i) {
     var days = (m.days || []).filter(function(d){ return d.startsWith(String(yr)); });
     var hols = getAllHolidays(m, yr);
-    var wd = workingDaysRemaining(m, yr);
+    var wd = workingDaysRemaining(m, yr, !!team.w7);
     return {name:m.name, days:usedOf({days:days,half:m.half}), hols:hols.length, wd:wd, pto:(m.pto||0)+(m.carry||0), color:MC[i%MC.length].d};
   });
 
@@ -942,7 +957,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
   var allDays = {};
   members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
   var overlapDays = Object.keys(allDays).filter(function(d){ return allDays[d].length >= 2; }).length;
-  var totalDays = 0; members.forEach(function(m){totalDays+=(m.days||[]).length;});
+  var totalDays = 0; members.forEach(function(m){totalDays+=usedOf(m);});
 
   // Top vacation month
   var topMoIdx = monthly.indexOf(Math.max.apply(null, monthly));
@@ -979,7 +994,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
           return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
             <span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{count>0?count:""}</span>
             <div style={{width:"100%",height:pct+"%",minHeight:count>0?8:2,background:count>0?"linear-gradient(180deg,"+th.ac+",#6366F1)":th.sh,borderRadius:3,transition:"height .5s"}}/>
-            <span style={{fontSize:8,color:th.t3,fontWeight:600}}>{(t.M?t.M[i].slice(0,3):EN_MO[i])}</span>
+            <span style={{fontSize:8,color:th.t3,fontWeight:600}}>{monthShort(i)}</span>
           </div>;
         })}
       </div>
@@ -994,7 +1009,7 @@ function AnalyticsDashboard({team,yr,th,t}) {
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:12,fontWeight:600,color:th.tx,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
           </div>
-          <div style={{fontSize:20,fontWeight:800,color:s.color,fontFamily:FM,minWidth:36,textAlign:"right"}}>{s.days}</div>
+          <div style={{fontSize:20,fontWeight:800,color:s.color,fontFamily:FM,minWidth:36,textAlign:"end"}}>{s.days}</div>
           <div style={{fontSize:10,color:th.t3,minWidth:50}}>
             {s.pto>0?pct+"% of "+s.pto:s.days+" "+t.dys}
           </div>
@@ -1076,7 +1091,7 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
         <div>
           <label style={{fontSize:10,color:th.t3,fontWeight:600,display:"block",marginBottom:3}}>{t.mb||"Member"}</label>
           <select value={form.member} onChange={function(e){setForm({...form,member:e.target.value});}} style={{width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+th.gbd,background:th.sf,color:th.tx,fontSize:12,fontFamily:F}}>
-            <option value="">— {t.selMember||"Select member"} —</option>
+            <option value="">— {V("rpMember")} —</option>
             {team.members.map(function(m){return <option key={m.id} value={m.id}>{m.name}</option>;})}
           </select>
         </div>
@@ -1123,8 +1138,8 @@ function TripsView({team,onUpdate,th,t,yr,holSet}){
             </div>
           </div>
           <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:8,background:"#FAEEDA",color:"#854F0B",flexShrink:0}}>{days}d</span>
-          <button onClick={function(){startEdit(tr);}} style={{background:"none",border:"none",cursor:"pointer",padding:3}}><Ic n="edit" s={13} c={th.t3}/></button>
-          <button onClick={function(){deleteTrip(tr.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:3}}><Ic n="trash" s={13} c={th.t3}/></button>
+          <button onClick={function(){startEdit(tr);}} aria-label={t.editTrip||"Edit Trip"} title={t.editTrip||"Edit Trip"} style={{background:"none",border:"none",cursor:"pointer",padding:3}}><Ic n="edit" s={13} c={th.t3}/></button>
+          <button onClick={function(){deleteTrip(tr.id);}} aria-label={X("removeN",{n:tr.dest||tr.project||""})} title={X("removeN",{n:tr.dest||tr.project||""})} style={{background:"none",border:"none",cursor:"pointer",padding:3}}><Ic n="trash" s={13} c={th.t3}/></button>
         </div>;
       })}
     </div>}
@@ -1227,7 +1242,7 @@ async function cropLogo(file){
   }finally{URL.revokeObjectURL(url);}
 }
 
-function TeamLogo({team,th,size=30,editable=false,onChange=null,locked=false}){
+function TeamLogo({team,th,size=30,editable=false,onChange=null,locked=false,compact=false}){
   const ref=useRef(null);const[busy,setBusy]=useState(false);const[menu,setMenu]=useState(false);
   const logo=safeLogo(team.logo);const initial=(team.name||"?").trim().charAt(0).toUpperCase();
   const pick=async e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f||!onChange)return;setBusy(true);try{onChange(await cropLogo(f));}catch(err){alert(X("logoBad"));}finally{setBusy(false);}};
@@ -1236,7 +1251,7 @@ function TeamLogo({team,th,size=30,editable=false,onChange=null,locked=false}){
   // No logo yet: the letter is just a picture; a visible text button next to it opens the upload
   if(!logo)return <span style={{display:"inline-flex",alignItems:"center",gap:6}}>
     {face}
-    <button type="button" className="tvp-addlogo" onClick={()=>ref.current&&ref.current.click()} disabled={busy} title={X("logoAdd")}>＋ {V("addLogo")}</button>
+    <button type="button" className="tvp-addlogo" onClick={()=>ref.current&&ref.current.click()} disabled={busy} title={X("logoAdd")} aria-label={compact?X("logoAdd"):undefined}>＋{compact?"":" "+V("addLogo")}</button>
     <input ref={ref} type="file" accept="image/*" onChange={pick} style={{display:"none"}}/>
   </span>;
   return <span style={{position:"relative",display:"inline-flex"}}>
@@ -1283,7 +1298,7 @@ function upcomingAway(members,fromKey,days){
 function ComingUp({team,th,lang}){
   const L=UP_TX[lang]||UP_TX.en;const[copied,setCopied]=useState(false);
   const today=dk(CY,CM,CD);const runs=upcomingAway(team.members,today,14);
-  const loc=lang==="en"?"en-GB":lang;
+  const loc=dateLocale(lang);
   const f=k=>{const p=pk(k);try{return new Date(p.y,p.m,p.d,12).toLocaleDateString(loc,{weekday:"short",day:"numeric",month:"short"});}catch(e){return k;}};
   const range=r=>r.from===r.to?f(r.from):f(r.from)+" – "+f(r.to);
   const copy=async()=>{const end=(()=>{const p=pk(today);const d=new Date(p.y,p.m,p.d+13,12);return dk(d.getFullYear(),d.getMonth(),d.getDate());})();
@@ -1330,28 +1345,6 @@ function NextYearPrompt({team,yr,onYear,th,lang}){
     <button onClick={()=>onYear(ny)} style={{padding:"8px 16px",minHeight:36,borderRadius:999,border:"none",background:th.ac,color:th.ti||"#fff",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:F}}>{L.open.replace("{y}",ny)} →</button>
     <button onClick={hide} style={{padding:"8px 10px",minHeight:36,borderRadius:999,border:"none",background:"none",color:th.t2,fontWeight:600,fontSize:12,cursor:"pointer",fontFamily:F}}>{L.later}</button>
   </div>;
-}
-
-// Dialog behaviour for any dialog it is placed in: focus moves in, Tab stays inside, Escape closes,
-// and focus returns to whatever opened the dialog (WCAG 2.1.2 / 2.4.3)
-function TrapScope({onClose}){
-  const ref=useRef(null);const closeRef=useRef(onClose);closeRef.current=onClose;
-  useEffect(()=>{
-    const box=ref.current&&ref.current.closest('[role="dialog"],[role="alertdialog"]');if(!box)return;
-    const prev=document.activeElement;
-    const items=()=>[...box.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);
-    if(!box.contains(document.activeElement)){const f=items()[0];if(f)f.focus();else{box.setAttribute("tabindex","-1");box.focus();}}
-    const key=e=>{
-      if(e.key==="Escape"){e.stopPropagation();closeRef.current&&closeRef.current();return;}
-      if(e.key!=="Tab")return;const it=items();if(!it.length)return;
-      const first=it[0],last=it[it.length-1];
-      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
-      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
-    };
-    box.addEventListener("keydown",key);
-    return()=>{box.removeEventListener("keydown",key);try{if(prev&&prev.focus&&document.contains(prev))prev.focus();}catch(e){}};
-  },[]);
-  return <span ref={ref} hidden/>;
 }
 
 function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members||[]).filter(function(m){return(m.days||[]).indexOf(today)>=0;});if(!out.length)return <div style={{padding:"8px 14px",background:"rgba(16,185,129,.08)",borderRadius:10,border:"1px solid rgba(16,185,129,.15)",marginBottom:10,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,color:"#059669"}}><span>✅</span>{t.fullTeam||"Full team in today!"}</div>;return <div style={{padding:"8px 14px",background:out.length>=3?"rgba(239,68,68,.06)":"rgba(245,158,11,.06)",borderRadius:10,border:"1px solid "+(out.length>=3?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)"),marginBottom:10}}><div style={{fontSize:10,fontWeight:700,color:out.length>=3?"#DC2626":"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{t.outToday||"Out today"} ({out.length})</div><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{out.map(function(m){var mc=MC[team.members.indexOf(m)%MC.length];return <span key={m.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:8,background:mc.b,fontSize:11,fontWeight:600,color:mc.t}}><span style={{width:6,height:6,borderRadius:"50%",background:mc.d}}></span>{m.name}</span>;})}</div></div>;}
@@ -1410,13 +1403,37 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const[quarter,setQuarter]=useState(null); // null=full year, 0=Q1, 1=Q2, 2=Q3, 3=Q4
 
   // ─── Undo/Redo ───
-  const historyRef=useRef([]);const redoRef=useRef([]);const skipHistoryRef=useRef(false);
-  const pushHistory=(prev)=>{if(skipHistoryRef.current){skipHistoryRef.current=false;return;}historyRef.current=[...historyRef.current.slice(-19),JSON.stringify(prev)];redoRef.current=[];};
-  const undo=()=>{if(!historyRef.current.length)return;const prev=historyRef.current.pop();redoRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(prev));flash(X("undo"));};
-  const redo=()=>{if(!redoRef.current.length)return;const next=redoRef.current.pop();historyRef.current.push(JSON.stringify(team));skipHistoryRef.current=true;onUpdate(JSON.parse(next));flash(X("redo"));};
+  // A step keeps the team before (b) and after (a) one local change. Undo applies "before" as a 3-way merge onto the
+  // team as it is NOW, so it takes back only that one change: whatever colleagues saved in the meantime (their days,
+  // new members, comments) stays. It used to put the whole old copy back and wipe those.
+  const historyRef=useRef([]);const redoRef=useRef([]);
+  const pushHistory=(prev,next)=>{historyRef.current=[...historyRef.current.slice(-19),{b:JSON.stringify(prev),a:JSON.stringify(next)}];redoRef.current=[];};
+  const undo=()=>{if(!historyRef.current.length)return;const st=historyRef.current.pop();redoRef.current.push(st);const out=awaitApproval(teamRef.current,mergeTeam(JSON.parse(st.a),JSON.parse(st.b),teamRef.current));teamRef.current=out;onUpdate(out);flash(X("undo"));};
+  const redo=()=>{if(!redoRef.current.length)return;const st=redoRef.current.pop();historyRef.current.push(st);const out=awaitApproval(teamRef.current,mergeTeam(JSON.parse(st.b),JSON.parse(st.a),teamRef.current));teamRef.current=out;onUpdate(out);flash(X("redo"));};
   // teamRef = the newest version, even before React re-renders (fast drags toggle several days per frame)
   const teamRef=useRef(team);teamRef.current=team;
-  const updateWithHistory=(newTeam)=>{pushHistory(teamRef.current);teamRef.current=newTeam;onUpdate(newTeam);};
+  // Phone tab bar: the open view's tab is brought into view, and the bar fades at the end while more tabs wait there
+  const botRef=useRef(null);const[botMore,setBotMore]=useState(false);
+  const botCheck=()=>{const n=botRef.current;if(!n)return;const left=Math.abs(n.scrollLeft);setBotMore(n.scrollWidth-n.clientWidth-left>6);};
+  useEffect(()=>{const n=botRef.current;if(!n)return;const el=n.querySelector('[aria-current="page"]');
+    if(el){const nr=n.getBoundingClientRect(),er=el.getBoundingClientRect();if(er.left<nr.left+4||er.right>nr.right-4)n.scrollLeft+=(er.left+er.width/2)-(nr.left+nr.width/2);}
+    botCheck();},[view,mob,lang]);
+  useEffect(()=>{window.addEventListener("resize",botCheck);return()=>window.removeEventListener("resize",botCheck);},[]);
+  // More leave on an approved plan needs a new approval (the server applies the same rule, lib/teamAuth.ts): show it
+  // as waiting straight away. The approver's own days, and changes made by someone who can approve, stay approved.
+  const awaitApproval=(prev,next)=>{
+    if(!next||!next.approver||canApprove||!Array.isArray(next.members)||!prev||!Array.isArray(prev.members))return next;
+    const pm=new Map<string,{days?:string[];half?:string[]}>(prev.members.map(m=>[m.id,m]));let hit=false;
+    const members=next.members.map(m=>{
+      if(!m||m.id===next.approver||m.approved!==true)return m;
+      const o=pm.get(m.id);if(!o)return m;
+      const had=new Set(o.days||[]),hadHalf=new Set(o.half||[]),half=new Set(m.half||[]);
+      if(!(m.days||[]).some(d=>!had.has(d)||(hadHalf.has(d)&&!half.has(d))))return m;
+      hit=true;return{...m,approved:false};
+    });
+    return hit?{...next,members}:next;
+  };
+  const updateWithHistory=(newTeam)=>{const nt=awaitApproval(teamRef.current,newTeam);pushHistory(teamRef.current,nt);teamRef.current=nt;onUpdate(nt);};
   // Undo steps belong to the year they were made in: start clean when the year changes
   useEffect(()=>{historyRef.current=[];redoRef.current=[];},[team.year]);
 
@@ -1431,7 +1448,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     return()=>{window.removeEventListener("tvp-reverted",h);window.removeEventListener("tvp-save-error",e);};
   },[]);
   // Keyboard shortcuts for undo/redo
-  useEffect(()=>{const h=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==="z"){e.preventDefault();if(e.shiftKey)redo();else undo();}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[team]);
+  useEffect(()=>{const h=(e)=>{if(!(e.metaKey||e.ctrlKey)||String(e.key).toLowerCase()!=="z")return;const el=e.target;if(el&&(el.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||"")))return;e.preventDefault();if(e.shiftKey)redo();else undo();};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[team]);
 
   useEffect(()=>{const h=()=>{const m=window.innerWidth<768;setMob(m);if(!m)setSb(true);};window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
   // Auto-show share modal for freshly created teams so user gets the link immediately
@@ -1440,7 +1457,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const yr=team.year||CY;const locked=!!team.locked;const isAdmin=!team.adminId||true;// In this version, everyone can admin
 
   // Compute holidays for all team countries
-  const holSet=new Set();team.members.forEach(m=>{if(m.country)computeHolidays(m.country,yr).forEach(h=>holSet.add(h));});
+  // Every member's public holidays, national and regional (the calendar used to mark national days only)
+  const holSet=new Set();team.members.forEach(m=>{if(m.country)holSetOf(m,yr).forEach(h=>holSet.add(h));});
   const hNames=useHolidayNames(team.members.map(m=>m.country));
   const holInfo=key=>holidayInfo(key,team.members,yr,hNames);
   // ─── v3: approval inbox, time travel, Wrapped, Today tiles ───
@@ -1697,8 +1715,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const tokMe=(()=>{try{const me=localStorage.getItem(meKey);return me&&getTokens(team.id)[me]&&team.members.some(x=>x.id===me&&hasPinOf(x))?me:null;}catch(e){return null;}})();
   const gOpen=team.members.length>0&&!unlockedId&&!ownerMode&&!tokMe;
   const gM=team.members.find(x=>x.id===gMid);
-  const pinBox=(v,set,ph,onEnter,autoF)=><input autoFocus={autoF} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={v} placeholder={ph} aria-label={ph} onChange={e=>{set(e.target.value.replace(/\D/g,"").slice(0,6));setGErr("");}} onKeyDown={e=>{if(e.key==="Enter")onEnter();}} className="tvp-gpin" style={{borderColor:v.length===6?"#10B981":th.gbd,background:th.sf,color:th.tx}}/>;
+  const pinBox=(v,set,ph,onEnter,autoF)=><input autoFocus={autoF} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={v} placeholder={ph} aria-label={/^_+$/.test(ph)?X("pinTitle"):ph} onChange={e=>{set(e.target.value.replace(/\D/g,"").slice(0,6));setGErr("");}} onKeyDown={e=>{if(e.key==="Enter")onEnter();}} className="tvp-gpin" style={{borderColor:v.length===6?"#10B981":th.gbd,background:th.sf,color:th.tx}}/>;
   const gateEl=gOpen?<div className="tvp-gate" role="dialog" aria-modal="true" aria-labelledby="tvp-gate-t">
+    <TrapScope onClose={null}/>
     <div className="tvp-gate-card" style={{background:th.bg,color:th.tx}}>
       <div className="tvp-gate-top"><TeamLogo team={team} th={th} size={36}/><div><h2 id="tvp-gate-t">{V("gtTitle",{n:team.name})}</h2><p style={{color:th.t3}}>{gStep==="choose"?V("gtSub"):gStep==="pick"?V("gtPick"):gStep==="new"?V("gtNewSub"):gM?gM.name:""}</p></div></div>
       {gStep==="choose"&&<div className="tvp-gate-opts">
@@ -1711,7 +1730,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       </div>}
       {gStep==="pin"&&gM&&<div className="tvp-gate-form">
         <label>{X("pinTitle")}</label>{pinBox(gPin,setGPin,"______",gUnlock,true)}
-        <button type="button" className="v3-btn v3-primary tvp-gbtn" style={{background:th.ac}} disabled={gPin.length!==6||gBusy} onClick={gUnlock}>{X("unlock")}</button>
+        <button type="button" className="v3-btn v3-primary tvp-gbtn" style={{background:th.ac,color:th.ti||"#fff"}} disabled={gPin.length!==6||gBusy} onClick={gUnlock}>{X("unlock")}</button>
         {gM.id===team.creatorId?<small className="tvp-gnote" style={{color:th.t3}}>{V("gtCreatorForgot")}</small>
           :<button type="button" className="tvp-glink" style={{color:th.ac}} onClick={()=>forgotPin(gM.id)}>{V("gtForgot")}</button>}
       </div>}
@@ -1719,18 +1738,18 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         <small className="tvp-gnote" style={{color:th.t2}}>{gM.resetPending?V("gtCodeHelp"):V("gtSetPin",{n:gM.name||""})}</small>
         {gM.resetPending&&<input value={gCode} onChange={e=>{setGCode(e.target.value.replace(/\D/g,"").slice(0,8));setGErr("");}} inputMode="numeric" autoComplete="one-time-code" placeholder={V("gtCode")} aria-label={V("gtCode")} className="tvp-gin" style={{borderColor:gCode.length===8?"#10B981":th.gbd,background:th.sf,color:th.tx,letterSpacing:3,textAlign:"center"}} autoFocus/>}
         {pinBox(gPin,setGPin,V("pinReqAll"),()=>{},!gM.resetPending)}{pinBox(gPin2,setGPin2,X("confirmPin"),gSetPin,false)}
-        {gPin2.length===6&&gPin!==gPin2&&<small className="tvp-gerr">{X("pinMismatch")}</small>}
-        <button type="button" className="v3-btn v3-primary tvp-gbtn" style={{background:th.ac}} disabled={gPin.length!==6||gPin!==gPin2||gBusy||(!!gM.resetPending&&gCode.length!==8)} onClick={gSetPin}>{X("savePin")}</button>
+        {gPin2.length===6&&gPin!==gPin2&&<small className="tvp-gerr" role="alert" style={theme==="dark"?{color:"#FCA5A5"}:undefined}>{X("pinMismatch")}</small>}
+        <button type="button" className="v3-btn v3-primary tvp-gbtn" style={{background:th.ac,color:th.ti||"#fff"}} disabled={gPin.length!==6||gPin!==gPin2||gBusy||(!!gM.resetPending&&gCode.length!==8)} onClick={gSetPin}>{X("savePin")}</button>
       </div>}
       {gStep==="new"&&<div className="tvp-gate-form">
         <input value={gName} onChange={e=>setGName(e.target.value)} maxLength={30} placeholder={V("gtName")} aria-label={V("gtName")} className="tvp-gin" style={{borderColor:th.gbd,background:th.sf,color:th.tx}} autoFocus/>
         <CountrySelect value={gCo} onChange={setGCo} th={th} t={t}/>
         {pinBox(gPin,setGPin,V("pinReqAll"),()=>{},false)}{pinBox(gPin2,setGPin2,X("confirmPin"),gJoin,false)}
-        {gPin2.length===6&&gPin!==gPin2&&<small className="tvp-gerr">{X("pinMismatch")}</small>}
+        {gPin2.length===6&&gPin!==gPin2&&<small className="tvp-gerr" role="alert" style={theme==="dark"?{color:"#FCA5A5"}:undefined}>{X("pinMismatch")}</small>}
         <small className="tvp-gnote" style={{color:th.t3}}>{V("gtPinWhy")}</small>
-        <button type="button" className="v3-btn v3-primary tvp-gbtn" style={{background:th.ac}} disabled={!gName.trim()||!gCo||gPin.length!==6||gPin!==gPin2||gBusy} onClick={gJoin}>{V("gtJoin")}</button>
+        <button type="button" className="v3-btn v3-primary tvp-gbtn" style={{background:th.ac,color:th.ti||"#fff"}} disabled={!gName.trim()||!gCo||gPin.length!==6||gPin!==gPin2||gBusy} onClick={gJoin}>{V("gtJoin")}</button>
       </div>}
-      {gErr&&<div className="tvp-gerr" role="status">{gErr}</div>}
+      {gErr&&<div className="tvp-gerr" role="alert" style={theme==="dark"?{color:"#FCA5A5"}:undefined}>{gErr}</div>}
       <div className="tvp-gate-foot">
         {gStep!=="choose"?<button type="button" className="tvp-glink" style={{color:th.t2}} onClick={()=>{gReset();setGStep(gStep==="pin"||gStep==="setpin"?"pick":"choose");}}>← {V("gtBack")}</button>:<span/>}
         <button type="button" className="tvp-glink" style={{color:th.t3}} onClick={onGoHome}>{X("home")}</button>
@@ -1740,26 +1759,26 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
 
   return <div style={{minHeight:"100vh",background:th.bg,fontFamily:F,display:"flex",flexDirection:"column"}}>
     <header className="tvp-hdr" style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"0 12px",height:56,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0,flex:mob?"1 1 0":"0 1 auto"}}>
         <button onClick={onGoHome} aria-label="Home" style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><Ic n="home" s={18} c={th.t2}/></button>
         {mob&&<button onClick={()=>setSb(!sb)} aria-label="Team members" aria-expanded={sb} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><Ic n="users" s={18} c={th.t2}/></button>}
-        <div>
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <TeamLogo team={team} th={th} size={26} editable locked={locked} onChange={v=>{const nt={...team,log:addLogEntry(team,v?"Team logo updated":"Team logo removed")};if(v)nt.logo=v;else delete nt.logo;updateWithHistory(nt);}}/>
-            <h1 style={{margin:0,fontSize:15,fontWeight:700,color:th.tx,letterSpacing:-.3,viewTransitionName:"tvp-team-name"}}>{team.name}</h1>
+        <div style={{minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0}}>
+            <TeamLogo team={team} th={th} size={26} editable locked={locked} compact={mob} onChange={v=>{const nt={...team,log:addLogEntry(team,v?"Team logo updated":"Team logo removed")};if(v)nt.logo=v;else delete nt.logo;updateWithHistory(nt);}}/>
+            <h1 title={team.name} style={{margin:0,fontSize:15,fontWeight:700,color:th.tx,letterSpacing:-.3,viewTransitionName:"tvp-team-name",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",minWidth:0,maxWidth:mob?"100%":"40vw"}}>{team.name}</h1>
             {locked&&<Ic n="lock" s={13} c={th.wm}/>}
           </div>
           <div style={{fontSize:10,color:th.t3,display:"flex",alignItems:"center",gap:4}}><YearNav yr={yr} onYear={onYear} th={th} small/><span>· {team.members.length} {team.members.length!==1?t.mbs:t.mb}</span></div>
         </div>
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:3,minWidth:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+      <div style={{display:"flex",alignItems:"center",gap:3,minWidth:0,flexWrap:"wrap",justifyContent:"flex-end",...(mob?{flexShrink:0,maxWidth:108,rowGap:1}:{})}}>
         {!mob&&<ThPk theme={theme} set={setTheme} th={th}/>}
         {!mob&&<Fragment><svg width="22" height="22" viewBox="0 0 22 22" style={{flexShrink:0}}><circle cx="11" cy="11" r="9" fill="none" stroke={th.gbd} strokeWidth="2.5"/><circle cx="11" cy="11" r="9" fill="none" stroke={th.ac} strokeWidth="2.5" strokeDasharray={Math.round((new Date()-new Date(yr,0,1))/(365.25*864e5)*56.5)+" 56.5"} strokeLinecap="round" style={{transform:"rotate(-90deg)",transformOrigin:"11px 11px"}}/></svg><div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 7px",background:th.al,borderRadius:16,cursor:"pointer",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} onClick={()=>{try{navigator.clipboard.writeText(team.id)}catch(e){};flash(t.cp);}}><Ic n="copy" s={10} c={th.ac}/><span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{team.id.slice(0,8)}</span></div></Fragment>}
         <LangDrop lang={lang} set={setLang} th={th}/>
         <button onClick={()=>setSettings(!settings)} aria-label="Settings" aria-expanded={settings} title="Settings" style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
         {!mob&&<div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 8px",background:"rgba(139,92,246,.1)",borderRadius:10}}><span style={{width:6,height:6,borderRadius:"50%",background:"#22C55E",animation:"pulse 2s 3"}}></span><span style={{fontSize:9,fontWeight:600,color:"#6D28D9",fontFamily:FM}}>{t.live||"Live"}</span></div>}
         {false&&<button type="button" className="v3-inbox-btn" onClick={()=>setShowInbox(true)} aria-label={V("inboxBadge",{n:pendN})} title={V("inbox")} style={{color:th.ac,background:th.al,borderColor:th.gbd||th.bd}}>✓{!mob&&<span>{V("inbox")}</span>}{pendN>0&&<b>{pendN}</b>}</button>}
-        <Btn th={th} v="secondary" sz="sm" icon="share" onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
+        <Btn th={th} v="secondary" sz="sm" icon="share" label={mob?t.sh:undefined} onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
         <CoffeeButton lang={lang} iconOnly={mob}/>
 
       </div>
@@ -1812,7 +1831,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           <button type="button" className="tvp-ico tvp-ico-hol" onClick={function(){setHolBr(true);if(mob)setSb(false);}} title={t.ch} aria-label={t.ch}><Ic n="flag" s={15} c="#EA580C"/></button>
         </div>
         {(unlockedId&&!ownerMode&&team.members.some(x=>x.id===unlockedId))||ownerMode?<div className="tvp-me" style={{borderColor:th.gbd,background:th.sf,color:th.t2}}><span>{ownerMode?V("gtOwnerMode"):V("gtYou",{n:(team.members.find(x=>x.id===unlockedId)||{}).name||""})}</span><button type="button" onClick={signOutMe} style={{color:th.ac}}>{V("gtSwitch")}</button></div>:null}
-        <div className="tvp-side-head"><span>{t.tm}</span><span>{team.members.length}/25</span></div>
+        <div className="tvp-side-head"><span>{t.tm}</span><span>{team.members.length}/50</span></div>
         <div style={{flex:1,overflowY:"auto",padding:"2px 8px 8px",display:"flex",flexDirection:"column",gap:1}}>
           {adding&&<div style={{padding:"6px 2px",display:"flex",flexDirection:"column",gap:5,marginBottom:6}}>
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:th.al,borderRadius:8,border:`1.5px solid ${th.ac}`}}>
@@ -1824,12 +1843,12 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
               <option value="">{defaultRegionName(nc)?V("regDefault",{r:defaultRegionName(nc)}):(t.natOnly||"National only")}</option>
               {REGIONS[nc].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
             </select>}
-            <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={nPin} onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setNPin(v);}} placeholder={firstIsCreator?V("pinReq"):V("pinReqAll")} aria-label={firstIsCreator?V("pinReq"):V("pinReqAll")} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${nPin.length===6?"#10B981":th.bd}`,fontSize:13,fontFamily:F,color:th.tx,background:th.bg,outline:"none",letterSpacing:6,textAlign:"center"}}/>
+            <input type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={nPin} autoComplete="off" onChange={e=>{const v=e.target.value.replace(/\D/g,"").slice(0,6);setNPin(v);}} onKeyDown={e=>{if(e.key==="Enter"&&nn.trim()&&nc)confirmAdd();}} placeholder={firstIsCreator?V("pinReq"):V("pinReqAll")} aria-label={firstIsCreator?V("pinReq"):V("pinReqAll")} style={{width:"100%",padding:"8px 12px",borderRadius:8,border:`1px solid ${nPin.length===6?"#10B981":th.bd}`,fontSize:13,fontFamily:F,color:th.tx,background:th.bg,outline:"none",letterSpacing:6,textAlign:"center"}}/>
             {firstIsCreator&&<div style={{fontSize:11,fontWeight:600,color:th.ac,background:th.al,borderRadius:8,padding:"6px 10px",lineHeight:1.35}}>👑 {V("creatorHint")}</div>}
             {!firstIsCreator&&!team.approver&&!team.members.some(x=>x.isApprover)&&<label style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",cursor:"pointer",fontSize:11,fontWeight:600,color:th.t2}}><input type="checkbox" checked={nIsApprover} onChange={e=>setNIsApprover(e.target.checked)} style={{width:14,height:14,accentColor:th.ac,cursor:"pointer"}}/>Approver (can manage all members)</label>}
             <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc||nPin.length!==6} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>{setAdding(false);setNn("");setNc(null);setNr(null);setNPin("");setNIsApprover(false);}}>{t.can}</Btn></div>
           </div>}
-          {team.members.map((m,i)=> <MRow key={m.id} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{
+          {team.members.map((m,i)=> <MRow key={m.id} w7={!!team.w7} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{
               const dimmed=!ownerMode&&!!unlockedId&&m.id!==unlockedId;
               if(dimmed){if(canEditRoles){setAId(m.id===aId?unlockedId:m.id);}else switchTo(m);return;}
               if(m.id===aId){setAId(null);return;}
@@ -1849,13 +1868,13 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
             {!locked&&<button onClick={()=>{setSb(true);setTimeout(startAdd,150);}} style={{padding:"6px 12px",borderRadius:10,border:"none",background:`linear-gradient(135deg,${th.ac},#6366F1)`,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(124,58,237,0.25)",whiteSpace:"nowrap"}}><Ic n="plus" s={12} c="#fff"/>{t.am}</button>}
             <button onClick={()=>setHolBr(true)} style={{padding:"6px 12px",borderRadius:10,border:"none",background:"linear-gradient(135deg, #F59E0B, #EF4444)",cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:700,color:"#fff",boxShadow:"0 2px 8px rgba(245,158,11,0.25)",whiteSpace:"nowrap"}}><Ic n="flag" s={12} c="#fff"/>{t.ch}</button>
-            <button onClick={()=>setSb(true)} style={{padding:"6px 10px",borderRadius:10,border:`1px solid ${th.bd}`,background:th.sf,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:600,color:th.t2,whiteSpace:"nowrap"}}><Ic n="users" s={12} c={th.t2}/>{team.members.length}/25</button>
+            <button onClick={()=>setSb(true)} style={{padding:"6px 10px",borderRadius:10,border:`1px solid ${th.bd}`,background:th.sf,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:600,color:th.t2,whiteSpace:"nowrap"}}><Ic n="users" s={12} c={th.t2}/>{team.members.length}/50</button>
           </div>
           {team.members.length>0&&<div style={{display:"flex",gap:4,overflowX:"auto",paddingBottom:2}}>
             {team.members.map((m,i)=>{const active=m.id===aId;return <button key={m.id} onClick={()=>setAId(active?null:m.id)} style={{padding:"4px 10px",borderRadius:20,border:active?`2px solid ${MC[i%MC.length].d}`:`1px solid ${th.bd}`,background:active?MC[i%MC.length].d+"18":th.sf,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontFamily:F,fontSize:11,fontWeight:active?700:500,color:active?MC[i%MC.length].d:th.t2,whiteSpace:"nowrap",flexShrink:0}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:MC[i%MC.length].d,flexShrink:0}}/>
               {m.name}
-              {(m.days||[]).length>0&&<span style={{fontSize:9,fontWeight:700,color:active?MC[i%MC.length].d:th.t3,fontFamily:FM}}>{(m.days||[]).length}d</span>}
+              {(m.days||[]).length>0&&<span style={{fontSize:9,fontWeight:700,color:active?MC[i%MC.length].d:th.t3,fontFamily:FM}}>{fmtDays(usedOf(m))}d</span>}
             </button>;})}
           </div>}
         </div>}
@@ -1951,7 +1970,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
             const dates=Object.keys(allH).sort();
             return <div style={{display:"flex",flexDirection:"column",gap:6}}>{dates.map(d=>{const p=pk(d);const dow=new Date(p.y,p.m,p.d).toLocaleDateString(dateLocale(),{weekday:"short"});const affected=team.members.filter(m=>(allH[d]||[]).includes(m.country));
               return <div key={d} style={{background:th.sf,borderRadius:6,border:`1px solid ${th.bd}`,padding:"8px 12px",display:"flex",alignItems:"center",gap:10}}>
-                <div style={{minWidth:36,textAlign:"center"}}><div style={{fontSize:15,fontWeight:700,color:th.ht,fontFamily:F}}>{p.d}</div><div style={{fontSize:9,color:th.t3,fontWeight:600}}>{t.M[p.m].slice(0,3)}</div></div>
+                <div style={{minWidth:36,textAlign:"center"}}><div style={{fontSize:15,fontWeight:700,color:th.ht,fontFamily:F}}>{p.d}</div><div style={{fontSize:9,color:th.t3,fontWeight:600}}>{monthShort(p.m)}</div></div>
                 <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,color:th.tx}}>{(()=>{const info=holInfo(d);if(!info.length)return holName(d);const nm=g=>(lang==="en"&&g.en)?g.en:g.local;const many=new Set(info.map(g=>g.cc)).size>1||countries.size>1;return info.map(g=>(many?g.cc+" ":"")+nm(g)).join(" · ");})()}</div><div style={{fontSize:10,color:th.t3}}>{dow} — {affected.map(m=>m.name).join(", ")}</div></div>
               </div>;})}</div>;
           })()}
@@ -1970,13 +1989,15 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     {mob&&sb&&<div onClick={()=>setSb(false)} style={{position:"fixed",inset:0,top:56,background:"rgba(0,0,0,.3)",zIndex:80}}/>}
     {showSh&&<ShareModal teamId={team.id} teamName={team.name} onClose={()=>setShowSh(false)} th={th} t={t}/>}
     
-    {mob&&<div className="tvp-botnav" style={{background:th.gbg,borderTop:"1px solid "+th.gbd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
-      {views.map(function(v){return <button key={v.k} onClick={function(){if(v.k===view)return;withTransition(function(){flushSync(function(){setView(v.k);});});}} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 8px",minWidth:48}}>
+    {mob&&<nav className="tvp-botnav" style={{background:th.gbg,borderTop:"1px solid "+th.gbd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
+      <div className={"tvp-botnav-scroll"+(botMore?" more":"")} ref={botRef} onScroll={botCheck}>
+      {views.map(function(v){return <button key={v.k} onClick={function(){if(v.k===view)return;withTransition(function(){flushSync(function(){setView(v.k);});});}} aria-current={v.k===view?"page":undefined} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 8px",flex:"1 0 auto",minWidth:56,scrollSnapAlign:"center"}}>
         <Ic n={v.i} s={18} c={v.k===view?th.ac:th.t3}/>
-        <span style={{fontSize:9,fontWeight:v.k===view?700:500,color:v.k===view?th.ac:th.t3,fontFamily:F}}>{v.l}</span>
+        <span style={{fontSize:10,fontWeight:v.k===view?700:500,color:v.k===view?th.ac:th.t3,fontFamily:F,textAlign:"center",lineHeight:1.15,whiteSpace:"nowrap"}}>{v.l}</span>
       </button>;})}
-      {canApprove&&<button type="button" onClick={function(){setView("approvals");}} aria-label={V("inboxBadge",{n:pendN})} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",color:view==="approvals"?"#15803D":th.t3,fontSize:9,fontWeight:800,fontFamily:F,position:"relative"}}><span style={{fontSize:15,lineHeight:1}}>✓</span>{V("inbox")}{pendN>0&&<span style={{position:"absolute",top:0,right:2,minWidth:15,height:15,borderRadius:99,background:"#DC2626",color:"#fff",fontSize:9,display:"grid",placeItems:"center",padding:"0 3px"}}>{pendN}</span>}</button>}
-    </div>}
+      </div>
+      {canApprove&&<button type="button" onClick={function(){setView("approvals");}} aria-label={V("inboxBadge",{n:pendN})} aria-current={view==="approvals"?"page":undefined} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",borderInlineStart:"1px solid "+th.gbd,cursor:"pointer",padding:"4px 10px",flex:"0 0 auto",whiteSpace:"nowrap",color:view==="approvals"?"#15803D":th.t3,fontSize:10,fontWeight:800,fontFamily:F,position:"relative"}}><span style={{fontSize:15,lineHeight:1}}>✓</span>{V("inbox")}{pendN>0&&<span style={{position:"absolute",top:0,right:2,minWidth:15,height:15,borderRadius:99,background:"#DC2626",color:"#fff",fontSize:9,display:"grid",placeItems:"center",padding:"0 3px"}}>{pendN}</span>}</button>}
+    </nav>}
 
     
     {commentDay&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setCommentDay(null)}>
@@ -1984,7 +2005,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         <TrapScope onClose={()=>setCommentDay(null)}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <h3 style={{margin:0,fontSize:15,fontWeight:700,color:th.tx,fontFamily:F}}>{commentDay}</h3>
-          <button onClick={()=>setCommentDay(null)} style={{background:"none",border:"none",cursor:"pointer"}}><Ic n="x" s={16} c={th.t2}/></button>
+          <button onClick={()=>setCommentDay(null)} aria-label={X("close")} title={X("close")} style={{background:"none",border:"none",cursor:"pointer"}}><Ic n="x" s={16} c={th.t2}/></button>
         </div>
         {(team.comments&&team.comments[commentDay]||[]).map(function(cm,ci){return <div key={ci} style={{padding:"6px 8px",background:th.sh,borderRadius:8,marginBottom:4,fontSize:12}}>
           <div style={{fontWeight:600,color:th.tx}}>{cm.by} <span style={{fontWeight:400,color:th.t3,fontSize:10}}>{new Date(cm.at).toLocaleString()}</span></div>
@@ -2004,14 +2025,14 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     {showOptimizer&&(()=>{const mem=team.members.find(m=>m.id===showOptimizer);if(!mem)return null;
       // Every 1–3 working-day gap that joins this person's days off (weekends, own national + regional holidays, booked days)
       const hs=[yr-1,yr,yr+1].filter(y=>y>=YEAR_MIN&&y<=YEAR_MAX).flatMap(y=>mem.country?getAllHolidays(mem,y):[]);
-      const loc=lang==="en"?"en-GB":lang;const fd=k=>{const p2=pk(k);try{return new Date(p2.y,p2.m,p2.d,12).toLocaleDateString(loc,{weekday:"short",day:"numeric",month:"short"});}catch(e){return k;}};
+      const loc=dateLocale(lang);const fd=k=>{const p2=pk(k);try{return new Date(p2.y,p2.m,p2.d,12).toLocaleDateString(loc,{weekday:"short",day:"numeric",month:"short"});}catch(e){return k;}};
       const hn=k=>{const rows=hNames[mem.country]&&hNames[mem.country].h&&hNames[mem.country].h[k];return rows&&rows[0]?(rows[0][0]||rows[0][1]):holName(k);};
       const suggestions=mem.country?findBridges({year:yr,holidays:hs,booked:mem.days||[],sevenDay:!!team.w7,today:yr===CY?dk(CY,CM,CD):"",limit:10}).map(b=>({take:b.take,off:b.cost,gain:b.length,label:(b.take.length===1?fd(b.take[0]):fd(b.take[0])+" – "+fd(b.take[b.take.length-1]))+" → "+fd(b.from)+" – "+fd(b.to)+" ("+[...new Set(b.holidays.map(hn))].join(", ")+")"})):[];
       return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowOptimizer(null)}>
         <div role="dialog" aria-modal="true" aria-label={t.bestDays||"Best days"} onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:480,width:"100%",maxHeight:"70vh",display:"flex",flexDirection:"column",boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}><TrapScope onClose={()=>setShowOptimizer(null)}/>
           <div style={{padding:"16px 20px",borderBottom:`1px solid ${th.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx,fontFamily:F}}>{t.bestDays} {mem.name}</h3>
-            <button onClick={()=>setShowOptimizer(null)} style={{background:th.sh,border:"none",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
+            <button onClick={()=>setShowOptimizer(null)} aria-label={X("close")} title={X("close")} style={{background:th.sh,border:"none",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
           </div>
           <div style={{flex:1,overflowY:"auto",padding:"12px 16px"}}>
             {suggestions.length===0?<div style={{textAlign:"center",padding:30,color:th.t3,fontSize:13}}>{X("bridgeNone",{y:yr})}</div>:
@@ -2044,7 +2065,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       </div>
     </div>}
     {showCSVImport&&(()=>{
-      const plan=planImport(csvText,team.members,EU_C,{sevenDay:!!team.w7,max:50});
+      const plan=planImport(csvText,team.members,EU_C,{sevenDay:!!team.w7,max:50,holidaysOf:(m,y)=>getAllHolidays(m,y)});
+      // The period each line was understood as, written out (5 Jul 2027 – 9 Jul 2027): a day/month mix-up shows before anything is saved
+      const dShow=k=>{try{const p=String(k).split("-");return new Date(+p[0],+p[1]-1,+p[2],12).toLocaleDateString(dateLocale(),{day:"numeric",month:"short",year:"numeric"});}catch(e){return k;}};
       const nUpd=Object.keys(plan.updates).length;
       const apply=()=>{
         if(locked){flash(t.locked);return;}
@@ -2071,7 +2094,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           <div style={{padding:"8px 12px",fontSize:12,fontWeight:700,color:th.tx,background:th.sh}}>{X("preview")} · {plan.adds.length} {X("nNew")} · {nUpd} {X("nUpdated")}{plan.skipped?` · ${plan.skipped} ${X("nSkipped")}`:""}</div>
           <div style={{maxHeight:220,overflowY:"auto"}}>
             {plan.rows.slice(0,200).map((r,i)=>{const b=badge(r.action);return <div key={i} style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 44px 70px 58px",gap:8,alignItems:"center",padding:"6px 12px",borderTop:i?`1px solid ${th.bl}`:"none",fontSize:12,color:th.tx}}>
-              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.note||""}>{r.name}{r.note&&<span style={{display:"block",fontSize:11,color:"#B45309"}}>{r.note}</span>}</span>
+              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.note||""}>{r.name}{r.from&&<span style={{display:"block",fontSize:11,color:th.t3,overflow:"hidden",textOverflow:"ellipsis"}}>{dShow(r.from)}{r.to&&r.to!==r.from?" – "+dShow(r.to):""}</span>}{r.note&&<span style={{display:"block",fontSize:11,color:"#B45309"}}>{r.note}</span>}</span>
               <span style={{fontFamily:FM,fontWeight:700,color:th.t2}}>{r.country||"—"}</span>
               <span style={{color:th.t2}}>{r.days.length?`${r.days.length} ${r.days.length!==1?X("days"):X("day")}`:"—"}</span>
               <span style={{fontSize:11,fontWeight:700,padding:"2px 6px",borderRadius:6,background:b.bg,color:b.c,textAlign:"center"}}>{b.l}</span>
@@ -2089,12 +2112,12 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     {pinModalEl}
     {setPinModalEl}
     {gateEl}
-    {resetCode&&<div className="tvp-gate" role="dialog" aria-modal="true" aria-labelledby="tvp-code-t"><div className="tvp-gate-card" style={{background:th.bg,color:th.tx}}>
+    {resetCode&&<div className="tvp-gate" role="dialog" aria-modal="true" aria-labelledby="tvp-code-t"><TrapScope onClose={null}/><div className="tvp-gate-card" style={{background:th.bg,color:th.tx}}>
       <h2 id="tvp-code-t" style={{margin:"0 0 6px",fontSize:18}}>🔑 {V("prCodeT",{n:resetCode.n})}</h2>
       <div className="tvp-code" aria-label={resetCode.c.split("").join(" ")}>{resetCode.c.slice(0,4)} {resetCode.c.slice(4)}</div>
       <p className="tvp-gnote" style={{color:th.t2}}>{V("prCodeD",{n:resetCode.n})}</p>
       <div className="tvp-gate-foot"><button type="button" className="tvp-glink" style={{color:th.ac}} onClick={()=>{try{navigator.clipboard.writeText(resetCode.c);flash(t.cp);}catch(e){}}} aria-label={resetCode.c} title={resetCode.c}><Ic n="copy" s={16} c={th.ac}/></button>
-      <button type="button" className="v3-btn v3-primary" style={{background:th.ac}} autoFocus onClick={()=>setResetCode(null)}>{V("prCodeOk")}</button></div>
+      <button type="button" className="v3-btn v3-primary" style={{background:th.ac,color:th.ti||"#fff"}} autoFocus onClick={()=>setResetCode(null)}>{V("prCodeOk")}</button></div>
     </div></div>}
   </div>;
 }

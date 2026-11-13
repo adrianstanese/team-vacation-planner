@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 649,
+ "strings": 651,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -811,7 +811,7 @@
      "max": 11
     },
     "nonWorking": {
-     "en": "non-working in {n} countries",
+     "en": "Countries with a public holiday: {n}",
      "ph": [
       "{n}"
      ]
@@ -1287,6 +1287,13 @@
    "where": "Assorted planner labels: PIN dialogs, import, groups, half days, cookie notice, exports.",
    "file": "lib/extraText.ts",
    "strings": {
+    "loadErr": {
+     "en": "Couldn't load the team. Check your connection and try again."
+    },
+    "noResults": {
+     "en": "No results",
+     "max": 20
+    },
     "nNew": {
      "en": "new",
      "max": 10,

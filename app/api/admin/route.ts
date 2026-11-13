@@ -6,11 +6,12 @@ import {
   makeSession, purgeOld, sameOrigin, tooManyAttempts,
 } from "@/lib/adminAuth";
 import type { Sql } from "@/lib/db";
+import { createHash, randomInt } from "node:crypto";
 import { newOwnerKey } from "@/lib/teamAuth";
 
 export const dynamic = "force-dynamic";
 
-type Member = { id: string; name?: string; pinHash?: string; days?: unknown[]; [k: string]: unknown };
+type Member = { id: string; name?: string; pinHash?: string; resetHash?: string; resetExp?: number; days?: unknown[]; [k: string]: unknown };
 type Team = { id?: string; name?: string; year?: number; locked?: boolean; lockY?: Record<string, boolean>; approver?: string | null; members?: Member[]; log?: { t: string; a: string }[]; [k: string]: unknown };
 
 const ID = /^[a-z0-9]{1,64}$/i;
@@ -94,8 +95,8 @@ export async function GET(req: NextRequest) {
     const rows = await sql`SELECT data, updated_at, expires_at FROM teams WHERE id = ${id}`;
     if (!rows.length) return json({ error: "Team not found" }, 404);
     const data = rows[0].data as Team;
-    // Never send PIN hashes to the browser, only whether a PIN is set
-    const members = (Array.isArray(data.members) ? data.members : []).filter(m => m && typeof m === "object").map(m => { const { pinHash, ...rest } = m; return { ...rest, hasPin: !!pinHash }; });
+    // Never send PIN hashes or setup-code hashes to the browser, only whether a PIN is set or a reset is waiting
+    const members = (Array.isArray(data.members) ? data.members : []).filter(m => m && typeof m === "object").map(m => { const { pinHash, resetHash, resetExp, ...rest } = m; return { ...rest, hasPin: !!pinHash, resetPending: !pinHash && !!resetHash && typeof resetExp === "number" && resetExp > Date.now() }; });
     const { ownerHash, ...rest } = data as Team & { ownerHash?: string };
     return json({ team: { ...rest, hasOwner: !!ownerHash, members }, updated_at: rows[0].updated_at, expires_at: rows[0].expires_at });
   }
@@ -108,7 +109,7 @@ export async function GET(req: NextRequest) {
     await logAction(sql, "export", id);
     const data = { ...(rows[0].data as Team) } as Team & { ownerHash?: string };
     delete data.ownerHash;
-    data.members = (data.members || []).filter(Boolean).map(m => { const c = { ...m }; delete c.pinHash; return c; });
+    data.members = (data.members || []).filter(Boolean).map(m => { const c = { ...m }; delete c.pinHash; delete c.resetHash; delete c.resetExp; return c; });
     return new NextResponse(JSON.stringify(data, null, 2), {
       headers: { ...NO_STORE, "Content-Type": "application/json", "Content-Disposition": `attachment; filename="team-${id}.json"` },
     });
@@ -174,13 +175,18 @@ export async function POST(req: NextRequest) {
   if (action === "resetPin" || action === "removeMember") {
     if (!ID.test(memberId)) return json({ error: "Bad member" }, 400);
     let who = "";
+    // One-time setup code (24 h), as in the approver's reset: without it anyone holding the team link could set
+    // the new PIN first and take the member over
+    const code = String(randomInt(0, 100000000)).padStart(8, "0");
     const r = await updateTeam(sql, id, t => {
       const m = (t.members || []).find(x => x.id === memberId);
       if (!m) return null;
       who = m.name || "member";
       if (action === "resetPin") {
-        if (!m.pinHash) return null;
+        if (!m.pinHash && !m.resetHash) return null;
         delete m.pinHash;
+        m.resetHash = createHash("sha256").update(code).digest("hex");
+        m.resetExp = Date.now() + 864e5;
         t.log = addLog(t, `PIN reset by the site admin for ${who}`);
       } else {
         t.members = (t.members || []).filter(x => x.id !== memberId);
@@ -197,7 +203,7 @@ export async function POST(req: NextRequest) {
           WHERE id = ${id} AND data->'members' @> ${JSON.stringify([{ id: memberId }])}::jsonb`;
       } catch { /* table may not exist yet */ }
     }
-    return json(r, r.ok ? 200 : 409);
+    return json(r.ok && action === "resetPin" ? { ...r, code } : r, r.ok ? 200 : 409);
   }
 
   if (action === "setLock") {
@@ -258,10 +264,11 @@ export async function POST(req: NextRequest) {
     if (live.length) return json({ ok: false, error: "A team with this id exists already" }, 409);
     const [last] = await sql`SELECT tid FROM team_trash WHERE id = ${id} ORDER BY deleted_at DESC LIMIT 1`;
     if (!last) return json({ ok: false, error: "Not in trash" }, 404);
-    const back = await sql`WITH gone AS (DELETE FROM team_trash WHERE id = ${id} RETURNING tid, id, data, updated_at, expires_at)
-      INSERT INTO teams (id, data, updated_at, expires_at)
-      SELECT id, data, now(), GREATEST(COALESCE(expires_at, now()), now() + interval '30 days') FROM gone WHERE tid = ${last.tid}
-      ON CONFLICT (id) DO NOTHING RETURNING id`;
+    const back = await sql`WITH back AS (
+        INSERT INTO teams (id, data, updated_at, expires_at)
+        SELECT id, data, now(), GREATEST(COALESCE(expires_at, now()), now() + interval '30 days') FROM team_trash WHERE tid = ${last.tid}
+        ON CONFLICT (id) DO NOTHING RETURNING id)
+      DELETE FROM team_trash WHERE id = ${id} AND EXISTS (SELECT 1 FROM back) RETURNING tid`;
     if (!back.length) return json({ ok: false, error: "Restore failed, try again" }, 409);
     await logAction(sql, "restore", id);
     return json({ ok: true });

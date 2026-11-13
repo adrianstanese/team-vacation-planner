@@ -21,7 +21,7 @@ export default function TodayTiles({ team, yr, th, colorOf, holOf, holInfo, acti
   const today = keyOf(new Date());
   if (!today.startsWith(yr + "-")) return null;
   const out = outOn(team, today);
-  const back = new Map(backSoon(team, today).map(b => [b.name, b.back]));
+  const back = new Map(backSoon(team, today, holOf).map(b => [b.id, b.back]));
   // Next public holiday for anyone in the team (from tomorrow if today is one too, today counts)
   let nextHol: { k: string; info: HolInfo } | null = null;
   const sets = team.members.filter(m => m.country).map(m => holOf(m));
@@ -40,7 +40,7 @@ export default function TodayTiles({ team, yr, th, colorOf, holOf, holInfo, acti
       <h3 style={{ color: th.t3 }}>{V("tdOut")}</h3>
       {out.length === 0 ? <p className="v3-t-big" style={{ color: th.tx }}>🙌 <span>{V("tdNone")}</span></p> : <>
         <div className="v3-faces">{out.slice(0, 5).map(m => { const c = colorOf(m.id); return <button type="button" key={m.id} className="v3-face" title={m.name} onClick={() => onPick(m.id)} style={{ background: c.b, color: c.t, borderColor: th.sf }}>{(m.name || "?").slice(0, 1).toUpperCase()}</button>; })}{out.length > 5 && <span className="v3-face" style={{ background: th.al, color: th.ac, borderColor: th.sf }}>+{out.length - 5}</span>}</div>
-        <ul className="v3-t-list">{out.slice(0, 3).map(m => <li key={m.id} style={{ color: th.tx }}><b>{m.name}</b> <span style={{ color: th.t3 }}>{V("tdBack", { d: day(back.get(m.name || "?") || today) })}</span></li>)}</ul>
+        <ul className="v3-t-list">{out.slice(0, 3).map(m => <li key={m.id} style={{ color: th.tx }}><b>{m.name}</b> <span style={{ color: th.t3 }}>{V("tdBack", { d: day(back.get(m.id) || today) })}</span></li>)}</ul>
       </>}
     </div>
     <div className="v3-tile" style={tile}>

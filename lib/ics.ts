@@ -26,6 +26,10 @@ function fold(line: string): string {
   return out.join("\r\n ");
 }
 
+// For the calendar files built in the browser (downloads): escaped text and a UTC time stamp
+export const icsText = (s: unknown): string => esc(String(s ?? ""));
+export const icsStamp = (now = new Date()): string => now.toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+
 const compact = (d: string) => d.replace(/-/g, "");
 function nextDay(d: string): string {
   const [y, m, dd] = d.split("-").map(Number);

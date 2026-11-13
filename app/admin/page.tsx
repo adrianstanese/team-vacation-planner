@@ -8,7 +8,7 @@ const C = { bg: "#F4F2FB", card: "#FFFFFF", tx: "#1E1B4B", t2: "#4B5563", t3: "#
 
 type Stats = { teams: number; active: number; updated7: number; updated30: number; members: number; empty: number; trash: number; visits: number; countries: { cc: string; n: number }[]; months: { month: string; n: number }[] };
 type TeamRow = { id: string; name: string; year: string; created: string; updated_at: string; expires_at: string; locked: boolean; approver: string | null; members: number; pins: number; days: number };
-type Member = { id: string; name?: string; country?: string; region?: string; days?: string[]; hasPin?: boolean; pto?: number; approved?: boolean };
+type Member = { id: string; name?: string; country?: string; region?: string; days?: string[]; hasPin?: boolean; resetPending?: boolean; pto?: number; approved?: boolean };
 type TeamDetail = { team: { id?: string; name?: string; year?: number; locked?: boolean; hasOwner?: boolean; lockY?: Record<string, boolean>; approver?: string | null; members: Member[]; createdAt?: string; log?: { t: string; a: string }[] }; updated_at: string; expires_at: string };
 
 const fmt = (s?: string | null) => { if (!s) return "—"; const d = new Date(s); return isNaN(+d) ? "—" : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); };
@@ -87,7 +87,12 @@ function Detail({ id, onClose, onChanged, flash }: { id: string; onClose: () => 
   const act = async (payload: Record<string, unknown>, done: string, confirmText?: string) => {
     if (confirmText && !window.confirm(confirmText)) return;
     const r = await api("/api/admin", { op: "action", id, ...payload });
-    if (r.status === 200) { flash(done); if (payload.action === "trash") { onChanged(); onClose(); return; } setVer(v => v + 1); onChanged(); }
+    if (r.status === 200) {
+      flash(done);
+      // A PIN reset comes with a one-time setup code: only the person who gets it from you can set the new PIN
+      if (payload.action === "resetPin" && r.data.code) window.alert(`${done}.\n\nOne-time setup code: ${r.data.code}\n\nGive it to them (valid for 24 hours). They need it to set a new PIN; nobody else with the team link can.`);
+      if (payload.action === "trash") { onChanged(); onClose(); return; } setVer(v => v + 1); onChanged();
+    }
     else flash(String(r.data.error || "That did not work."));
   };
   if (err) return <Panel onClose={onClose}><div style={{ color: C.red, fontSize: 14 }}>{err}</div></Panel>;
@@ -133,7 +138,7 @@ function Detail({ id, onClose, onChanged, flash }: { id: string; onClose: () => 
           <div style={{ fontSize: 11, color: C.t3 }}>{m.country || "—"}{m.region ? "·" + m.region : ""} · {(m.days || []).length} days{m.pto ? ` · allowance ${m.pto}` : ""}</div>
         </div>
         <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 8, background: m.hasPin ? C.greenBg : "#F3F4F6", color: m.hasPin ? C.green : C.t3 }}>{m.hasPin ? "PIN set" : "No PIN"}</span>
-        <Btn small disabled={!m.hasPin} onClick={() => act({ action: "resetPin", memberId: m.id }, `PIN reset for ${m.name}`, `Reset the PIN for ${m.name}? They will be asked to set a new one the next time they edit.`)}>Reset PIN</Btn>
+        <Btn small disabled={!m.hasPin && !m.resetPending} onClick={() => act({ action: "resetPin", memberId: m.id }, `PIN reset for ${m.name}`, `Reset the PIN for ${m.name}? You will get a one-time setup code to pass on; they need it to set a new PIN.`)}>Reset PIN</Btn>
         <Btn small tone="danger" onClick={() => act({ action: "removeMember", memberId: m.id }, `${m.name} removed`, `Remove ${m.name} and all their days from "${t.name}"? This cannot be undone.`)}>Remove</Btn>
       </div>)}
     </div>
