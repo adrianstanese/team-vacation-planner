@@ -163,7 +163,7 @@ export default function ApprovalsView({ team, yr, threshold, th, colorOf, onAppr
               <div className="v3-big" style={{ color: c.d }}>{fmtN(cur.days)}<small style={{ color: th.t3 }}>{cur.days === 1 ? V("dayLbl") : V("daysLbl")}</small></div>
             </div>
             {(() => {
-              const allow = m.pto ? m.pto + (m.carry || 0) : 0, usedN = used(m, yr), left = allow - usedN;
+              const allow = (m.pto || 0) + (m.carry || 0), usedN = used(m, yr), left = allow - usedN;
               const hol = holOf ? holOf(m) : new Set<string>();
               const rs = ranges((m.days || []).filter(k => k.startsWith(yr + "-")));
               const isWork = (k: string) => { const g = dateOf(k).getDay(); return (sevenDay || (g !== 0 && g !== 6)) && !hol.has(k); };

@@ -180,6 +180,36 @@ export function nextClash(team: TeamView, from: string, threshold: number, horiz
   return null;
 }
 // Who comes back next: the earliest end of a leave range that is running today
+// Days a person brings into a year from the one before.
+//   Their own figure for that year (carryY[year], typed in the member card) wins: the planner cannot know what was
+//   left before the team existed, or days taken outside it.
+//   Otherwise the planner's own count: what was left at the end of the previous year (that year's allowance, plus
+//   what that year itself brought in, minus the days booked in it), up to the team's limit.
+//   With no team limit the planner carries nothing by itself, except for a person who typed a figure for an earlier
+//   year: they keep their balance by hand, so it rolls on from year to year instead of dropping to zero.
+//   Nothing is known for the year before the team's first year.
+// `left` is what the planner saw left at the end of the previous year (null when it does not know that year).
+export type CarryMember = { days?: string[]; half?: string[]; pto?: number | null; ptoY?: Record<string, number>; carryY?: Record<string, number> };
+export function carryInfo(m: CarryMember, year: number, baseYear: number, limit: number, depth = 0): { carry: number; auto: number; manual: boolean; left: number | null } {
+  const raw = m.carryY ? m.carryY[String(year)] : undefined;
+  const typed = raw != null && Number.isFinite(Number(raw)) ? Math.max(0, Number(raw)) : null;
+  let left: number | null = null;
+  if (year - 1 >= baseYear && depth < 12) {
+    const py = year - 1;
+    const allowance = py === baseYear ? m.pto : (m.ptoY && m.ptoY[String(py)] != null ? m.ptoY[String(py)] : m.pto);
+    if (allowance) {
+      const before = carryInfo(m, py, baseYear, limit, depth + 1).carry;
+      const half = new Set(m.half || []);
+      let usedPrev = 0;
+      for (const d of m.days || []) if (typeof d === "string" && d.startsWith(py + "-")) usedPrev += half.has(d) ? 0.5 : 1;
+      left = Math.max(0, Number(allowance) + before - usedPrev);
+    }
+  }
+  const byHand = Object.keys(m.carryY || {}).some(y => Number(y) < year);
+  const auto = left == null ? 0 : limit > 0 ? Math.min(limit, left) : byHand ? left : 0;
+  return { carry: typed != null ? typed : auto, auto, manual: typed != null, left };
+}
+
 // Average coverage of a year, the one definition used on screen, in the PDF and in Excel: over the year's working
 // days (Mon–Fri, or every day in a 7-day team), the share of the team at work. At work = not on leave (a half day
 // counts as half away) and not on their own public holiday. (The reports used "1 − leave days ÷ (people × 260)",

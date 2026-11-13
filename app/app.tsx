@@ -12,7 +12,7 @@ import { X, setTextLang, textLang, dateLocale, isRtl, monthShort } from "@/lib/e
 import TrapScope from "@/components/TrapScope";
 import { LANG_META } from "@/lib/langMeta";
 import { V } from "@/lib/v3Text";
-import { nextLeaveDay } from "@/lib/v3Util";
+import { nextLeaveDay, carryInfo } from "@/lib/v3Util";
 // Loaded only when first opened (keeps the first page load small)
 // The team screen lives in app/workspace.tsx and loads on demand: team links start loading it at once,
 // the front page fetches it when the browser is idle, so opening a team stays instant.
@@ -625,8 +625,10 @@ export function teamForYear(raw,yr){
     if(Array.isArray(m.half))nm.half=m.half.filter(d=>typeof d!=="string"||d.indexOf(p)===0);
     if(yr!==base){nm.approved=!!(m.apY&&m.apY[yr]);const a=allowanceOf(m,yr,base);if(a!=null)nm.pto=a;else delete nm.pto;}
     nm._pto0=nm.pto;
-    // Carry-over: unused days of the previous year, up to the team's limit
-    if(cmax>0&&yr-1>=base){const pa=allowanceOf(m,yr-1,base);if(pa){const pp=(yr-1)+"-";const used=usedOf({days:(m.days||[]).filter(d=>typeof d==="string"&&d.indexOf(pp)===0),half:m.half});const left=Math.max(0,pa-used);if(left>0)nm.carry=Math.min(cmax,left);}}
+    // Days brought from the previous year: the person's own figure for this year, else the planner's count up to
+    // the team's limit (lib/v3Util carryInfo). `_cy` tells the member card what the planner counted; it is for the
+    // screen only and is dropped again before saving (mergeYearView).
+    const ci=carryInfo(m,yr,base,cmax);if(ci.carry>0)nm.carry=ci.carry;nm._cy={auto:ci.auto,manual:ci.manual,left:ci.left};
     return nm;
   });
   if(Array.isArray(raw.trips))v.trips=raw.trips.filter(tr=>tripInYear(tr,yr));
@@ -643,7 +645,7 @@ function mergeYearView(view,raw){
   const rawM={};(raw.members||[]).forEach(m=>{rawM[m.id]=m;});
   out.members=(view.members||[]).map(m=>{
     const r=rawM[m.id];const nm={...m};
-    const p0=nm._pto0;delete nm._pto0;delete nm.carry;
+    const p0=nm._pto0;delete nm._pto0;delete nm.carry;delete nm._cy;
     const keep=r&&Array.isArray(r.days)?r.days.filter(d=>typeof d==="string"&&d.indexOf(p)!==0):[];
     if(keep.length){const seen={};nm.days=keep.concat(m.days||[]).filter(d=>seen[d]?false:(seen[d]=true));}
     const keepH=r&&Array.isArray(r.half)?r.half.filter(d=>typeof d==="string"&&d.indexOf(p)!==0):[];

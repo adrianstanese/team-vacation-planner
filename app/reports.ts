@@ -308,7 +308,7 @@ export function generateApprovedPDF(team, t) {
     });
     if(rS)rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));
     var usedN=usedOf({days:days,half:m.half});
-    var ps=m.pto?fmtD(usedN)+"/"+m.pto:"–";
+    const al=(m.pto||0)+(m.carry||0); var ps=al?fmtD(usedN)+"/"+fmtD(al)+(m.carry?" (+"+fmtD(m.carry)+")":""):"–";
     h+='<tr><td><span class="dot" style="background:'+mc.d+'"></span><strong>'+esc(m.name)+'</strong></td>';
     h+='<td>'+(co?co.f+" "+co.n:"–")+'</td>';
     h+='<td style="text-align:center;font-weight:700;color:'+mc.d+';font-size:11px">'+fmtD(usedN)+'</td>';

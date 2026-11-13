@@ -30,7 +30,7 @@ export default function TodayTiles({ team, yr, th, colorOf, holOf, holInfo, acti
   }
   const inDays = nextHol ? Math.round((dateOf(nextHol.k).getTime() - dateOf(today).getTime()) / 864e5) : 0;
   const clash = nextClash(team, today, threshold, 30);
-  const allow = active && active.pto != null ? Number(active.pto) + Number(active.carry || 0) : null;
+  const allow = active && (active.pto != null || active.carry) ? Number(active.pto || 0) + Number(active.carry || 0) : null;
   const left = active && allow != null ? Math.max(0, allow - used(active, yr)) : null;
   const pct = allow ? Math.min(1, (left || 0) / allow) : 0;
   const tile = { background: th.gbg || th.sf, borderColor: th.gbd || th.bd };

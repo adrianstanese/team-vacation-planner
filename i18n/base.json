@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 674,
+ "strings": 679,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -2728,6 +2728,40 @@
     },
     "teNone": {
      "en": "No working days in that period"
+    },
+    "cyLabel": {
+     "en": "From {y}",
+     "ph": [
+      "{y}"
+     ],
+     "max": 16
+    },
+    "cyHelp": {
+     "en": "Days left over from {y} that you can still take. Leave empty to use the planner's own count, or type the real number.",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "cyTotal": {
+     "en": "Total for {y}",
+     "ph": [
+      "{y}"
+     ],
+     "max": 25
+    },
+    "cyLeft": {
+     "en": "From {y}: {a} of {b} left",
+     "ph": [
+      "{y}",
+      "{a}",
+      "{b}"
+     ]
+    },
+    "cyAuto": {
+     "en": "planner's count: {n}",
+     "ph": [
+      "{n}"
+     ]
     }
    }
   },

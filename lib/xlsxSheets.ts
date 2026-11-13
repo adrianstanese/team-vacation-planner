@@ -3,7 +3,7 @@
 
 import { nextLeaveDay } from "./v3Util";
 
-type Member = { id: string; name?: string; country?: string; days?: unknown[]; half?: unknown[] };
+type Member = { id: string; name?: string; country?: string; days?: unknown[]; half?: unknown[]; pto?: number | null; carry?: number };
 type Cell = { value?: string | number; type?: typeof String | typeof Number; fontWeight?: "bold"; fontSize?: number; textColor?: string; backgroundColor?: string; align?: "left" | "center" | "right"; columnSpan?: number; height?: number; wrap?: boolean } | null;
 export type Sheet = { sheet: string; data: Cell[][]; columns: { width: number }[] };
 
@@ -67,6 +67,11 @@ export function buildSheets(x: XlsxInput): Sheet[] {
   const total = ms.reduce((s, m) => s + m.used, 0);
   const cover = typeof x.coverage === "number" ? x.coverage : Math.round((1 - total / ((ms.length * 260) || 1)) * 100);
 
+  // Allowance columns appear when someone has an allowance: the year's total (with days brought from last year),
+  // the brought part on its own, and what is left
+  const allowOf = (m: (typeof ms)[number]) => (Number(m.pto) || 0) + (Number(m.carry) || 0);
+  const anyAllow = ms.some(m => allowOf(m) > 0);
+  const blank = str("");
   // Dashboard
   const dash: Cell[][] = [
     [str(x.teamName, { ...S.title, height: 24 })],
@@ -76,8 +81,10 @@ export function buildSheets(x: XlsxInput): Sheet[] {
     [str("Total vacation days", S.lbl), str("Overlap days", S.lbl), str("Team members", S.lbl), str("Avg coverage", S.lbl)],
     [],
     [str("Member summary", { ...S.sect, columnSpan: 4 }), null, null, null],
-    [str("Member", S.hdr), str("Country", S.hdr), str("Days", S.hdr), str("Periods", S.hdr)],
-    ...ms.map(m => [str(m.name || "", { fontWeight: "bold" }), str(x.countryName(m.country)), num(m.used), str(periods(m.days, !!x.sevenDay).join(", "))]),
+    [str("Member", S.hdr), str("Country", S.hdr), str("Days", S.hdr), ...(anyAllow ? [str("Allowance", S.hdr), str(`From ${yr - 1}`, S.hdr), str("Left", S.hdr)] : []), str("Periods", S.hdr)],
+    ...ms.map(m => { const al = allowOf(m); return [str(m.name || "", { fontWeight: "bold" }), str(x.countryName(m.country)), num(m.used),
+      ...(anyAllow ? [al ? num(al) : blank, m.carry ? num(Number(m.carry)) : blank, al ? num(Math.round((al - m.used) * 10) / 10) : blank] : []),
+      str(periods(m.days, !!x.sevenDay).join(", "))]; }),
   ];
   if (overlaps.length) {
     dash.push([], [str(`Overlap days (${overlaps.length})`, { ...S.sect, columnSpan: 2 }), null], [str("Date", S.hdr), str("Members out", S.hdr)]);
@@ -130,7 +137,7 @@ export function buildSheets(x: XlsxInput): Sheet[] {
   if (!tl.length) tl.push([str("No vacation days planned for this year yet.", S.sub)]);
 
   return [
-    { sheet: "Dashboard", data: dash, columns: [{ width: 22 }, { width: 16 }, { width: 14 }, { width: 60 }] },
+    { sheet: "Dashboard", data: dash, columns: [{ width: 22 }, { width: 16 }, { width: 14 }, ...(anyAllow ? [{ width: 12 }, { width: 12 }, { width: 10 }] : []), { width: 60 }] },
     { sheet: "Calendar", data: cal, columns: [{ width: 12 }, ...Array(7).fill({ width: 5 })] },
     { sheet: "Timeline", data: tl, columns: [{ width: 16 }, ...Array(31).fill({ width: 3 })] },
   ];

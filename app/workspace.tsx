@@ -772,8 +772,10 @@ function ConflictAlerts({team,threshold,th,t}) {
   </div>;
 }
 
-function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null,notes=0}){
-  const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const dc=usedOf(m);const allow=m.pto?m.pto+(m.carry||0):0;
+function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null,notes=0,onCarryChange=null}){
+  const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const dc=usedOf(m);
+  // Days for the year = the yearly allowance plus what was brought from the year before (m.carry, see lib/v3Util carryInfo)
+  const allow=(m.pto||0)+(m.carry||0);const cy=m._cy||{auto:0,manual:false,left:null};
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
 
@@ -787,7 +789,7 @@ function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename
   </div>;
 
   // Option A: slim row; the selected person glows (in their colour) and opens a drawer with labelled fields
-  const allowTxt=m.pto?fmtDays(dc)+" / "+allow:(dc===0?"—":fmtDays(dc));
+  const allowTxt=allow?fmtDays(dc)+" / "+fmtDays(allow):(dc===0?"—":fmtDays(dc));
   const pct=allow?Math.min(100,Math.round(dc/allow*100)):0;
   const barCol=dc>allow?"#EF4444":dc>allow*0.8?"#F59E0B":c.d;
   return <div draggable={!locked} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}
@@ -798,7 +800,7 @@ function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename
         <b style={{color:isActive?c.t:th.tx}}>{m.name}{hasPin&&<span className="tvp-lock" aria-label="PIN" title="PIN">🔒</span>}</b>
         <small style={{color:th.t3}}>{co?co.f+" ":""}{m.role||m.group||(co?co.n:"")}</small>
       </div>
-      <span className="tvp-mrow-cnt" style={{color:th.tx}}>{allowTxt}<small style={{color:th.t3}}>{dc!==1?t.dys:t.dy}{m.carry?<span title={X("carried")} style={{color:"#047857"}}>{" +"+m.carry}</span>:null}</small></span>
+      <span className="tvp-mrow-cnt" style={{color:th.tx}}>{allowTxt}<small style={{color:th.t3}}>{dc!==1?t.dys:t.dy}{m.carry?<span title={X("carried")} style={{color:th.dk?"#6EE7B7":"#047857"}}>{" +"+fmtDays(m.carry)}</span>:null}</small></span>
     </div>
     {(function(){
       // Status at a glance: what is left, whether the plan is approved, notes left on their days
@@ -807,7 +809,7 @@ function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename
       if(approvalMode&&!isApprover&&dc>0)parts.push(m.approved?<span key="a" style={{color:th.dk?"#6EE7B7":"#047857"}}>✓ {V("ttApproved")}</span>:<span key="a" style={{color:th.dk?"#FCD34D":"#B45309"}}>{V("stWait")}</span>);
       if(notes>0)parts.push(<span key="n" style={{color:th.t2}}>{V("stNotes",{n:notes})}</span>);
       return parts.length?<div className="tvp-mstat">{parts}</div>:null;})()}
-    {m.pto&&!isActive?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
+    {allow&&!isActive?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
     {isActive&&!isEditing&&limited&&<div className="tvp-drawer" onClick={function(e){e.stopPropagation();}}>
       {onSwitchTo&&<button type="button" className="tvp-mini tvp-mini-sw" onClick={onSwitchTo}>⇄ {V("swTo",{n:m.name||""})}</button>}
       <label className="tvp-fld"><span style={{color:th.t3}}>{V("jobRole")}</span>
@@ -821,7 +823,16 @@ function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename
           {canEditRole?<input key={m.id+(m.role||"")} defaultValue={m.role||""} maxLength={40} placeholder={V("jobRolePh")} onBlur={function(e){const v=e.target.value.trim();if(v!==(m.role||""))onRoleChange(v);}} onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/>
             :<em style={{color:th.tx}}>{m.role||"—"}</em>}</label>
       </div>
-      {m.pto?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
+      {/* Days brought from last year: the person's own number, or (left empty) the planner's count shown as the hint */}
+      {yr&&onCarryChange&&<div className="tvp-two">
+        <label className="tvp-fld"><span style={{color:th.t3}}>{V("cyLabel",{y:yr-1})}<i className="tvp-tip" tabIndex={0} title={V("cyHelp",{y:yr-1})} aria-label={V("cyHelp",{y:yr-1})}>i</i></span>
+          <input key={m.id+"cy"+yr+(cy.manual?String((m.carryY||{})[yr]):"auto")} type="number" min="0" max="366" step="0.5" inputMode="decimal" placeholder={cy.auto?fmtDays(cy.auto):"—"} defaultValue={cy.manual?String((m.carryY||{})[yr]):""}
+            onBlur={function(e){const raw=e.target.value.trim();const cur=cy.manual?Number((m.carryY||{})[yr]):null;const v=raw===""?null:Math.max(0,Math.min(366,Math.round((parseFloat(raw)||0)*2)/2));if(v!==cur)onCarryChange(v);}}
+            onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/></label>
+        <div className="tvp-fld"><span style={{color:th.t3}}>{V("cyTotal",{y:yr})}</span><em style={{color:th.tx,fontWeight:700}}>{allow?fmtDays(allow):"—"}</em></div>
+      </div>}
+      {allow?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
+      {m.carry?<div className="tvp-meta" style={{color:th.t3}}>{V("cyLeft",{y:yr-1,a:fmtDays(Math.max(0,Math.round((m.carry-dc)*10)/10)),b:fmtDays(m.carry)})}{cy.manual&&cy.auto&&cy.auto!==m.carry?" · "+V("cyAuto",{n:fmtDays(cy.auto)}):""}</div>:null}
       {yr&&m.country&&<div className="tvp-meta" style={{color:th.t3}}>{workingDaysRemaining(m,yr,w7)} {t.workDaysLeft||"work days left"} · {getAllHolidays(m,yr).length} {t.holCount||"holidays"}</div>}
       {m.country&&REGIONS[m.country]&&<label className="tvp-fld"><span style={{color:th.t3}}>{t.region||"Region"}</span>
         <select value={m.region||""} onChange={function(e){onRegionChange(e.target.value||null);}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}>
@@ -1571,6 +1582,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const ren=(id,n)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}setEId(null);const old=team.members.find(x=>x.id===id);updateWithHistory({...team,members:team.members.map(m=>m.id===id?{...m,name:n}:m),log:addLogEntry(team,`${(old&&old.name)||"Member"} renamed to ${n}`)});};
   const setCo=(id,cc)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}const m=team.members.find(x=>x.id===id);const co=EU_C.find(c=>c.c===cc);updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,country:cc}:x),log:addLogEntry(team,`${(m&&m.name)||"Member"} → ${(co&&co.f)||""} ${(co&&co.n)||cc}`)});};
   const setPto=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,pto:val||null}:x)});};
+  // Days brought from last year, for the year on screen. null = back to the planner's own count
+  const setCarry=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const cy={...(x.carryY||{})};if(val==null)delete cy[yr];else cy[yr]=val;const nx={...x};if(Object.keys(cy).length)nx.carryY=cy;else delete nx.carryY;return nx;})});};
   // Day comments (right-click a day): this function was missing, so posting a comment did nothing
   const addComment=(day,text)=>{
     if(locked){flash(t.locked);return;}
@@ -1921,7 +1934,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
               if(hasPinOf(m)&&unlockedId!==m.id&&!meIsAppr){setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
               setAId(m.id);
               if(mob)setSb(false);
-            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>setView("approvals"):null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} onSwitchTo={()=>switchTo(m)} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
+            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onCarryChange={v=>setCarry(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>setView("approvals"):null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} onSwitchTo={()=>switchTo(m)} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}
@@ -2057,7 +2070,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     {/* Touch: one bar above the tab bar. Looking by default; "Edit my days" switches the calendar to tap mode.
         It sits here, outside <main>: main carries a view-transition name and an entrance animation, and either one
         makes a "fixed" child stick to main's box instead of the screen. */}
-        {view==="cal"&&touchUI&&!locked&&(am||meM)&&(()=>{const who=am||meM;const wc=MC[Math.max(0,team.members.indexOf(who))%MC.length];const u=usedOf(who);const al=who.pto?who.pto+(who.carry||0):0;
+        {view==="cal"&&touchUI&&!locked&&(am||meM)&&(()=>{const who=am||meM;const wc=MC[Math.max(0,team.members.indexOf(who))%MC.length];const u=usedOf(who);const al=(who.pto||0)+(who.carry||0);
           const st=fmtDays(u)+(al?" "+V("tdOf",{n:al}):"")+" "+(u===1&&!al?t.dy:t.dys);
           return <div className="tvp-tbar" style={{bottom:mob?"calc(62px + env(safe-area-inset-bottom,0px))":14,background:th.dk?"#241D3D":"#FFFFFF",borderColor:wc.d,color:th.tx}}>
             {!touchEdit?<Fragment>

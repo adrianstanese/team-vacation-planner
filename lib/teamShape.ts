@@ -33,6 +33,9 @@ export function cleanTeam(input: Obj): Obj {
       const h = dates(m.half, 4000); if (h) m.half = h; else delete m.half;
       if ("pto" in m && m.pto != null) { const p = int(m.pto, 0, 366); m.pto = p === undefined ? null : p; }
       if (isObj(m.ptoY)) { const o: Obj = {}; for (const [k, v] of Object.entries(m.ptoY)) { const p = int(v, 0, 366); if (/^\d{4}$/.test(k) && p !== undefined) o[k] = p; } if (Object.keys(o).length) m.ptoY = o; else delete m.ptoY; } else delete m.ptoY;
+      // Days brought from the previous year, typed per year (halves allowed)
+      if (isObj(m.carryY)) { const o: Obj = {}; for (const [k, v] of Object.entries(m.carryY)) { const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN; if (/^\d{4}$/.test(k) && Number.isFinite(n) && n >= 0 && n <= 366) o[k] = Math.round(n * 2) / 2; } if (Object.keys(o).length) m.carryY = o; else delete m.carryY; } else delete m.carryY;
+      delete m._cy; // worked out per year for the screen, never stored
       if (isObj(m.apY)) { const o: Obj = {}; for (const [k, v] of Object.entries(m.apY)) if (/^\d{4}$/.test(k) && v === true) o[k] = true; if (Object.keys(o).length) m.apY = o; else delete m.apY; } else delete m.apY;
       return m;
     }).filter(m => m.id);
