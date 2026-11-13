@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 652,
+ "strings": 674,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -1287,6 +1287,38 @@
    "where": "Assorted planner labels: PIN dialogs, import, groups, half days, cookie notice, exports.",
    "file": "lib/extraText.ts",
    "strings": {
+    "prQ": {
+     "en": "Coming soon:",
+     "max": 24
+    },
+    "prSub": {
+     "en": "Send company policies and procedures to the right people, check they were read with a short quiz, and keep the evidence of every acknowledgement."
+    },
+    "prS1": {
+     "en": "Delivered",
+     "max": 18
+    },
+    "prS2": {
+     "en": "Read",
+     "max": 10
+    },
+    "prS3": {
+     "en": "Understood",
+     "max": 20
+    },
+    "prF1": {
+     "en": "Policies and procedures"
+    },
+    "prF2": {
+     "en": "Short quiz",
+     "max": 20
+    },
+    "prF3": {
+     "en": "Evidence you can export"
+    },
+    "prBeta": {
+     "en": "In beta now · release coming soon"
+    },
     "uaNote": {
      "en": "Public holidays are suspended in Ukraine under martial law: no days off for now."
     },
@@ -2641,6 +2673,61 @@
      "ph": [
       "{n}"
      ]
+    },
+    "stLeft": {
+     "en": "{n} left",
+     "ph": [
+      "{n}"
+     ],
+     "max": 16
+    },
+    "stOver": {
+     "en": "{n} over",
+     "ph": [
+      "{n}"
+     ],
+     "max": 16
+    },
+    "stWait": {
+     "en": "waiting for approval"
+    },
+    "stNotes": {
+     "en": "notes: {n}",
+     "ph": [
+      "{n}"
+     ],
+     "max": 20
+    },
+    "syncSaving": {
+     "en": "Saving…",
+     "max": 15
+    },
+    "syncSaved": {
+     "en": "Saved",
+     "max": 11
+    },
+    "syncOffline": {
+     "en": "Offline",
+     "max": 15
+    },
+    "syncOfflineHint": {
+     "en": "You're offline. Your changes are kept and sent when the connection is back."
+    },
+    "teEdit": {
+     "en": "Edit my days",
+     "max": 24
+    },
+    "teFirst": {
+     "en": "Tap the first day"
+    },
+    "teLast": {
+     "en": "Now tap the last day"
+    },
+    "teHint": {
+     "en": "Tap “Edit my days” to change your days"
+    },
+    "teNone": {
+     "en": "No working days in that period"
     }
    }
   },

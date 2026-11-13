@@ -678,6 +678,11 @@ const API_BASE = "/api/team";
 // VER = server version (X-Updated-At) this browser last saw; BASE = that version's JSON (for 3-way merges).
 const SYNC={VER:{},BASE:{},PENDING:{},INFLIGHT:{},listeners:new Set()};
 const syncIdle=id=>!SYNC.INFLIGHT[id]&&!SYNC.PENDING[id];
+// What the team screen says about saving: "saving" while a change is on its way, "offline" when it could not be
+// sent (it is kept and sent again), otherwise "saved". The screen listens for the "tvp-sync" event.
+const SYNC_DOWN={};
+export const syncStateOf=id=>{let off=false;try{off=typeof navigator!=="undefined"&&navigator.onLine===false;}catch(e){}return(SYNC_DOWN[id]||off)?"offline":syncIdle(id)?"saved":"saving";};
+const syncTell=id=>{try{window.dispatchEvent(new CustomEvent("tvp-sync",{detail:{id,state:syncStateOf(id)}}));}catch(e){}};
 // PIN tokens (per tab) and owner keys (per browser): proofs the server checks before changing protected members
 export const authKey=id=>"tvp-tok-"+id;
 export const getTokens=id=>{try{return JSON.parse(sessionStorage.getItem(authKey(id))||"{}")||{};}catch(e){return {};}};
@@ -708,8 +713,8 @@ async function syncFlush(id){
   if(SYNC.INFLIGHT[id])return;
   while(SYNC.PENDING[id]){
     const doc=SYNC.PENDING[id];delete SYNC.PENDING[id];
-    SYNC.INFLIGHT[id]=true;
-    let retry=false,refused=false,adjusted=false;
+    SYNC.INFLIGHT[id]=true;syncTell(id);
+    let retry=false,refused=false,adjusted=false,down=false;
     try{
       let res=await putTeam(id,doc);
       if(res.status===409){
@@ -742,9 +747,10 @@ async function syncFlush(id){
       }
     }catch(e){
       // Offline: keep the newest edit queued
-      if(!SYNC.PENDING[id])SYNC.PENDING[id]=doc;retry=true;
+      if(!SYNC.PENDING[id])SYNC.PENDING[id]=doc;retry=true;down=true;
     }
     SYNC.INFLIGHT[id]=false;
+    SYNC_DOWN[id]=down;syncTell(id);
     if(retry){setTimeout(()=>syncFlush(id),5000);return;}
     // The server refused this change (too large, bad data): the screen must not keep showing it as if it were saved
     // …and when it stored another approval state than the one sent (more leave on an approved plan), show that one
@@ -760,7 +766,7 @@ const db={
       // Team data → API (production) or window.storage (artifact sandbox)
       if(k.startsWith("team:")&&s){
         var teamId=k.replace("team:","");
-        SYNC.PENDING[teamId]=d;syncFlush(teamId);
+        SYNC.PENDING[teamId]=d;syncTell(teamId);syncFlush(teamId);
       }
       // Also save to window.storage if available (artifact sandbox)
       if(window.storage){try{await window.storage.set(k,JSON.stringify(d),s);}catch(e){}}
@@ -1252,8 +1258,11 @@ export function HolBrowser({onClose,th,t,year}){
   const[q,setQ]=useState("");
   const[sort,setSort]=useState("az");
   const co=sel?EU_C.find(c=>c.c===sel):null;
-  useHolidayNames(sel?[sel]:[]);
-  const hols=sel?computeHolidays(sel,year).map(h=>({date:h,name:holNameFor(sel,h)})).sort((a,b)=>a.date.localeCompare(b.date)):[];
+  // Names are fetched only for a country that has holidays that year (Ukraine has none for now, and no names file:
+  // asking for it logged a "not found" in the browser console)
+  const dates=sel?computeHolidays(sel,year):[];
+  useHolidayNames(sel&&dates.length?[sel]:[]);
+  const hols=sel?dates.map(h=>({date:h,name:holNameFor(sel,h)})).sort((a,b)=>a.date.localeCompare(b.date)):[];
   const maxHol=17;
 
   var filtered=EU_C.filter(function(c2){return !q||c2.n.toLowerCase().indexOf(q.toLowerCase())>=0||(c2.ne||"").toLowerCase().indexOf(q.toLowerCase())>=0;});
@@ -1608,7 +1617,7 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
           <ul>{Array.from({length:g.b-g.a+1},(_,i)=>g.a+i).map(n=><li key={n}><b>{a["f"+n]}</b><span>{a["f"+n+"d"]}</span></li>)}</ul>
         </div>)}</div>
       </section>}
-      <div className="wrap"><BottomDuo th={th} lang={lang}/></div>
+      <div className="wrap"><BottomDuo th={th} lang={lang} provenRead/></div>
     </main>
     <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><a href={"mailto:"+CONTACT_EMAIL} style={{color:"var(--ink-2)",fontWeight:600,minHeight:44,display:"inline-flex",alignItems:"center"}}>{L.contact}: {CONTACT_EMAIL}</a><a href="/privacy" style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{X("privacy")}</a></div></footer>
     {children}

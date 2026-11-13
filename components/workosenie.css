@@ -72,3 +72,26 @@
 .wpo-fine { font-size: 12px; color: #6B5B95; }
 .wpo.dark .wpo-fine { color: #B4A8D6; }
 [dir="rtl"] .wpo-cta .arr { transform: scaleX(-1); }
+
+/* Front page: two promo cards side by side, "Recommend this tool" across the full width below */
+@media (min-width: 900px) { .wpo-duo.wpo-pair { grid-template-columns: 1fr 1fr; } }
+.wpo-duo.wpo-pair { margin-bottom: 18px; }
+.wpo-below { width: 100%; max-width: 1120px; margin: 0 auto 16px; box-sizing: border-box; }
+.wpo-below > section { margin: 0 !important; max-width: none !important; }
+
+/* ProvenRead teaser: the same card in ProvenRead's plum */
+.wpo.prt { box-shadow: 0 0 50px -14px rgba(162,28,175,.5), 0 0 90px -24px rgba(79,70,229,.45); }
+@media (prefers-reduced-motion: no-preference) { .wpo.prt { animation: prt-halo 4s ease-in-out 6 alternate; } }
+@keyframes prt-halo { to { box-shadow: 0 0 70px -10px rgba(192,38,211,.65), 0 0 120px -20px rgba(79,70,229,.55); } }
+.wpo.prt::before, .wpo.prt::after { background: conic-gradient(from var(--wpo-a), transparent 0 58%, #A21CAF 68%, #E879F9 73%, #7C3AED 78%, #4F46E5 84%, transparent 92%); }
+.prt .wpo-logo { background: conic-gradient(from 210deg, #86198F, #C026D3, #E879F9, #6366F1, #86198F); box-shadow: 0 10px 30px -8px rgba(162,28,175,.65); }
+.prt .wpo-h span { background: linear-gradient(95deg, #A21CAF, #7C3AED 55%, #4F46E5); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wpo.dark.prt .wpo-h span { background: linear-gradient(95deg, #F0ABFC, #C4B5FD 55%, #A5B4FC); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.prt .wpo-from { color: #86198F; }
+.wpo.dark.prt .wpo-from { color: #F0ABFC; }
+.prt .wpo-feat li { background: rgba(162,28,175,.09); color: #86198F; border-color: rgba(162,28,175,.25); }
+.wpo.dark.prt .wpo-feat li { color: #F0ABFC; }
+.prt-ladder .r { grid-template-columns: minmax(84px, 34%) 1fr 38px; }
+.prt-ladder .r span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prt-ladder .r em { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; text-align: end; color: #E7ECF5; }
+.prt-beta { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; color: #fff; font: 700 14px/1.2 var(--font-body, system-ui), system-ui; background: linear-gradient(135deg, #86198F, #6D28D9); box-shadow: 0 12px 30px -12px rgba(134,25,143,.7); }

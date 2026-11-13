@@ -9,7 +9,7 @@ import CoffeeButton from "@/components/CoffeeButton";
 import nextDynamic from "next/dynamic";
 import TodayTiles from "@/components/v3/TodayTiles";
 import { V } from "@/lib/v3Text";
-import { nextLeaveDay, pendingApprovals, streaksOf, avgCoverage } from "@/lib/v3Util";
+import { nextLeaveDay, pendingApprovals, streaksOf, avgCoverage, addDays, dateOf } from "@/lib/v3Util";
 import { withTransition, celebrate, buzz } from "@/lib/motion";
 import "./frontpage.css";
 import { buildSheets } from "@/lib/xlsxSheets";
@@ -20,7 +20,7 @@ import { X, textLang, dateLocale, isRtl, monthShort } from "@/lib/extraText";
 import { icsText, icsStamp } from "@/lib/ics";
 import TrapScope from "@/components/TrapScope";
 // Loaded only when first opened (keeps the first page load small)
-import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, INK, onFills, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, sheetCell, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
+import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, INK, onFills, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, sheetCell, syncStateOf, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
 
 const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr:false});
 
@@ -419,7 +419,7 @@ function HolidayCard({info,dateKey,rect,lang,th,onClose,onHover=null}){
   </div>,document.body);
 }
 
-function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,holSet,w7,approvalMode,team,setCommentDay=null,holInfo=null,lang="en"}) {
+function Cal({year,month,members,activeId,onToggle,onDragSelect=null,compact,th,t,holSet,w7,approvalMode,team,setCommentDay=null,holInfo=null,lang="en",touchEdit=false,tapStart=null,onTapDay=null}) {
   const[card,setCard]=useState(null);const cardTimer=useRef(null);
   const openCard=(key,el)=>{if(!holInfo)return;const info=holInfo(key);if(!info.length)return;setCard({key,info,rect:el.getBoundingClientRect()});};
   const closeCard=useCallback(()=>{clearTimeout(cardTimer.current);setCard(null);},[]);
@@ -452,24 +452,21 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
   const dragRef=useRef(null);
   const dayLabels=[t.mo,t.tu,t.we2,t.th,t.fr,t.sa,t.su];
 
-  const[popDay,setPopDay]=useState(null);const handleMouseDown=(day)=>{if(!activeId||(isWe(year,month,day)&&!w7))return;setPopDay(day);setTimeout(function(){setPopDay(null);},200);dragRef.current={start:day,days:new Set([day]),adding:!(am&&am.days||[]).includes(dk(year,month,day))};onToggle(year,month,day);};
-  const handleMouseEnter=(day)=>{if(!dragRef.current||!activeId||(isWe(year,month,day)&&!w7))return;const{start,days:dragDays,adding}=dragRef.current;const lo=Math.min(start,day),hi=Math.max(start,day);const amHol=adding&&am&&!w7?holSetOf(am,year):null;const newDays=new Set();for(let d=lo;d<=hi;d++){if((!isWe(year,month,d)||w7)&&!(d!==start&&amHol&&amHol.has(dk(year,month,d))))newDays.add(d);}const toProcess=[...newDays].filter(d=>!dragDays.has(d));toProcess.forEach(d=>{const key=dk(year,month,d);const hasDayAlready=(am&&am.days||[]).includes(key);if((adding&&!hasDayAlready)||(!adding&&hasDayAlready))onToggle(year,month,d);});dragRef.current.days=newDays;};
+  // A finger: the browser follows a tap with made-up mouse events. Those must not start a drag (see the touch notes below).
+  const lastTouch=useRef(0);const byTouch=()=>Date.now()-lastTouch.current<800;
+  const[popDay,setPopDay]=useState(null);const handleMouseDown=(day)=>{if(byTouch()||!activeId||(isWe(year,month,day)&&!w7))return;setPopDay(day);setTimeout(function(){setPopDay(null);},200);dragRef.current={start:day,days:new Set([day]),adding:!(am&&am.days||[]).includes(dk(year,month,day))};onToggle(year,month,day);};
+  const handleMouseEnter=(day)=>{if(byTouch()||!dragRef.current||!activeId||(isWe(year,month,day)&&!w7))return;const{start,days:dragDays,adding}=dragRef.current;const lo=Math.min(start,day),hi=Math.max(start,day);const amHol=adding&&am&&!w7?holSetOf(am,year):null;const newDays=new Set();for(let d=lo;d<=hi;d++){if((!isWe(year,month,d)||w7)&&!(d!==start&&amHol&&amHol.has(dk(year,month,d))))newDays.add(d);}const toProcess=[...newDays].filter(d=>!dragDays.has(d));toProcess.forEach(d=>{const key=dk(year,month,d);const hasDayAlready=(am&&am.days||[]).includes(key);if((adding&&!hasDayAlready)||(!adding&&hasDayAlready))onToggle(year,month,d);});dragRef.current.days=newDays;};
   const handleMouseUp=()=>{dragRef.current=null;};
 
   useEffect(()=>{const up=()=>{dragRef.current=null;};window.addEventListener("mouseup",up);return()=>window.removeEventListener("mouseup",up);},[]);
-  // Touch: drag across days with a finger. Only while a member is selected (otherwise the page scrolls as usual).
-  // Native listeners with passive:false so the drag doesn't scroll the page or fire emulated mouse clicks.
-  const gridRef=useRef(null);const touchRef=useRef({});
-  touchRef.current={down:handleMouseDown,enter:handleMouseEnter,up:handleMouseUp,active:!!activeId};
+  // Touch: a finger scrolls the calendar, always. (It used to book the day it landed on and hold the page still
+  // while someone was selected.) Days are changed by taps, which arrive as clicks, and only in "Edit my days".
+  const gridRef=useRef(null);
   useEffect(()=>{
     const el=gridRef.current;if(!el)return;
-    const dayAt=(x,y)=>{const c=document.elementFromPoint(x,y);const d=c&&c.closest&&c.closest("[data-day]");return d&&el.contains(d)?Number(d.getAttribute("data-day")):null;};
-    let last=null;
-    const start=e=>{if(!touchRef.current.active||e.touches.length!==1)return;const t0=e.touches[0];const d=dayAt(t0.clientX,t0.clientY);if(d==null)return;e.preventDefault();last=d;touchRef.current.down(d);};
-    const move=e=>{if(last==null)return;e.preventDefault();const t0=e.touches[0];const d=dayAt(t0.clientX,t0.clientY);if(d!=null&&d!==last){last=d;touchRef.current.enter(d);}};
-    const end=()=>{if(last==null)return;last=null;touchRef.current.up();};
-    el.addEventListener("touchstart",start,{passive:false});el.addEventListener("touchmove",move,{passive:false});el.addEventListener("touchend",end);el.addEventListener("touchcancel",end);
-    return()=>{el.removeEventListener("touchstart",start);el.removeEventListener("touchmove",move);el.removeEventListener("touchend",end);el.removeEventListener("touchcancel",end);};
+    const stamp=()=>{lastTouch.current=Date.now();};
+    el.addEventListener("touchstart",stamp,{passive:true});el.addEventListener("touchend",stamp,{passive:true});
+    return()=>{el.removeEventListener("touchstart",stamp);el.removeEventListener("touchend",stamp);};
   },[]);
 
   return <div className="tvp-month" data-ym={year+"-"+month} style={{background:th.gbg,borderRadius:G.rSm,border:`1px solid ${th.gbd}`,overflow:"hidden",animation:"popIn .3s ease-out",boxShadow:th.sd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
@@ -546,12 +543,15 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect,compact,th,t,hol
             onFocus={function(e){if(fd!==day)setFd(day);if(isHol&&holInfo&&!activeId){var el=e.currentTarget;openCard(key,el);}}}
             onBlur={function(){if(isHol&&holInfo)setCard(function(c){return c&&c.key===key&&!c.pinned?null:c;});}}
             onMouseDown={e=>{e.preventDefault();handleMouseDown(day);}} onContextMenu={function(e){e.preventDefault();if(typeof setCommentDay==="function")setCommentDay(dk(year,month,day));}}
-            onMouseEnter={function(e){handleMouseEnter(day);if(activeId)e.currentTarget.style.transform="scale(1.1)";if(isHol&&holInfo){var el=e.currentTarget;clearTimeout(cardTimer.current);cardTimer.current=setTimeout(function(){openCard(key,el);},180);}}}
+            onMouseEnter={function(e){handleMouseEnter(day);if(activeId&&!byTouch())e.currentTarget.style.transform="scale(1.1)";if(isHol&&holInfo){var el=e.currentTarget;clearTimeout(cardTimer.current);cardTimer.current=setTimeout(function(){openCard(key,el);},180);}}}
             onMouseLeave={function(e){e.currentTarget.style.transform="";if(isHol&&holInfo){clearTimeout(cardTimer.current);cardTimer.current=setTimeout(function(){setCard(function(c){return c&&c.key===key&&!c.pinned?null:c;});},120);}}}
-            onClick={function(e){if(!isHol||!holInfo||activeId)return;var el=e.currentTarget;setCard(function(c){if(c&&c.key===key)return null;var info=holInfo(key);return info.length?{key,info,rect:el.getBoundingClientRect(),pinned:true}:null;});}}
+            onClick={function(e){var el=e.currentTarget;var touch=byTouch();
+              if(touch&&activeId&&touchEdit){if(!(we&&!w7)&&onTapDay)onTapDay(year,month,day);return;}
+              if(isHol&&holInfo&&(!activeId||touch)){setCard(function(c){if(c&&c.key===key)return null;var info=holInfo(key);return info.length?{key,info,rect:el.getBoundingClientRect(),pinned:true}:null;});return;}
+              if(touch&&activeId&&!(we&&!w7)&&onTapDay)onTapDay(year,month,day);}}
             aria-label={cellLabel}
             title={isHol&&holInfo?undefined:isHol?holNameAny(key):mh.length>0?mh.map(function(m){return m.name}).join(", "):""}
-            style={{position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:(we&&!w7)||!activeId?"default":"pointer",transition:"transform .12s",transform:day===popDay?"scale(1.15)":"",
+            style={{outline:tapStart===key?"3px solid "+th.ac:undefined,outlineOffset:tapStart===key?2:undefined,position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:(we&&!w7)||!activeId?"default":"pointer",transition:"transform .12s",transform:day===popDay?"scale(1.15)":"",
               backgroundColor:String(vacBg).indexOf("gradient(")>=0?"transparent":vacBg, backgroundImage:[pendingStripe,String(vacBg).indexOf("gradient(")>=0?vacBg:""].filter(Boolean).join(",")||"none", border:vacBorder, transition:"background .1s",
               opacity:past&&mh.length===0&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
               boxShadow:vacShadow+(th.bg==="#0B0F1A"&&(isA||mh.length>0)?",0 0 8px "+(isA&&ac?ac.d+"35":mh.length>0?MC[members.indexOf(mh[0])%MC.length].d+"25":""):"")}}>
@@ -772,7 +772,7 @@ function ConflictAlerts({team,threshold,th,t}) {
   </div>;
 }
 
-function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null}){
+function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null,notes=0}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const dc=usedOf(m);const allow=m.pto?m.pto+(m.carry||0):0;
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
@@ -793,13 +793,20 @@ function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename
   return <div draggable={!locked} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}
     className={"tvp-mrow"+(isActive?" on":"")+(dim?" tvp-dim":"")} aria-disabled={dim&&!limited?true:undefined} style={{"--mc":c.d,"--mbg":th.bg,opacity:isDragging?0.4:1,borderTop:isDragOver?"2px solid "+th.ac:undefined}}>
     <div className="tvp-mrow-top">
-      <span className="tvp-av" style={{background:c.d}}>{(m.name||"?")[0].toUpperCase()}{isApprover&&<span className="tvp-crown" title={t.approverLabel||"Approver"}>👑</span>}</span>
+      <span className="tvp-av" style={{background:c.d,color:c.o}}>{(m.name||"?")[0].toUpperCase()}{isApprover&&<span className="tvp-crown" title={t.approverLabel||"Approver"}>👑</span>}</span>
       <div role="button" tabIndex={0} aria-pressed={isActive} aria-label={m.name+" · "+(dc===0?t.nd:fmtDays(dc)+" "+(dc!==1?t.dys:t.dy))} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick();}}} className="tvp-mrow-nm">
         <b style={{color:isActive?c.t:th.tx}}>{m.name}{hasPin&&<span className="tvp-lock" aria-label="PIN" title="PIN">🔒</span>}</b>
         <small style={{color:th.t3}}>{co?co.f+" ":""}{m.role||m.group||(co?co.n:"")}</small>
       </div>
       <span className="tvp-mrow-cnt" style={{color:th.tx}}>{allowTxt}<small style={{color:th.t3}}>{dc!==1?t.dys:t.dy}{m.carry?<span title={X("carried")} style={{color:"#047857"}}>{" +"+m.carry}</span>:null}</small></span>
     </div>
+    {(function(){
+      // Status at a glance: what is left, whether the plan is approved, notes left on their days
+      const parts=[];const left=allow?Math.round((allow-dc)*10)/10:0;
+      if(allow)parts.push(<span key="l" style={{color:left<0?(th.dk?"#FCA5A5":"#B91C1C"):th.t2}}>{left<0?V("stOver",{n:fmtDays(-left)}):V("stLeft",{n:fmtDays(left)})}</span>);
+      if(approvalMode&&!isApprover&&dc>0)parts.push(m.approved?<span key="a" style={{color:th.dk?"#6EE7B7":"#047857"}}>✓ {V("ttApproved")}</span>:<span key="a" style={{color:th.dk?"#FCD34D":"#B45309"}}>{V("stWait")}</span>);
+      if(notes>0)parts.push(<span key="n" style={{color:th.t2}}>{V("stNotes",{n:notes})}</span>);
+      return parts.length?<div className="tvp-mstat">{parts}</div>:null;})()}
     {m.pto&&!isActive?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
     {isActive&&!isEditing&&limited&&<div className="tvp-drawer" onClick={function(e){e.stopPropagation();}}>
       {onSwitchTo&&<button type="button" className="tvp-mini tvp-mini-sw" onClick={onSwitchTo}>⇄ {V("swTo",{n:m.name||""})}</button>}
@@ -1413,6 +1420,18 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const redo=()=>{if(!redoRef.current.length)return;const st=redoRef.current.pop();historyRef.current.push(st);const out=awaitApproval(teamRef.current,mergeTeam(JSON.parse(st.b),JSON.parse(st.a),teamRef.current));teamRef.current=out;onUpdate(out);flash(X("redo"));};
   // teamRef = the newest version, even before React re-renders (fast drags toggle several days per frame)
   const teamRef=useRef(team);teamRef.current=team;
+  // Saved / Saving / Offline, shown in the header
+  const[sync,setSync]=useState(()=>syncStateOf(team.id));
+  useEffect(()=>{const f=()=>setSync(syncStateOf(team.id));
+    window.addEventListener("tvp-sync",f);window.addEventListener("online",f);window.addEventListener("offline",f);
+    return()=>{window.removeEventListener("tvp-sync",f);window.removeEventListener("online",f);window.removeEventListener("offline",f);};},[team.id]);
+  // Phone and tablet: a finger scrolls the calendar, and days change only in "Edit my days", by tapping the first
+  // and the last day of a period. (A finger landing on a day used to book it, and the calendar could not be
+  // scrolled while someone was selected.)
+  const[touchUI,setTouchUI]=useState(()=>{try{return window.matchMedia("(pointer: coarse)").matches;}catch(e){return false;}});
+  useEffect(()=>{const on=()=>setTouchUI(true);window.addEventListener("touchstart",on,{once:true,passive:true});return()=>window.removeEventListener("touchstart",on);},[]);
+  const[touchEdit,setTouchEdit]=useState(false);const[tapStart,setTapStart]=useState(null);
+  const notesOf=m=>{const c=team.comments||{};let n=0;(m.days||[]).forEach(d=>{if(Array.isArray(c[d]))n+=c[d].length;});return n;};
   // Phone tab bar: the open view's tab is brought into view, and the bar fades at the end while more tabs wait there
   const botRef=useRef(null);const[botMore,setBotMore]=useState(false);
   const botCheck=()=>{const n=botRef.current;if(!n)return;const left=Math.abs(n.scrollLeft);setBotMore(n.scrollWidth-n.clientWidth-left>6);};
@@ -1592,6 +1611,45 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       const after=streaksOf({...member,days:nd},y,hol,!!team.w7).find(st=>st.start<=key&&st.end>=key);
       if(after&&after.leave>=5&&!(before&&before.leave>=5)){const cell=document.querySelector('[data-ym="'+y+"-"+m+'"] [data-day="'+d+'"]');celebrate(cell);flash("🎉 "+V("celebrate",{n:after.length}));}}catch(e){}}
   };
+  // Phone editing. The first tap marks the start, the second the end: the working days between them are booked,
+  // or removed when the start was already booked. One save, so one Undo takes the whole period back. Weekends are
+  // skipped (unless the team works 7 days), and so are the person's public holidays when adding. Tapping the same
+  // day twice is that one day. In half-day mode every tap is one day, as before.
+  const tapDay=(y,m,d)=>{
+    const cur=teamRef.current;
+    if(!aId)return;
+    if(!touchEdit){flash(V("teHint"));return;}
+    if(locked){flash(t.locked);return;}
+    if(isPinLocked(aId)){flash(X("pinEnter"));return;}
+    const key=dk(y,m,d);
+    if(halfMode){tog(y,m,d);return;}
+    if(!tapStart){setTapStart(key);buzz();return;}
+    const anchor=tapStart;setTapStart(null);
+    if(anchor===key){tog(y,m,d);return;}
+    const member=cur.members.find(x=>x.id===aId);if(!member)return;
+    const a=anchor<key?anchor:key,b=anchor<key?key:anchor;
+    const ds=member.days||[],hs=member.half||[];const have=new Set(ds);
+    const adding=!have.has(anchor);
+    const holByYear={};const isHol=k=>{const yy=k.slice(0,4);if(!holByYear[yy])holByYear[yy]=holSetOf(member,Number(yy));return holByYear[yy].has(k);};
+    const span=[];
+    for(let k=a,n=0;k<=b&&n<400;k=addDays(k,1),n++){
+      const wd=dateOf(k).getDay();
+      if(!cur.w7&&(wd===0||wd===6))continue;
+      if(adding&&!cur.w7&&isHol(k))continue;
+      span.push(k);
+    }
+    let nd=ds,nh=hs,count=0;
+    if(adding){const add=span.filter(k=>!have.has(k));count=add.length;nd=ds.concat(add);}
+    else{const rm=new Set(span.filter(k=>have.has(k)));count=rm.size;nd=ds.filter(k=>!rm.has(k));nh=hs.filter(k=>!rm.has(k));}
+    if(!count){flash(V("teNone"));return;}
+    updateWithHistory({...cur,members:cur.members.map(function(mm){
+      if(mm.id!==aId)return mm;
+      const nm={...mm,days:nd};if(nh.length||mm.half)nm.half=nh;return nm;
+    }),log:addLogEntry(cur,(member.name||"Member")+(adding?" added ":" removed ")+a+" → "+b)});
+    buzz();flash((adding?"+":"−")+count+" "+(count===1?t.dy:t.dys));
+  };
+  useEffect(()=>{setTapStart(null);},[aId,team.year,view,halfMode,touchEdit]);
+  useEffect(()=>{if(!aId)setTouchEdit(false);},[aId]);
   const setApprover=function(memberId){
     updateWithHistory({...team,approver:memberId||null});
   };
@@ -1616,6 +1674,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const toggleLock=()=>updateWithHistory({...team,locked:!team.locked,log:addLogEntry(team,team.locked?"Board unlocked":"Board locked")});
 
   const am=team.members.find(m=>m.id===aId);const ai=am?team.members.indexOf(am):-1;const ac=ai>=0?MC[ai%MC.length]:null;
+  const meM=unlockedId?team.members.find(m=>m.id===unlockedId):null;
   const allM=Array.from({length:12},(_,i)=>({year:yr,month:i}));
 
   const[vk,setVk]=useState(0);const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:t.activityLog||"Log"},{k:"analytics",i:"bar",l:t.analytics||"Analytics"},{k:"trips",i:"globe",l:t.trips||"Trips"}];
@@ -1780,7 +1839,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         {!mob&&<Fragment><svg width="22" height="22" viewBox="0 0 22 22" style={{flexShrink:0}}><circle cx="11" cy="11" r="9" fill="none" stroke={th.gbd} strokeWidth="2.5"/><circle cx="11" cy="11" r="9" fill="none" stroke={th.ac} strokeWidth="2.5" strokeDasharray={Math.round((new Date()-new Date(yr,0,1))/(365.25*864e5)*56.5)+" 56.5"} strokeLinecap="round" style={{transform:"rotate(-90deg)",transformOrigin:"11px 11px"}}/></svg><div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 7px",background:th.al,borderRadius:16,cursor:"pointer",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} onClick={()=>{try{navigator.clipboard.writeText(team.id)}catch(e){};flash(t.cp);}}><Ic n="copy" s={10} c={th.ac}/><span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{team.id.slice(0,8)}</span></div></Fragment>}
         <LangDrop lang={lang} set={setLang} th={th}/>
         <button onClick={()=>setSettings(!settings)} aria-label="Settings" aria-expanded={settings} title="Settings" style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
-        {!mob&&<div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 8px",background:"rgba(139,92,246,.1)",borderRadius:10}}><span style={{width:6,height:6,borderRadius:"50%",background:"#22C55E",animation:"pulse 2s 3"}}></span><span style={{fontSize:9,fontWeight:600,color:"#6D28D9",fontFamily:FM}}>{t.live||"Live"}</span></div>}
+        <span role="status" aria-live="polite" className={"tvp-sync tvp-sync-"+sync} title={sync==="offline"?V("syncOfflineHint"):V(sync==="saving"?"syncSaving":"syncSaved")} style={{color:sync==="offline"?(th.dk?"#FCD34D":"#B45309"):th.t2}}><i aria-hidden="true"/><span className={mob?"tvp-sr":undefined}>{V(sync==="offline"?"syncOffline":sync==="saving"?"syncSaving":"syncSaved")}</span></span>
         {false&&<button type="button" className="v3-inbox-btn" onClick={()=>setShowInbox(true)} aria-label={V("inboxBadge",{n:pendN})} title={V("inbox")} style={{color:th.ac,background:th.al,borderColor:th.gbd||th.bd}}>✓{!mob&&<span>{V("inbox")}</span>}{pendN>0&&<b>{pendN}</b>}</button>}
         <Btn th={th} v="secondary" sz="sm" icon="share" label={mob?t.sh:undefined} onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
         <CoffeeButton lang={lang} iconOnly={mob}/>
@@ -1853,7 +1912,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
             {!firstIsCreator&&!team.approver&&!team.members.some(x=>x.isApprover)&&<label style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",cursor:"pointer",fontSize:11,fontWeight:600,color:th.t2}}><input type="checkbox" checked={nIsApprover} onChange={e=>setNIsApprover(e.target.checked)} style={{width:14,height:14,accentColor:th.ac,cursor:"pointer"}}/>Approver (can manage all members)</label>}
             <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc||nPin.length!==6} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>{setAdding(false);setNn("");setNc(null);setNr(null);setNPin("");setNIsApprover(false);}}>{t.can}</Btn></div>
           </div>}
-          {team.members.map((m,i)=> <MRow key={m.id} w7={!!team.w7} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{
+          {team.members.map((m,i)=> <MRow key={m.id} w7={!!team.w7} notes={notesOf(m)} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{
               const dimmed=!ownerMode&&!!unlockedId&&m.id!==unlockedId;
               if(dimmed){if(canEditRoles){setAId(m.id===aId?unlockedId:m.id);}else switchTo(m);return;}
               if(m.id===aId){setAId(null);return;}
@@ -1899,14 +1958,14 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           </div>
         </div>}
 
-        {view==="cal"&&am&&<div style={{background:ac.b,borderRadius:12,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:8,border:`1px solid ${ac.d}30`,flexWrap:"wrap",justifyContent:"space-between"}}>
+        {view==="cal"&&am&&!touchUI&&<div style={{background:ac.b,borderRadius:12,padding:"10px 14px",marginBottom:10,display:"flex",alignItems:"center",gap:8,border:`1px solid ${ac.d}30`,flexWrap:"wrap",justifyContent:"space-between"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{width:22,height:22,borderRadius:"50%",background:ac.d,display:"flex",alignItems:"center",justifyContent:"center",color:ac.o,fontSize:10,fontWeight:700}}>{am.name[0].toUpperCase()}</div>
             <span style={{fontSize:12,fontWeight:600,color:ac.t}}>{t.ed}: {am.name}</span>
             <span style={{fontSize:11,color:ac.t,opacity:.7}}>{t.tap}</span>
           </div>
-          <button onClick={()=>setHalfMode(h=>!h)} aria-pressed={halfMode} title={X("halfTitle")} style={{padding:"6px 12px",borderRadius:20,border:"1.5px solid "+ac.d,background:halfMode?ac.d:"transparent",color:halfMode?"#fff":ac.t,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>{halfMode?X("halfOn"):X("halfDay")}</button>
-          <button onClick={()=>{setAId(null);setHalfMode(false);flash(am.name+": "+fmtDays(usedOf(am))+" "+((usedOf(am)===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:ac.o,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c="#fff"/>{V("prCodeOk")} · {fmtDays(usedOf(am))} {(usedOf(am)===1)?t.dy:t.dys}</button>
+          <button onClick={()=>setHalfMode(h=>!h)} aria-pressed={halfMode} title={X("halfTitle")} style={{padding:"6px 12px",borderRadius:20,border:"1.5px solid "+ac.d,background:halfMode?ac.d:"transparent",color:halfMode?ac.o:ac.t,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>{halfMode?X("halfOn"):X("halfDay")}</button>
+          <button onClick={()=>{setAId(null);setHalfMode(false);flash(am.name+": "+fmtDays(usedOf(am))+" "+((usedOf(am)===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:ac.o,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c={ac.o}/>{V("prCodeOk")} · {fmtDays(usedOf(am))} {(usedOf(am)===1)?t.dy:t.dys}</button>
         </div>}
 
         {/* Holiday Clash Warning */}
@@ -1955,8 +2014,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
             </div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:mob?"1fr":quarter!==null?"repeat(3,1fr)":"repeat(3,1fr)",gap:mob?10:14}}>
-            {allM.filter(({month})=>quarter===null||Math.floor(month/3)===quarter).map(({year,month})=> <Cal key={month} year={year} month={month} members={team.members} activeId={locked?null:aId} onToggle={tog} compact={mob&&quarter===null} th={th} t={t} holSet={holSet} w7={team.w7} approvalMode={approvalMode} team={team} setCommentDay={setCommentDay} holInfo={holInfo} lang={lang}/>)}
+            {allM.filter(({month})=>quarter===null||Math.floor(month/3)===quarter).map(({year,month})=> <Cal key={month} year={year} month={month} members={team.members} activeId={locked?null:aId} onToggle={tog} touchEdit={touchEdit} tapStart={tapStart} onTapDay={tapDay} compact={mob&&quarter===null} th={th} t={t} holSet={holSet} w7={team.w7} approvalMode={approvalMode} team={team} setCommentDay={setCommentDay} holInfo={holInfo} lang={lang}/>)}
           </div>
+          {touchUI&&<div style={{height:78}} aria-hidden="true"/>}
         </Fragment>}
 
         {view==="heatmap"&&<HeatmapView team={team} th={th} t={t} holSet={holSet}/>}
@@ -1994,6 +2054,23 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     {mob&&sb&&<div onClick={()=>setSb(false)} style={{position:"fixed",inset:0,top:56,background:"rgba(0,0,0,.3)",zIndex:80}}/>}
     {showSh&&<ShareModal teamId={team.id} teamName={team.name} onClose={()=>setShowSh(false)} th={th} t={t}/>}
     
+    {/* Touch: one bar above the tab bar. Looking by default; "Edit my days" switches the calendar to tap mode.
+        It sits here, outside <main>: main carries a view-transition name and an entrance animation, and either one
+        makes a "fixed" child stick to main's box instead of the screen. */}
+        {view==="cal"&&touchUI&&!locked&&(am||meM)&&(()=>{const who=am||meM;const wc=MC[Math.max(0,team.members.indexOf(who))%MC.length];const u=usedOf(who);const al=who.pto?who.pto+(who.carry||0):0;
+          const st=fmtDays(u)+(al?" "+V("tdOf",{n:al}):"")+" "+(u===1&&!al?t.dy:t.dys);
+          return <div className="tvp-tbar" style={{bottom:mob?"calc(62px + env(safe-area-inset-bottom,0px))":14,background:th.dk?"#241D3D":"#FFFFFF",borderColor:wc.d,color:th.tx}}>
+            {!touchEdit?<Fragment>
+              <span className="tvp-av" style={{background:wc.d,color:wc.o,width:28,height:28,fontSize:12}}>{(who.name||"?")[0].toUpperCase()}</span>
+              <span className="tvp-tbar-tx"><b>{who.name}</b><small style={{color:th.t2}}>{st}</small></span>
+              <button type="button" className="tvp-tbar-go" style={{background:wc.d,color:wc.o}} onClick={()=>{if(!am)setAId(who.id);setHalfMode(false);setTouchEdit(true);}}><Ic n="edit" s={14} c={wc.o}/>{V("teEdit")}</button>
+            </Fragment>:<Fragment>
+              <span className="tvp-tbar-tx" role="status"><b>{halfMode?X("halfOn"):tapStart?V("teLast"):V("teFirst")}</b><small style={{color:th.t2}}>{st}</small></span>
+              {tapStart&&<button type="button" className="tvp-tbar-sm" style={{borderColor:th.gbd,color:th.t2}} onClick={()=>setTapStart(null)}>{X("cancel")}</button>}
+              <button type="button" className="tvp-tbar-sm" aria-pressed={halfMode} aria-label={X("halfDay")} title={X("halfTitle")} style={{borderColor:wc.d,background:halfMode?wc.d:"transparent",color:halfMode?wc.o:th.tx}} onClick={()=>setHalfMode(h=>!h)}>½</button>
+              <button type="button" className="tvp-tbar-go" style={{background:wc.d,color:wc.o}} onClick={()=>{setTouchEdit(false);setHalfMode(false);}}><Ic n="check" s={14} c={wc.o}/>{V("prCodeOk")}</button>
+            </Fragment>}
+          </div>;})()}
     {mob&&<nav className="tvp-botnav" style={{background:th.gbg,borderTop:"1px solid "+th.gbd,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
       <div className={"tvp-botnav-scroll"+(botMore?" more":"")} ref={botRef} onScroll={botCheck}>
       {views.map(function(v){return <button key={v.k} onClick={function(){if(v.k===view)return;withTransition(function(){flushSync(function(){setView(v.k);});});}} aria-current={v.k===view?"page":undefined} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",padding:"4px 8px",flex:"1 0 auto",minWidth:56,scrollSnapAlign:"center"}}>

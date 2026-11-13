@@ -3,6 +3,7 @@
 // The Workoșenie link is nofollow (portfolio rule: no followed links between Adrian's own sites).
 import { useEffect, useRef, useState } from "react";
 import ShareSection from "@/components/ShareSection";
+import ProvenReadTeaser from "@/components/ProvenReadTeaser";
 import { X } from "@/lib/extraText";
 import "./workosenie.css";
 import { isRtl } from "@/lib/extraText";
@@ -69,8 +70,16 @@ export function WorkoseniePromo({ th, lang = "en" }: { th: Th; lang?: string }) 
   </div>;
 }
 
-// Share + Workoșenie side by side (stacked on phones)
-export default function BottomDuo({ th, lang = "en", compact = false }: { th: Th; lang?: string; compact?: boolean }) {
+// Share + Workoșenie side by side (stacked on phones). On the front page (`provenRead`): ProvenRead and Workoșenie
+// side by side, with "Recommend this tool" across the full width below them.
+export default function BottomDuo({ th, lang = "en", compact = false, provenRead = false }: { th: Th; lang?: string; compact?: boolean; provenRead?: boolean }) {
+  if (provenRead) return <>
+    <div className="wpo-duo wpo-pair">
+      <ProvenReadTeaser th={th} lang={lang} />
+      <WorkoseniePromo th={th} lang={lang} />
+    </div>
+    <div className="wpo-below"><ShareSection th={th} lang={lang} compact={compact} /></div>
+  </>;
   return <div className="wpo-duo" style={compact ? { marginTop: 28 } : undefined}>
     <ShareSection th={th} lang={lang} compact={compact} />
     <WorkoseniePromo th={th} lang={lang} />
