@@ -62,8 +62,13 @@
     "w7": "Option: the team works all 7 days (shops, hospitals).",
     "recent": "Heading above the teams this browser opened before."
   },
-  "HC": { "off": "Followed by a list of member names.", "mn": "Date set by the lunar calendar (e.g. Eid, Lunar New Year)." },
-  "UP": { "head": "Lower-case, follows a date range in a copied text: '12-26 Nov: who is away'." },
+  "HC": {
+    "off": "Followed by a list of member names.",
+    "mn": "Date set by the lunar calendar (e.g. Eid, Lunar New Year)."
+  },
+  "UP": {
+    "head": "Lower-case, follows a date range in a copied text: '12-26 Nov: who is away'."
+  },
   "X": {
     "nNew": "Follows a number in an import preview: members that are new.",
     "nUpdated": "Follows a number: members updated.",
@@ -72,7 +77,12 @@
     "halfDay": "Keep the ½ sign.",
     "starts": "Lower-case verb after a name: 'Ana starts 14 Dec'.",
     "group": "A sub-group inside a team (e.g. Design, Sales).",
-    "protect": "Button: protect a member with a PIN."
+    "protect": "Button: protect a member with a PIN.",
+    "vmQ": "Heading of a card promoting a free video call tool; followed by the product name 'Free Video Meeting Space' (kept in English).",
+    "vmCall": "Example title of a video call in an illustration: arranging who covers for colleagues on holiday in December.",
+    "vmOf": "People in the call out of the 10 allowed, e.g. '4 of 10'.",
+    "vmFine": "Small print under the button: the tool is free and calls are peer to peer.",
+    "vmF3": "Feature chip: polls and the raise-hand feature of a video call."
   },
   "V": {
     "wr": "Feature name: a playful year-in-review story (like a music app's yearly recap). May stay 'Wrapped' if natural.",
@@ -92,7 +102,10 @@
     "pSteady": "Playful persona title for someone who spreads days evenly.",
     "jobRole": "Job title (e.g. Designer), set by the team owner."
   },
-  "PROMO": { "feats": "Exactly 4 short feature chips, in order.", "fine": "Keep '€10' and the meaning: 12 months free, then €10 per month per company." },
+  "PROMO": {
+    "feats": "Exactly 4 short feature chips, in order.",
+    "fine": "Keep '€10' and the meaning: 12 months free, then €10 per month per company."
+  },
   "PAGE": {
     "title": "Browser-tab and search-result title of the front page, about 60 characters: say what the tool is in the words people type into a search engine (free team leave planner), then ' | Team Vacation Planner'.",
     "desc": "Search-result description of the front page: one or two sentences, at most about 160 characters.",

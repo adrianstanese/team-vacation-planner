@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 706,
+ "strings": 717,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -1287,6 +1287,50 @@
    "where": "Assorted planner labels: PIN dialogs, import, groups, half days, cookie notice, exports.",
    "file": "lib/extraText.ts",
    "strings": {
+    "vmQ": {
+     "en": "Need to talk it through?",
+     "note": "Heading of a card promoting a free video call tool; followed by the product name 'Free Video Meeting Space' (kept in English)."
+    },
+    "vmSub": {
+     "en": "Video calls that start from a link. No account, nothing to install, up to 10 people. Open a room, send the link, and you are talking."
+    },
+    "vmF1": {
+     "en": "Screen sharing",
+     "max": 27
+    },
+    "vmF2": {
+     "en": "Background blur",
+     "max": 29
+    },
+    "vmF3": {
+     "en": "Polls and raised hands",
+     "note": "Feature chip: polls and the raise-hand feature of a video call."
+    },
+    "vmF4": {
+     "en": "Shared agenda with timer"
+    },
+    "vmCta": {
+     "en": "Start a free call"
+    },
+    "vmFine": {
+     "en": "Free. Calls go directly between your browsers.",
+     "note": "Small print under the button: the tool is free and calls are peer to peer."
+    },
+    "vmCall": {
+     "en": "Holiday cover · December",
+     "note": "Example title of a video call in an illustration: arranging who covers for colleagues on holiday in December."
+    },
+    "vmOf": {
+     "en": "{n} of 10",
+     "ph": [
+      "{n}"
+     ],
+     "max": 18,
+     "note": "People in the call out of the 10 allowed, e.g. '4 of 10'."
+    },
+    "vmAlt": {
+     "en": "Illustration of a four-person video call"
+    },
     "prQ": {
      "en": "Coming soon:",
      "max": 24

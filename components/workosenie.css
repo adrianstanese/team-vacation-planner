@@ -95,3 +95,6 @@
 .prt-ladder .r span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .prt-ladder .r em { font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; text-align: end; color: #E7ECF5; }
 .prt-beta { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; color: #fff; font: 700 14px/1.2 var(--font-body, system-ui), system-ui; background: linear-gradient(135deg, #86198F, #6D28D9); box-shadow: 0 12px 30px -12px rgba(134,25,143,.7); }
+
+.wpo-below.wpo-video { margin-bottom: 18px; }
+.wpo-below.wpo-video > section { margin: 0 !important; max-width: none !important; }

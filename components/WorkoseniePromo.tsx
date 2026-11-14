@@ -3,6 +3,7 @@
 // The Workoșenie link is nofollow (portfolio rule: no followed links between Adrian's own sites).
 import { useEffect, useRef, useState } from "react";
 import ShareSection from "@/components/ShareSection";
+import VideoMeetingPromo from "@/components/VideoMeetingPromo";
 import ProvenReadTeaser from "@/components/ProvenReadTeaser";
 import { X } from "@/lib/extraText";
 import "./workosenie.css";
@@ -78,6 +79,7 @@ export default function BottomDuo({ th, lang = "en", compact = false, provenRead
       <ProvenReadTeaser th={th} lang={lang} />
       <WorkoseniePromo th={th} lang={lang} />
     </div>
+    <div className="wpo-below wpo-video"><VideoMeetingPromo th={th} lang={lang} /></div>
     <div className="wpo-below"><ShareSection th={th} lang={lang} compact={compact} /></div>
   </>;
   return <div className="wpo-duo" style={compact ? { marginTop: 28 } : undefined}>
