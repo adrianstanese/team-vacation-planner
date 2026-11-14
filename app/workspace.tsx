@@ -15,6 +15,7 @@ import "./frontpage.css";
 import { buildSheets } from "@/lib/xlsxSheets";
 import { planImport } from "@/lib/importPlan";
 import { findBridges } from "@/lib/bridges";
+import { CARD_HEIGHT } from "@/lib/embedLines";
 import { mergeTeam } from "@/lib/merge";
 import { X, textLang, dateLocale, isRtl, monthShort } from "@/lib/extraText";
 import { icsText, icsStamp } from "@/lib/ics";
@@ -907,8 +908,8 @@ function ShareModal({teamId,teamName,onClose,th,t}){
       {tab==="widget"&&<Fragment>
         <p style={{margin:"0 0 6px",fontSize:13,color:th.t2,fontWeight:600}}>{X("widgetT")}</p>
         <p style={{margin:"0 0 10px",fontSize:12,color:th.t3}}>{X("widgetD")}</p>
-        <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{"<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"220\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>"}</div>
-        <Btn th={th} onClick={()=>copy("<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"220\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center"}}>{cp?t.cp:t.copyWidget}</Btn>
+        <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{"<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"" + CARD_HEIGHT + "\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>"}</div>
+        <Btn th={th} onClick={()=>copy("<iframe src=\"" + link.replace("#team=","?team=") + "&view=badge\" width=\"320\" height=\"" + CARD_HEIGHT + "\" frameborder=\"0\" style=\"border-radius:12px;overflow:hidden\"></iframe>")} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center"}}>{cp?t.cp:t.copyWidget}</Btn>
       </Fragment>}
       {tab==="embed"&&<Fragment>
         <p style={{margin:"0 0 10px",fontSize:13,color:th.t2}}>{X("embedD")}</p>

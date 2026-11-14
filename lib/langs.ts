@@ -59,6 +59,9 @@ export function withLang(lang: string, loc: { pathname: string; search: string; 
 // The list is kept per page as well: a new page ships closed and is opened here once it has been checked.
 //   home     = the planner's front page in that language
 //   template = the leave planner template page
+//   about    = the About page (what the planner is, where the holiday data comes from)
+//   embed    = the page on showing a team's calendar inside Notion, Teams and SharePoint (English only)
+// The pages' addresses are in lib/sitePages.
 const OPEN_PAGES: Record<string, readonly string[]> = { en: ["home"] };
 export const INDEXED_LANGS: ReadonlySet<string> = new Set(Object.keys(OPEN_PAGES).filter(l => OPEN_PAGES[l].includes("home")));
 export const indexable = (lang: string, page = "home"): boolean => !!OPEN_PAGES[lang] && OPEN_PAGES[lang].includes(page);

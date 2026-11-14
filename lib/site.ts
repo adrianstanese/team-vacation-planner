@@ -14,3 +14,8 @@ export const VIEWPORT: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#0B0F1A" },
   ],
 };
+
+/** Where people write to: questions, corrections, data requests. */
+export const CONTACT_EMAIL = "contact@stanese.ro";
+/** The publisher's name, shown on the About page once the site owner has decided to name one. Empty until then. */
+export const PUBLISHER = "";

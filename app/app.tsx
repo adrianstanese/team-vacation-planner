@@ -13,15 +13,18 @@ import TrapScope from "@/components/TrapScope";
 import { LANG_META } from "@/lib/langMeta";
 import { indexable, isPlannerPath, nameLocale, pickLang, withLang } from "@/lib/langs";
 import { TEMPLATE_LINK, TEMPLATE_PATH, TEMPLATE_YEAR } from "@/lib/templateLinks";
+import { PAGE_LINK, pagePath, pageRel } from "@/lib/sitePages";
+import { CONTACT_EMAIL } from "@/lib/site";
 import { PAGE_TX } from "@/lib/pageText";
 import { V } from "@/lib/v3Text";
 import { nextLeaveDay, carryInfo } from "@/lib/v3Util";
 // Loaded only when first opened (keeps the first page load small)
-// The team screen lives in app/workspace.tsx and loads on demand: team links start loading it at once,
+// The team screen lives in app/workspace.tsx and loads on demand: team links (#team=, and ?team= as embedded
+// planners use it; not the small views with view=) start loading it at once,
 // the front page fetches it when the browser is idle, so opening a team stays instant.
 const loadWS=()=>import("./workspace");
 const WS=nextDynamic(loadWS,{ssr:false,loading:()=><div style={{minHeight:"100vh"}} aria-busy="true"/>});
-if(typeof window!=="undefined"){try{if(/team=/.test(window.location.hash))loadWS();else{const ric=(window as Window&{requestIdleCallback?:(cb:()=>void)=>number}).requestIdleCallback;if(ric)ric(()=>{loadWS();});else setTimeout(()=>{loadWS();},1500);}}catch(e){}}
+if(typeof window!=="undefined"){try{if(/team=/.test(window.location.hash)||(/[?&]team=/.test(window.location.search)&&!/[?&]view=/.test(window.location.search)))loadWS();else{const ric=(window as Window&{requestIdleCallback?:(cb:()=>void)=>number}).requestIdleCallback;if(ric)ric(()=>{loadWS();});else setTimeout(()=>{loadWS();},1500);}}catch(e){}}
 // Report and export builders load on the first click (app/reports.ts)
 export const R=fn=>(...a)=>import("./reports").then(m=>m[fn](...a)).catch(e=>{console.error(e);try{window.dispatchEvent(new CustomEvent("tvp-save-error",{detail:"Could not start the export. Reload the page and try again."}));}catch(_){/* no window */}});
 // ─── Algorithmic Holiday Engine (2026–2035) ──────────────────────
@@ -1401,7 +1404,7 @@ function AboutPage({th,t,onBack,lang,setLang,theme,setTheme}) {
 }
 
 // Contact: a plain e-mail link on the front page (the pop-up form was removed on 2026-11-13).
-const CONTACT_EMAIL="contact@stanese.ro";
+
 
 // Keeps the address in step with the language on screen ("/de" for German, "/" for English) without loading
 // anything, so a copied link, a bookmark and a reload carry the language. Only on the planner's own addresses.
@@ -1646,7 +1649,7 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
       <div className="wrap"><BottomDuo th={th} lang={lang} provenRead/></div>
     </main>
     {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a full page load on purpose: the privacy page is English and must not inherit the language this screen set on <html> */}
-    <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><a href={"mailto:"+CONTACT_EMAIL} style={{color:"var(--ink-2)",fontWeight:600,minHeight:44,display:"inline-flex",alignItems:"center"}}>{L.contact}: {CONTACT_EMAIL}</a>{TEMPLATE_PATH[lang]&&<a href={TEMPLATE_PATH[lang]} rel={indexable(lang,"template")?undefined:"nofollow"} style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{TEMPLATE_LINK[lang].replace("{y}",String(TEMPLATE_YEAR))}</a>}<a href="/privacy" style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{X("privacy")}</a></div></footer>
+    <footer className="foot"><div className="wrap"><span className="sp">© {CY} {t.brand} · {L.free}</span><button onClick={onAbout}>{L.about}</button><a href={"mailto:"+CONTACT_EMAIL} style={{color:"var(--ink-2)",fontWeight:600,minHeight:44,display:"inline-flex",alignItems:"center"}}>{L.contact}: {CONTACT_EMAIL}</a>{TEMPLATE_PATH[lang]&&<a href={TEMPLATE_PATH[lang]} rel={indexable(lang,"template")?undefined:"nofollow"} style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{TEMPLATE_LINK[lang].replace("{y}",String(TEMPLATE_YEAR))}</a>}{(["about","embed"] as const).map(p=>pagePath(p,lang)?<a key={p} href={pagePath(p,lang)} rel={pageRel(p,lang)} style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{PAGE_LINK[p][lang]}</a>:null)}<a href="/privacy" style={{color:"var(--ink-2)",fontWeight:600,textDecoration:"none",minHeight:44,display:"inline-flex",alignItems:"center"}}>{X("privacy")}</a></div></footer>
     {children}
   </div>;
 }
