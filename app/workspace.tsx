@@ -2152,12 +2152,16 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       const loc=dateLocale(lang);const fd=k=>{const p2=pk(k);try{return new Date(p2.y,p2.m,p2.d,12).toLocaleDateString(loc,{weekday:"short",day:"numeric",month:"short"});}catch(e){return k;}};
       const hn=k=>{const rows=hNames[mem.country]&&hNames[mem.country].h&&hNames[mem.country].h[k];return rows&&rows[0]?(rows[0][0]||rows[0][1]):holName(k);};
       const suggestions=mem.country?findBridges({year:yr,holidays:hs,booked:mem.days||[],sevenDay:!!team.w7,today:yr===CY?dk(CY,CM,CD):"",limit:10}).map(b=>({take:b.take,off:b.cost,gain:b.length,label:(b.take.length===1?fd(b.take[0]):fd(b.take[0])+" – "+fd(b.take[b.take.length-1]))+" → "+fd(b.from)+" – "+fd(b.to)+" ("+[...new Set(b.holidays.map(hn))].join(", ")+")"})):[];
+      // Adding a suggestion follows the rules of a click on the calendar: not in a locked year, and only for the
+      // person the visitor may change (the server refuses anything else; without this the days showed for a moment)
+      const noAdd=locked?t.locked:isPinLocked(mem.id)?X("pinEnter"):"";
       return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}} onClick={()=>setShowOptimizer(null)}>
         <div role="dialog" aria-modal="true" aria-label={t.bestDays||"Best days"} onClick={e=>e.stopPropagation()} style={{background:th.gbg,borderRadius:G.r,maxWidth:480,width:"100%",maxHeight:"70vh",display:"flex",flexDirection:"column",boxShadow:th.sl,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}><TrapScope onClose={()=>setShowOptimizer(null)}/>
           <div style={{padding:"16px 20px",borderBottom:`1px solid ${th.bd}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <h3 style={{margin:0,fontSize:16,fontWeight:700,color:th.tx,fontFamily:F}}>{t.bestDays} {mem.name}</h3>
             <button onClick={()=>setShowOptimizer(null)} aria-label={X("close")} title={X("close")} style={{background:th.sh,border:"none",borderRadius:"50%",width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={14} c={th.t2}/></button>
           </div>
+          {noAdd&&suggestions.length>0&&<div role="note" style={{padding:"8px 20px",borderBottom:`1px solid ${th.bd}`,fontSize:12,fontWeight:600,color:th.t2,display:"flex",alignItems:"center",gap:6}}><Ic n="lock" s={13} c={th.t2}/>{noAdd}</div>}
           <div style={{flex:1,overflowY:"auto",padding:"12px 16px"}}>
             {suggestions.length===0?<div style={{textAlign:"center",padding:30,color:th.t3,fontSize:13}}>{X("bridgeNone",{y:yr})}</div>:
             suggestions.map((s,i)=> <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:i%2===0?th.bg:"transparent",borderRadius:8,marginBottom:4}}>
@@ -2168,7 +2172,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
                 <div style={{fontSize:13,fontWeight:600,color:th.tx}}>{s.label}</div>
                 <div style={{fontSize:11,color:th.t3}}>{X("bridgeTake",{o:s.off,g:s.gain})}</div>
               </div>
-              <Btn th={th} v="ghost" sz="sm" onClick={()=>{const newDays=[...(mem.days||[]),...s.take.filter(d=>!(mem.days||[]).includes(d))];updateWithHistory({...team,members:team.members.map(m=>m.id===mem.id?{...m,days:newDays}:m)});flash(X("added",{n:s.off}));}} style={{fontSize:11}}>+ {X("add")}</Btn>
+              <Btn th={th} v="ghost" sz="sm" icon={null} disabled={!!noAdd} onClick={()=>{if(noAdd){flash(noAdd);return;}const add=s.take.filter(d=>!(mem.days||[]).includes(d));if(!add.length)return;updateWithHistory({...team,members:team.members.map(m=>m.id===mem.id?{...m,days:[...(m.days||[]),...add]}:m),log:addLogEntry(team,(mem.name||"Member")+" added "+add[0]+(add.length>1?" → "+add[add.length-1]:""))});flash(X("added",{n:add.length}));}} style={{fontSize:11}}>+ {X("add")}</Btn>
             </div>)}
           </div>
         </div>

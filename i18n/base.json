@@ -1062,7 +1062,7 @@
      "en": "Multi-Year Support (2026–2035)"
     },
     "f3d": {
-     "en": "Holidays computed algorithmically for any year in the range."
+     "en": "Public holidays are included for every year in the range."
     },
     "f4": {
      "en": "Quarterly Focus View"
@@ -1074,7 +1074,7 @@
      "en": "61 Countries with Regional Holidays"
     },
     "f5d": {
-     "en": "Public holidays for 61 countries. Regional holidays for Spain, Germany, Switzerland, Australia, Canada."
+     "en": "Public holidays for 61 countries. Regional holidays for countries such as Spain, Germany, Switzerland, the United Kingdom, Canada, Australia and India."
     },
     "f6": {
      "en": "Holiday Clash Detector"
