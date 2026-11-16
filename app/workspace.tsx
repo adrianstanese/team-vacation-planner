@@ -1664,7 +1664,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const declineAsk=()=>{const cur=teamRef.current;const r=cur.approverReq;const m=r&&cur.members.find(x=>x.id===r.id);updateWithHistory({...cur,approverReq:null,log:addLogEntry(cur,"Approver request from "+((m&&m.name)||"member")+" declined")});};
   const revokeApproval=id=>{const cur=teamRef.current;const m=cur.members.find(x=>x.id===id);updateWithHistory({...cur,members:cur.members.map(x=>x.id===id?{...x,approved:false}:x),log:addLogEntry(cur,((m&&m.name)||"Member")+" approval revoked")});};
   const turnOnApprovals=mid=>{const cur=teamRef.current;updateWithHistory({...cur,approver:mid,members:cur.members.map(x=>x.id===mid?{...x,isApprover:true,approved:true}:x),log:addLogEntry(cur,"Approvals turned on")});};
-  const wrOk=team.members.reduce((n,m)=>n+(m.days||[]).filter(k=>typeof k==="string"&&k.startsWith(yr+"-")).length,0)>=5;
+  // Wrapped is a December ritual: shown only in December, and only for the year we are in
+  const wrNow=new Date();
+  const wrOk=wrNow.getMonth()===11&&yr===wrNow.getFullYear()&&team.members.reduce((n,m)=>n+(m.days||[]).filter(k=>typeof k==="string"&&k.startsWith(yr+"-")).length,0)>=5;
   const approveIds=ids=>{if(!ids.length)return;const cur=teamRef.current;const set=new Set(ids);const names=cur.members.filter(m=>set.has(m.id)).map(m=>m.name||"Member");
     updateWithHistory({...cur,members:cur.members.map(mm=>set.has(mm.id)?{...mm,approved:true}:mm),log:addLogEntry(cur,names.join(", ")+" approved")});flash(V("approvedToast",{n:ids.length}));};
   const requestChanges=(m,note,day)=>{const cur=teamRef.current;if(cur.locked){flash(t.locked);return;}const by=(cur.members.find(x=>x.id===cur.approver)||{}).name||"Approver";
