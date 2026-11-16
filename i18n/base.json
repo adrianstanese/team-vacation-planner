@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 786,
+ "strings": 833,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -1755,6 +1755,205 @@
    "where": "Newer features: approvals, 'Who are you?' gate, PIN reset, time travel (version history), Team Wrapped (year-in-review story), Today tiles, printed/PDF reports (keys starting rp).",
    "file": "lib/v3Text.ts",
    "strings": {
+    "dmTry": {
+     "en": "Try the live demo"
+    },
+    "dmSub": {
+     "en": "A ready-filled team. Change anything: it resets every night."
+    },
+    "dmBanner": {
+     "en": "Demo team: sign in as anyone with PIN {pin}. Everything resets every night.",
+     "ph": [
+      "{pin}"
+     ],
+     "note": "Banner inside the public demo team; {pin} is a 6-digit number."
+    },
+    "dmOwn": {
+     "en": "Create your own team"
+    },
+    "trStart": {
+     "en": "Show me around",
+     "max": 27
+    },
+    "trNext": {
+     "en": "Next",
+     "max": 10
+    },
+    "trDone": {
+     "en": "Got it",
+     "max": 13
+    },
+    "trSkip": {
+     "en": "Skip",
+     "max": 10
+    },
+    "trStep": {
+     "en": "{a} of {b}",
+     "ph": [
+      "{a}",
+      "{b}"
+     ],
+     "max": 20,
+     "note": "Tour progress, e.g. '1 of 4'."
+    },
+    "tr1t": {
+     "en": "Mark your days",
+     "max": 27
+    },
+    "tr1b": {
+     "en": "Tap a day, or drag across several, to mark vacation. Tap again to remove it."
+    },
+    "tr2t": {
+     "en": "This is you",
+     "max": 22
+    },
+    "tr2b": {
+     "en": "Click your name for your details, photo, countdown and the long-weekend finder."
+    },
+    "tr3t": {
+     "en": "Reports for HR",
+     "max": 27
+    },
+    "tr3b": {
+     "en": "Export the year as PDF or Excel, including the year-end report with a sign-off block."
+    },
+    "tr4t": {
+     "en": "Invite your team",
+     "max": 31
+    },
+    "tr4b": {
+     "en": "Share the link or show the QR code. Everyone picks their name and sets a PIN."
+    },
+    "yeBtnX": {
+     "en": "Year-end (Excel)",
+     "max": 31
+    },
+    "yeBtnP": {
+     "en": "Year-end (PDF)",
+     "max": 27
+    },
+    "yrTitle": {
+     "en": "Year-end leave report {y}",
+     "ph": [
+      "{y}"
+     ]
+    },
+    "yePerson": {
+     "en": "Person",
+     "max": 13
+    },
+    "yeCountry": {
+     "en": "Country",
+     "max": 15
+    },
+    "yeGroup": {
+     "en": "Group",
+     "max": 11
+    },
+    "yeRole": {
+     "en": "Job title",
+     "max": 18
+    },
+    "yrAllow": {
+     "en": "Allowance",
+     "max": 18
+    },
+    "yeCarry": {
+     "en": "From {y}",
+     "ph": [
+      "{y}"
+     ],
+     "max": 16,
+     "note": "Report column: days carried over from the previous year {y}."
+    },
+    "yeTotal": {
+     "en": "Total",
+     "max": 11
+    },
+    "yrTaken": {
+     "en": "Taken",
+     "max": 11
+    },
+    "yrLeft": {
+     "en": "Left",
+     "max": 10
+    },
+    "yeLong": {
+     "en": "Longest break (days in a row)"
+    },
+    "yeTwo": {
+     "en": "Break of 10+ working days"
+    },
+    "yeAppr": {
+     "en": "Plan approved",
+     "max": 25
+    },
+    "yeYes": {
+     "en": "Yes",
+     "max": 10
+    },
+    "yeNo": {
+     "en": "No",
+     "max": 10
+    },
+    "yeByCountry": {
+     "en": "By country",
+     "max": 20
+    },
+    "yePeople": {
+     "en": "People",
+     "max": 13
+    },
+    "yeAvg": {
+     "en": "Average taken",
+     "max": 25
+    },
+    "yeNotes": {
+     "en": "Points for attention"
+    },
+    "yeNoTwo": {
+     "en": "No break of 10 working days or more: {names}",
+     "ph": [
+      "{names}"
+     ]
+    },
+    "yeOver": {
+     "en": "Over the allowance: {names}",
+     "ph": [
+      "{names}"
+     ]
+    },
+    "yeUnused": {
+     "en": "Days left unused: {n} in total",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "yeNone": {
+     "en": "Nothing to flag.",
+     "max": 31
+    },
+    "yeSign1": {
+     "en": "Prepared by",
+     "max": 22,
+     "note": "Sign-off line on a printed HR report."
+    },
+    "yeSign2": {
+     "en": "Approved by",
+     "max": 22,
+     "note": "Sign-off line on a printed HR report, followed by the approver's name."
+    },
+    "yeDate": {
+     "en": "Date",
+     "max": 10
+    },
+    "yeSig": {
+     "en": "Signature",
+     "max": 18
+    },
+    "yeHalf": {
+     "en": "A half day counts as 0.5. Weekends and public holidays are never counted."
+    },
     "capAway": {
      "en": "Away · back {d}",
      "ph": [

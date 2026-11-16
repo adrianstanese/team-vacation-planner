@@ -74,6 +74,7 @@ export function checkPin(pin: string, stored: string): { ok: boolean; legacy: bo
 
 // Records the attempt FIRST and then counts, so parallel guesses cannot all slip under the limit (race-safe)
 export async function pinAttempt(sql: Sql, team: string, member: string): Promise<boolean> {
+  if (team === "demo") return true; // public demo PIN (lib/demoTeam.ts): nothing to protect, never lock it
   if (Math.random() < 0.02) await sql`DELETE FROM pin_attempts WHERE at < now() - interval '1 day'`;
   await sql`INSERT INTO pin_attempts (team, member) VALUES (${team}, ${member})`;
   const [r] = await sql`SELECT COUNT(*)::int AS n FROM pin_attempts WHERE team = ${team} AND member = ${member} AND at > now() - interval '15 minutes'`;

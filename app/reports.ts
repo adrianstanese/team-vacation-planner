@@ -3,7 +3,7 @@
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { V } from "@/lib/v3Text";
 import { dateLocale, monthShort } from "@/lib/extraText";
-import { nextLeaveDay, avgCoverage } from "@/lib/v3Util";
+import { nextLeaveDay, avgCoverage, streaksOf } from "@/lib/v3Util";
 import { EU_C, MC, dim, dk, esc, fdm, fileBase, pk, reportSafe, safeYear, withBusy, _fd, _fd2, getAllHolidays, isWe, usedOf } from "./app";
 
 // Day totals as the planner shows them: a half day counts 0.5
@@ -703,4 +703,84 @@ export function exportXLSLegacy(team, t) {
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a"); a.href = url; a.download = fileBase(team.name)+"_"+yr+".xls"; a.click();
   URL.revokeObjectURL(url);
+}
+
+
+// ─── Year-end leave report for HR (Excel and PDF) ───
+// Per person: allowance, days brought from last year, taken, left, the longest break and whether it included 10
+// working days in a row (the minimum one-block rule in several countries, e.g. Romania Art. 146); per country
+// totals; points for attention; a sign-off block. Weekends and public holidays never count; a half day is 0.5.
+function yearEndData(team){
+  team = reportSafe(team);
+  var yr = safeYear(team), w7 = !!team.w7, p = yr + "-";
+  var appr = !!team.approver || (team.members||[]).some(function(m){return m.isApprover;});
+  var rows = (team.members||[]).map(function(m){
+    var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
+    var hol = new Set(m.country ? getAllHolidays(m, yr) : []);
+    var mm = { ...m, days:(m.days||[]).filter(function(d){return String(d).startsWith(p);}), half:(m.half||[]).filter(function(d){return String(d).startsWith(p);}) };
+    var taken = usedOf(mm), pto = Number(m.pto)||0, carry = Number(m.carry)||0, total = pto + carry;
+    var st = streaksOf(mm, yr, hol, w7);
+    var longest = st.reduce(function(a,s){return Math.max(a, s.length);}, 0);
+    var longLeave = st.reduce(function(a,s){return Math.max(a, s.leave);}, 0);
+    return { name:m.name||"", country:co?co.n:"", group:m.group||"", role:m.role||"", pto:pto, carry:carry, total:total, taken:taken,
+      left: total ? Math.round((total-taken)*10)/10 : null, longest:longest, two: longLeave >= 10, approved: appr && !m.isApprover && team.approver!==m.id ? !!m.approved : null };
+  }).sort(function(a,b){return a.name.localeCompare(b.name);});
+  type CRow = { country: string; people: number; total: number; taken: number; left: number };
+  var byC: Record<string, CRow> = {};
+  rows.forEach(function(r){ var k = r.country || "—"; var c = byC[k] || (byC[k] = { country:k, people:0, total:0, taken:0, left:0 }); c.people++; c.total += r.total; c.taken += r.taken; c.left += r.left || 0; });
+  var countries: CRow[] = Object.values(byC).sort(function(a,b){return a.country.localeCompare(b.country);});
+  var noTwo = rows.filter(function(r){return !r.two && r.taken > 0;}).map(function(r){return r.name;});
+  var never = rows.filter(function(r){return r.taken === 0;}).map(function(r){return r.name;});
+  var over = rows.filter(function(r){return r.left !== null && r.left < 0;}).map(function(r){return r.name;});
+  var unused = rows.reduce(function(a,r){return a + (r.left && r.left > 0 ? r.left : 0);}, 0);
+  var aprM = team.approver ? (team.members||[]).find(function(m){return m.id===team.approver;}) : (team.members||[]).find(function(m){return m.isApprover;});
+  return { team:team, yr:yr, appr:appr, rows:rows, countries:countries, noTwo:noTwo.concat(never), over:over, unused:Math.round(unused*10)/10, approver: aprM ? aprM.name : "" };
+}
+var fmtN = function(n){ return n === null || n === undefined ? "—" : String(Math.round(n*10)/10); };
+
+export function yearEndReport(team, t, kind){
+  var d = yearEndData(team);
+  var title = V("yrTitle", { y: d.yr }) + " · " + (d.team.name || "");
+  var gen = new Date().toLocaleDateString(dateLocale());
+  var yn = function(b){ return b === null ? "—" : b ? V("yeYes") : V("yeNo"); };
+  var heads = [V("yePerson"), V("yeCountry"), V("yeGroup"), V("yeRole"), V("yrAllow"), V("yeCarry",{y:d.yr-1}), V("yeTotal"), V("yrTaken"), V("yrLeft"), V("yeLong"), V("yeTwo")].concat(d.appr ? [V("yeAppr")] : []);
+  var line = function(r){ return [r.name, r.country, r.group, r.role, r.pto||"—", r.carry||"—", r.total||"—", r.taken, r.left, r.longest||"—", yn(r.two)].concat(d.appr ? [yn(r.approved)] : []); };
+  var notes = [];
+  if (d.noTwo.length) notes.push(V("yeNoTwo", { names: d.noTwo.join(", ") }));
+  if (d.over.length) notes.push(V("yeOver", { names: d.over.join(", ") }));
+  if (d.unused) notes.push(V("yeUnused", { n: fmtN(d.unused) }));
+  if (!notes.length) notes.push(V("yeNone"));
+  var base = fileBase(d.team.name) + "_" + d.yr + "_year-end";
+  if (kind === "xlsx") {
+    return withBusy((async function(){
+      var mod = await import("write-excel-file/universal");
+      var H = function(v){ return { value: String(v), fontWeight: "bold", backgroundColor: "#EDE9FE" }; };
+      var C = function(v){ return typeof v === "number" ? { value: v, type: Number } : { value: v === null || v === undefined ? "—" : String(v) }; };
+      var s1: Record<string, unknown>[][] = ([[{ value: title, fontWeight: "bold", fontSize: 14 }], [{ value: gen + " · vacationplanner.team" }], [], heads.map(H)] as Record<string, unknown>[][]).concat(d.rows.map(function(r){ return line(r).map(C); }));
+      s1.push([]); s1.push([{ value: V("yeNotes"), fontWeight: "bold" }]); notes.forEach(function(n){ s1.push([{ value: n }]); });
+      s1.push([]); s1.push([{ value: V("yeHalf") }]);
+      var s2: Record<string, unknown>[][] = ([[{ value: V("yeByCountry"), fontWeight: "bold", fontSize: 14 }], [], [V("yeCountry"), V("yePeople"), V("yeTotal"), V("yrTaken"), V("yrLeft"), V("yeAvg")].map(H)] as Record<string, unknown>[][])
+        .concat(d.countries.map(function(c){ return [C(c.country), C(c.people), C(Math.round(c.total*10)/10), C(Math.round(c.taken*10)/10), C(Math.round(c.left*10)/10), C(Math.round(c.taken/c.people*10)/10)]; }));
+      var w = [22,14,14,18,10,10,9,9,9,14,12,12].slice(0, heads.length).map(function(n){ return { width: n }; });
+      var blob = await mod.default([{ sheet: "Year-end", data: s1, columns: w }, { sheet: "By country", data: s2, columns: [22,10,10,10,10,12].map(function(n){return {width:n};}) }] as never).toBlob();
+      var url = URL.createObjectURL(blob); var a = document.createElement("a"); a.href = url; a.download = base + ".xlsx"; a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    })());
+  }
+  var th = heads.map(function(h){ return "<th>" + esc(h) + "</th>"; }).join("");
+  var tr = d.rows.map(function(r){ var cells = line(r); return "<tr" + (r.left !== null && r.left < 0 ? ' class="over"' : "") + ">" + cells.map(function(c, i){ return "<td" + (i >= 4 ? ' class="n"' : "") + ">" + esc(typeof c === "number" ? fmtN(c) : c) + "</td>"; }).join("") + "</tr>"; }).join("");
+  var ct = d.countries.map(function(c){ return "<tr><td>" + esc(c.country) + '</td><td class="n">' + c.people + '</td><td class="n">' + fmtN(c.total) + '</td><td class="n">' + fmtN(c.taken) + '</td><td class="n">' + fmtN(c.left) + '</td><td class="n">' + fmtN(c.taken / c.people) + "</td></tr>"; }).join("");
+  var sign = function(label, name){ return '<div class="sig"><b>' + esc(label) + "</b><span>" + esc(name || "") + '</span><div class="ln"><i>' + esc(V("yeSig")) + '</i></div><div class="ln"><i>' + esc(V("yeDate")) + "</i></div></div>"; };
+  var html = '<!doctype html><html lang="' + esc(document.documentElement.lang || "en") + '"><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>'
+    + 'body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1B1440;margin:28px 34px;font-size:11px}'
+    + 'h1{font-size:20px;margin:0 0 2px}.sub{color:#6B6592;margin-bottom:16px}h2{font-size:13px;margin:18px 0 6px;color:#5B21B6;text-transform:uppercase;letter-spacing:.06em}'
+    + 'table{border-collapse:collapse;width:100%}th{background:#EDE9FE;text-align:left;padding:6px 7px;font-size:10px}td{padding:5px 7px;border-bottom:1px solid #ECE9F5}td.n{text-align:right;font-variant-numeric:tabular-nums}'
+    + 'tr.over td{color:#B91C1C;font-weight:600}.notes li{margin:3px 0}.foot{color:#6B6592;margin-top:8px}'
+    + '.signs{display:flex;gap:40px;margin-top:26px}.sig{flex:1;display:grid;gap:6px}.sig span{color:#4A4270}.ln{border-bottom:1px solid #8B86AE;height:30px;position:relative}.ln i{position:absolute;bottom:-14px;left:0;font-style:normal;font-size:9px;color:#8B86AE}'
+    + '</style></head><body><div class="hdr"><h1>' + esc(title) + '</h1><div class="sub">' + esc(gen) + ' · vacationplanner.team</div></div>'
+    + "<table><thead><tr>" + th + "</tr></thead><tbody>" + tr + "</tbody></table>"
+    + '<div class="card"><h2>' + esc(V("yeByCountry")) + "</h2><table><thead><tr><th>" + [V("yeCountry"), V("yePeople"), V("yeTotal"), V("yrTaken"), V("yrLeft"), V("yeAvg")].map(esc).join("</th><th>") + "</th></tr></thead><tbody>" + ct + "</tbody></table></div>"
+    + '<div class="card"><h2>' + esc(V("yeNotes")) + '</h2><ul class="notes">' + notes.map(function(n){ return "<li>" + esc(n) + "</li>"; }).join("") + '</ul><div class="foot">' + esc(V("yeHalf")) + "</div></div>"
+    + '<div class="card signs">' + sign(V("yeSign1"), "") + sign(V("yeSign2"), d.approver) + "</div></body></html>";
+  return withBusy(downloadHtmlAsPdf(html, base + ".pdf"));
 }

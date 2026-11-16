@@ -13,6 +13,7 @@ export async function GET() {
         COALESCE(SUM(jsonb_array_length(data->'members')), 0)::int as members
       FROM teams
       WHERE expires_at > NOW()
+        AND id <> 'demo'
         AND jsonb_array_length(data->'members') > 0
     `;
     return NextResponse.json({

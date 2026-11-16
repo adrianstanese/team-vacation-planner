@@ -113,7 +113,12 @@
     "ruCarry": "Line of a sum; keep the leading + sign.",
     "ruBooked": "Line of a sum; keep the leading − sign.",
     "ruLeft": "Result line of a sum; keep the leading = sign.",
-    "rcLbl": "A private 'battery' meter showing how rested the person is."
+    "rcLbl": "A private 'battery' meter showing how rested the person is.",
+    "dmBanner": "Banner inside the public demo team; {pin} is a 6-digit number.",
+    "trStep": "Tour progress, e.g. '1 of 4'.",
+    "yeCarry": "Report column: days carried over from the previous year {y}.",
+    "yeSign1": "Sign-off line on a printed HR report.",
+    "yeSign2": "Sign-off line on a printed HR report, followed by the approver's name."
   },
   "PROMO": {
     "feats": "Exactly 4 short feature chips, in order.",

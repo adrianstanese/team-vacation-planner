@@ -1602,6 +1602,8 @@ function FrontPage({t,lang,setLang,theme,setTheme,myTeams,onOpenTeam,onDeleteTea
           {mode!=="create"&&<div className="cmd-opts"><span>{L.joinHint}</span></div>}
           {err&&<div className="cmd-err" role="alert">{err}</div>}
         </form>
+        {/* Public demo team (lib/demoTeam.ts), rebuilt every night */}
+        <button type="button" className="fp-demo" onClick={()=>onJoinTeam("demo",e2=>setErr(e2))}><b>✨ {V("dmTry")} →</b><span>{V("dmSub")}</span></button>
         {myTeams.length>0&&<div className="recent">
           <h2>{L.recent}</h2>
           {myTeams.map(tm=><div key={tm.id} data-rt={tm.id} className={"rt"+(confirmDel===tm.id?" confirm":"")}>

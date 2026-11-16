@@ -8,6 +8,7 @@ import BottomDuo from "@/components/WorkoseniePromo";
 import CoffeeButton from "@/components/CoffeeButton";
 import nextDynamic from "next/dynamic";
 import TodayTiles from "@/components/v3/TodayTiles";
+import Tour, { plannerSteps } from "@/components/v3/Tour";
 import { popData, usePhotoTint, paneStyle, Countdown, YearRing, Ribbon, StyleBadge, Recharge, LongWeekend, AwayMessage, CountHelp } from "@/components/v3/PersonPop";
 import { V } from "@/lib/v3Text";
 import { nextLeaveDay, pendingApprovals, streaksOf, avgCoverage, addDays, dateOf, yearEndPrompt, keyOf, ranges as dayRanges } from "@/lib/v3Util";
@@ -483,7 +484,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect=null,compact,th,
       <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",marginBottom:3}}>
         {dayLabels.map(d=> <div key={d} style={{textAlign:"center",fontSize:10,fontWeight:600,color:th.t3,padding:"3px 0",fontFamily:F,textTransform:"uppercase",letterSpacing:.5}}>{d}</div>)}
       </div>
-      <div ref={gridRef} role="group" aria-label={t.M[month]+" "+year} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,touchAction:activeId?"none":"auto"}} onMouseLeave={handleMouseUp}>
+      <div ref={gridRef} data-tour="cal" role="group" aria-label={t.M[month]+" "+year} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,touchAction:activeId?"none":"auto"}} onMouseLeave={handleMouseUp}>
         {cells.map((day,i)=>{
           if(!day) return <div key={`e${i}`}/>;
           const we=isWe(year,month,day);const key=dk(year,month,day);
@@ -1465,7 +1466,7 @@ function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members
 
 export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=null,th,t,lang,setLang,theme,setTheme}){
   const[halfMode,setHalfMode]=useState(false);const[delOpen,setDelOpen]=useState(false);const[delText,setDelText]=useState("");const NY=NY_TX[lang]||NY_TX.en;
-  const[aId,setAId]=useState(null);const[popId,setPopId]=useState(null);const popAfterPin=useRef(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
+  const[aId,setAId]=useState(null);const[popId,setPopId]=useState(null);const[tour,setTour]=useState(false);const popAfterPin=useRef(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
   // ─── PIN feature state (Step 1: declarations only, no UI yet) ─────
   const[nPin,setNPin]=useState("");
   const[nIsApprover,setNIsApprover]=useState(false);
@@ -1654,7 +1655,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     if(me&&r.token)setToken(team.id,nm.id,r.token);
     await syncReload(team.id,false);
     // Signed in as someone: adding a colleague doesn't switch you to them
-    if(me){setAId(nm.id);setUnlockedId(nm.id);}
+    if(me){setAId(nm.id);setUnlockedId(nm.id);maybeTour();}
     setAdding(false);
     setNn("");setNc(null);setNr(null);
     setNPin("");setNIsApprover(false);
@@ -1868,6 +1869,10 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   // Act as another person: their PIN (or set one if they have none). If this tab already unlocked them, switch at once.
   // Closing the person pop-up goes back to the calendar with them still selected (on phones the member list closes too)
   const closePop=()=>{setPopId(null);if(mob)setSb(false);};
+  // Guided first visit (components/v3/Tour): once per team in this browser, after joining or signing in
+  const tourKey="tvp-tour-"+team.id;
+  const maybeTour=()=>{let seen=false;try{seen=!!localStorage.getItem(tourKey);}catch(e){}if(!seen)setTimeout(()=>setTour(true),700);};
+  const endTour=()=>{setTour(false);try{localStorage.setItem(tourKey,"1");}catch(e){}};
   const switchTo=m=>{if(!m||m.id===unlockedId)return;if(!window.confirm(hasPinOf(m)?V("swQ",{n:m.name||""}):V("swQNew",{n:m.name||""})))return;
     if(hasPinOf(m)&&getTokens(team.id)[m.id]){setUnlockedId(m.id);setAId(m.id);flash(V("gtYou",{n:m.name||""}));return;}
     try{localStorage.removeItem(meKey);}catch(e){}setUnlockedId(null);setAId(null);setGMid(m.id);setGStep(hasPinOf(m)?"pin":"setpin");setGPin("");setGPin2("");setGErr("");};
@@ -1876,11 +1881,11 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const gReset=()=>{setGPin("");setGPin2("");setGErr("");setGBusy(false);};
   const gUnlock=async()=>{const m=team.members.find(x=>x.id===gMid);if(!m||gPin.length!==6||gBusy)return;setGBusy(true);
     const r=await teamAuth({op:"verify",id:team.id,memberId:m.id,pin:gPin});setGBusy(false);
-    if(r.ok&&r.token){setToken(team.id,m.id,r.token);setUnlockedId(m.id);setAId(m.id);gReset();return;}
+    if(r.ok&&r.token){setToken(team.id,m.id,r.token);setUnlockedId(m.id);setAId(m.id);gReset();maybeTour();return;}
     setGErr(r.status===429?(r.error||"Too many tries"):X("pinWrong"));setGPin("");};
   const gSetPin=async()=>{const m=team.members.find(x=>x.id===gMid);if(!m||gPin.length!==6||gPin!==gPin2||gBusy)return;setGBusy(true);await waitIdle(team.id);
     const r=await teamAuth({op:"set",id:team.id,memberId:m.id,pin:gPin,code:m.resetPending?gCode:undefined});setGBusy(false);
-    if(r.ok&&r.token){setGCode("");setToken(team.id,m.id,r.token);syncReload(team.id,false);setUnlockedId(m.id);setAId(m.id);gReset();flash(X("pinSet"));}else setGErr(r.error||"PIN not saved");};
+    if(r.ok&&r.token){setGCode("");setToken(team.id,m.id,r.token);syncReload(team.id,false);setUnlockedId(m.id);setAId(m.id);gReset();flash(X("pinSet"));maybeTour();}else setGErr(r.error||"PIN not saved");};
   const gJoin=async()=>{const n=gName.trim();if(!n||!gCo||gPin.length!==6||gPin!==gPin2||gBusy)return;if(team.members.length>=50){flash(t.mx);return;}
     setGBusy(true);const id=gid();await waitIdle(team.id);
     // Member and PIN are created together by the server
@@ -1955,7 +1960,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         <button onClick={()=>setSettings(!settings)} aria-label="Settings" aria-expanded={settings} title="Settings" style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
         <span role="status" aria-live="polite" className={"tvp-sync tvp-sync-"+sync} title={sync==="offline"?V("syncOfflineHint"):V(sync==="saving"?"syncSaving":"syncSaved")} style={{color:sync==="offline"?(th.dk?"#FCD34D":"#B45309"):th.t2}}><i aria-hidden="true"/><span className={mob?"tvp-sr":undefined}>{V(sync==="offline"?"syncOffline":sync==="saving"?"syncSaving":"syncSaved")}</span></span>
         {false&&<button type="button" className="v3-inbox-btn" onClick={()=>setShowInbox(true)} aria-label={V("inboxBadge",{n:pendN})} title={V("inbox")} style={{color:th.ac,background:th.al,borderColor:th.gbd||th.bd}}>✓{!mob&&<span>{V("inbox")}</span>}{pendN>0&&<b>{pendN}</b>}</button>}
-        <Btn th={th} v="secondary" sz="sm" icon="share" label={mob?t.sh:undefined} onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn>
+        <span data-tour="share" style={{display:"contents"}}><Btn th={th} v="secondary" sz="sm" icon="share" label={mob?t.sh:undefined} onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn></span>
         <CoffeeButton lang={lang} iconOnly={mob}/>
 
       </div>
@@ -2009,7 +2014,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           {!locked&&!adding&&team.members.length<50&&<button type="button" className="tvp-ico" onClick={()=>setShowCSVImport(true)} title={X("several")} aria-label={X("several")}><Ic n="users" s={15} c={th.ac}/></button>}
           <button type="button" className="tvp-ico tvp-ico-hol" onClick={function(){setHolBr(true);if(mob)setSb(false);}} title={t.ch} aria-label={t.ch}><Ic n="flag" s={15} c="#EA580C"/></button>
         </div>
-        {(unlockedId&&!ownerMode&&team.members.some(x=>x.id===unlockedId))||ownerMode?<div className="tvp-me" style={{borderColor:th.gbd,background:th.sf,color:th.t2}}><span>{ownerMode?V("gtOwnerMode"):V("gtYou",{n:(team.members.find(x=>x.id===unlockedId)||{}).name||""})}</span><button type="button" onClick={signOutMe} style={{color:th.ac}}>{V("gtSwitch")}</button></div>:null}
+        {(unlockedId&&!ownerMode&&team.members.some(x=>x.id===unlockedId))||ownerMode?<div className="tvp-me" style={{borderColor:th.gbd,background:th.sf,color:th.t2}}><span>{ownerMode?V("gtOwnerMode"):V("gtYou",{n:(team.members.find(x=>x.id===unlockedId)||{}).name||""})}</span><span style={{display:"inline-flex",gap:10}}><button type="button" onClick={()=>{if(mob)setSb(false);setTour(true);}} style={{color:th.ac}}>{V("trStart")}</button><button type="button" onClick={signOutMe} style={{color:th.ac}}>{V("gtSwitch")}</button></span></div>:null}
         <div className="tvp-side-head"><span>{t.tm}</span><span>{team.members.length}/50</span></div>
         <div style={{flex:1,overflowY:"auto",padding:"2px 8px 8px",display:"flex",flexDirection:"column",gap:1}}>
           {adding&&<div style={{padding:"6px 2px",display:"flex",flexDirection:"column",gap:5,marginBottom:6}}>
@@ -2104,8 +2109,10 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         {view==="cal"&&locked&&<div style={{background:th.wl,borderRadius:8,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#92400E",fontWeight:500,display:"flex",alignItems:"center",gap:6}}><Ic n="lock" s={14} c="#92400E"/>{t.locked}</div>}
 
         {view==="cal"&&team.members.length>1&&<div style={{display:"flex",flexWrap:"wrap",gap:3,justifyContent:"center",marginBottom:8,padding:"5px 8px",background:th.gbg,borderRadius:8,border:"1px solid "+th.gbd}}>{team.members.map(function(m,i){var mc=MC[i%MC.length];var act=m.id===aId;return <button key={m.id} onClick={function(){setAId(m.id===aId?null:m.id);}} style={{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:5,border:act?"1.5px solid "+mc.d:"1px solid transparent",background:act?mc.b:"transparent",cursor:"pointer",fontSize:10,fontWeight:600,color:act?mc.t:th.t2,fontFamily:F}}><span style={{width:7,height:7,borderRadius:"50%",background:mc.d}}/>{m.name}</button>;})}</div>}
+        {/* Public demo team (lib/demoTeam.ts): how to sign in, and the way out */}
+        {team.id==="demo"&&<div className="tvp-demo"><span>🧪 {V("dmBanner",{pin:"123456"})}</span><span className="tvp-demo-a"><button type="button" onClick={()=>setTour(true)}>{V("trStart")}</button><button type="button" className="pri" onClick={()=>{window.location.hash="";window.location.reload();}}>{V("dmOwn")} →</button></span></div>}
         {/* Export Pill Bar */}
-        {view==="cal"&&team.members.length>0&&<div style={{padding:"8px 14px",background:th.sf,borderRadius:G.rXs,border:"1px solid "+th.bd,display:"flex",alignItems:"center",gap:4,flexWrap:"wrap",marginBottom:12}}>
+        {view==="cal"&&team.members.length>0&&<div data-tour="exp" style={{padding:"8px 14px",background:th.sf,borderRadius:G.rXs,border:"1px solid "+th.bd,display:"flex",alignItems:"center",gap:4,flexWrap:"wrap",marginBottom:12}}>
           <span style={{fontSize:10,fontWeight:700,color:th.t3,marginRight:2,textTransform:"uppercase"}}>{V("expLbl")}</span>
           <button data-export="pdf" onClick={function(){R("generatePDFReport")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.pdf}</button>
           <button data-export="ics" onClick={function(){downloadTeamICS(team)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>Team .ics</button>
@@ -2115,6 +2122,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>{V("shareQr")}</button>
           <button data-export="print" onClick={function(){R("printReport")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
           <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{V("importLbl")}</button>
+          <button data-export="year-end-xlsx" onClick={function(){R("yearEndReport")(team,t,"xlsx")}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #7C3AED55",background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3}}><Ic n="download" s={10} c={th.ac}/>{V("yeBtnX")}</button>
+          <button data-export="year-end-pdf" onClick={function(){R("yearEndReport")(team,t,"pdf")}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #7C3AED55",background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3}}><Ic n="download" s={10} c={th.ac}/>{V("yeBtnP")}</button>
           {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<button data-export="approved" onClick={function(){R("generateApprovedPDF")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
         </div>}
 
@@ -2314,6 +2323,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     </div>;})()}
 
     <Toast message={toast} visible={!!toast}/>
+    {tour&&<Tour steps={plannerSteps()} onDone={endTour}/>}
     {pinModalEl}
     {setPinModalEl}
     {gateEl}

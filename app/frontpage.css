@@ -180,3 +180,8 @@
 .fp .foot button{color:var(--ink-2);font-weight:600;background:none;border:0;padding:0;min-height:44px;cursor:pointer}
 [dir="rtl"] .fp .flip,.fp[dir="rtl"] .flip{transform:scaleX(-1)}
 @media (prefers-reduced-motion:reduce){.fp *{animation:none!important;transition:none!important}}
+/* "Try the live demo" under the create/join bar */
+.fp .fp-demo{display:grid;gap:2px;justify-items:center;margin:14px auto 0;padding:10px 18px;border-radius:16px;border:1px dashed var(--line-2);background:transparent;cursor:pointer;color:var(--ink-2);font:inherit;text-align:center}
+.fp .fp-demo b{font-weight:700;color:var(--accent,#7C3AED)}
+.fp .fp-demo span{font-size:13px;color:var(--muted)}
+.fp .fp-demo:hover{border-style:solid;background:var(--accent-wash)}

@@ -2,6 +2,7 @@ import { getSql } from "@/lib/db";
 import { adminDb, clientIp, purgeOld } from "@/lib/adminAuth";
 import { authDb, guardIncoming, newOwnerKey, publicTeam, validOwner, type TeamDoc } from "@/lib/teamAuth";
 import { cleanTeam } from "@/lib/teamShape";
+import { buildDemo, demoDayOf, DEMO_ID } from "@/lib/demoTeam";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
   if (!ID.test(id)) return NextResponse.json(null, { headers: NO_STORE });
+  if (id === DEMO_ID) { const d = await demoTeam(); return NextResponse.json(publicTeam(d.data), { headers: { ...NO_STORE, "X-Updated-At": d.v } }); }
   // A team is kept until it has been unused for 36 months, and opening it is use: the date moves on, at most once
   // a month per team (so reading stays a read almost every time). The version (updated_at) is not touched.
   const rows = await sql`WITH touch AS (
@@ -51,11 +53,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ conflict: true, data: publicTeam(cur[0].data as TeamDoc), v: cur[0].v }, { status: 409, headers: NO_STORE });
     }
     const stored = cur.length ? (cur[0].data as TeamDoc) : null;
+    // The demo team is created by GET only; its reset date cannot be moved by a browser
+    if (id === DEMO_ID && !stored) return NextResponse.json({ error: "Open the demo first" }, { status: 409, headers: NO_STORE });
     // A save without the member list would drop everyone unprotected: refuse it
     if (stored && Array.isArray(stored.members) && stored.members.length && !Array.isArray(incoming.members)) {
       return NextResponse.json({ error: "Missing members" }, { status: 400, headers: NO_STORE });
     }
     const { doc, reverted, adjusted } = await guardIncoming(sql, id, stored, incoming, auth);
+    if (id === DEMO_ID && stored) doc.demoDay = stored.demoDay;
     if (cur.length) {
       const rows = await sql`UPDATE teams SET data = ${JSON.stringify(doc)}::jsonb, updated_at = NOW(), expires_at = NOW() + INTERVAL '36 months'
         WHERE id = ${id} AND updated_at::text = ${cur[0].v} RETURNING updated_at::text AS v`;
@@ -135,4 +140,17 @@ export async function DELETE(request: NextRequest) {
   await sql`WITH gone AS (DELETE FROM teams WHERE id = ${id} RETURNING id, data, updated_at, expires_at)
     INSERT INTO team_trash (id, data, updated_at, expires_at) SELECT id, data, updated_at, expires_at FROM gone`;
   return NextResponse.json({ ok: true });
+}
+
+// The public demo team: rebuilt from lib/demoTeam.ts on the first visit of each UTC day, so visitors' changes last
+// until midnight. Its time-travel copies and PIN attempts are cleared with it.
+async function demoTeam(): Promise<{ data: TeamDoc; v: string }> {
+  const sql = await authDb();
+  const cur = await sql`SELECT data, updated_at::text AS v FROM teams WHERE id = ${DEMO_ID}`;
+  if (cur.length && (cur[0].data as TeamDoc).demoDay === demoDayOf()) return { data: cur[0].data as TeamDoc, v: String(cur[0].v) };
+  const doc = buildDemo();
+  const rows = await sql`INSERT INTO teams (id, data, updated_at, expires_at) VALUES (${DEMO_ID}, ${JSON.stringify(doc)}::jsonb, NOW(), NOW() + INTERVAL '36 months')
+    ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW(), expires_at = EXCLUDED.expires_at RETURNING updated_at::text AS v`;
+  try { await sql`DELETE FROM team_versions WHERE id = ${DEMO_ID}`; await sql`DELETE FROM pin_attempts WHERE team = ${DEMO_ID}`; } catch { /* tables may not exist yet */ }
+  return { data: doc, v: String(rows[0]?.v || "") };
 }

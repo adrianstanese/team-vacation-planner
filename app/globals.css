@@ -500,3 +500,23 @@ html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-
 @keyframes tvp-sweep { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 /* Round flag images (public/flags) */
 .tvp-flag { display: inline-block; vertical-align: -0.18em; border-radius: 50%; object-fit: cover; margin-inline-end: 5px; flex: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, .1); background: #eee; }
+
+/* Demo team banner */
+.tvp-demo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin-bottom: 10px; padding: 10px 14px; border-radius: 14px;
+  background: linear-gradient(90deg, rgba(124, 58, 237, .12), rgba(8, 145, 178, .12)); border: 1px solid rgba(124, 58, 237, .25); font-size: 13px; font-weight: 600; }
+.tvp-demo-a { display: flex; gap: 8px; }
+.tvp-demo button { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(124, 58, 237, .35); background: transparent; color: inherit; font: 600 12.5px var(--font-body, system-ui), system-ui; cursor: pointer; }
+.tvp-demo button.pri { background: #7C3AED; border-color: #7C3AED; color: #fff; }
+/* Guided tour (components/v3/Tour.tsx) */
+.tvp-tour { position: fixed; inset: 0; z-index: 9500; }
+.tvp-tour-dim { position: fixed; inset: 0; background: rgba(15, 10, 40, .55); }
+.tvp-tour-hole { position: fixed; border-radius: 14px; box-shadow: 0 0 0 9999px rgba(15, 10, 40, .55), 0 0 0 3px #A78BFA, 0 0 30px 6px rgba(167, 139, 250, .6); transition: all .3s cubic-bezier(.2, .8, .2, 1); pointer-events: none; }
+.tvp-tour-b { position: fixed; display: grid; gap: 6px; padding: 16px 18px 14px; border-radius: 18px; background: #fff; color: #1B1440; box-shadow: 0 24px 60px -18px rgba(20, 10, 60, .55); transition: top .3s, left .3s; }
+.tvp-tour-b b { font: 800 17px/1.2 var(--font-display, system-ui), system-ui; }
+.tvp-tour-b p { margin: 0; font-size: 14px; line-height: 1.45; color: #4A4270; }
+.tvp-tour-n { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #7C3AED; }
+.tvp-tour-a { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.tvp-tour-a button { min-height: 38px; padding: 0 16px; border-radius: 999px; border: 0; font: 700 13.5px var(--font-body, system-ui), system-ui; cursor: pointer; }
+.tvp-tour-a .sk { background: transparent; color: #6E6794; }
+.tvp-tour-a .go { background: linear-gradient(135deg, #7C3AED, #6D28D9); color: #fff; }
+@media (prefers-reduced-motion: reduce) { .tvp-tour-hole, .tvp-tour-b { transition: none; } }
