@@ -812,24 +812,27 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,onBookDays=null,w7=f
     return {months:months,max:Math.max(1,...months),next:next,status:status,mi:mi};})();
   const pct=allow?Math.min(100,Math.round(dc/allow*100)):0;
   const barCol=dc>allow?"#EF4444":dc>allow*0.8?"#F59E0B":c.d;
+  // Capsule row (option 2, mockups/member-list-2026-11): the pill fills with the person's colour as days are
+  // planned; red stripes when over the allowance; a light sweeps across whoever is away today.
+  const capLeft=allow?Math.round((allow-dc)*10)/10:null;const capOver=capLeft!==null&&capLeft<0;
+  const capPct=capOver?100:allow?Math.min(100,dc/allow*100):Math.min(100,dc/25*100);
+  const capAway=(function(){const today=keyOf(new Date());if(!(m.days||[]).includes(today))return null;const ds=new Set(m.days||[]);const hs={};
+    const holOn=function(k){const y=Number(k.slice(0,4));if(!hs[y])hs[y]=new Set(m.country?getAllHolidays(m,y):[]);return hs[y].has(k);};
+    let k=addDays(today,1);for(let i=0;i<90;i++){const wd=dateOf(k).getDay();if(!ds.has(k)&&(w7||(wd!==0&&wd!==6))&&!holOn(k))break;k=addDays(k,1);}
+    try{return dateOf(k).toLocaleDateString(dateLocale(),{weekday:"short",day:"numeric"});}catch(e){return k;}})();
+  const capRed=th.dk?"#FCA5A5":"#B91C1C";
   return <div draggable={!locked} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}
-    className={"tvp-mrow"+(isActive?" on":"")+(dim?" tvp-dim":"")} aria-disabled={dim&&!limited?true:undefined} style={{"--mc":c.d,"--mbg":th.bg,opacity:isDragging?0.4:1,borderTop:isDragOver?"2px solid "+th.ac:undefined}}>
-    <div className="tvp-mrow-top">
-      <span className="tvp-av" style={{background:c.d,color:c.o}}>{photo?<img src={photo} alt="" className="tvp-av-img"/>:(m.name||"?")[0].toUpperCase()}{isApprover&&<span className="tvp-crown" title={t.approverLabel||"Approver"}>👑</span>}</span>
-      <div role="button" tabIndex={0} aria-pressed={isActive} aria-label={m.name+" · "+(dc===0?t.nd:fmtDays(dc)+" "+(dc!==1?t.dys:t.dy))} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick();}}} className="tvp-mrow-nm">
-        <b style={{color:isActive?c.t:th.tx}}>{m.name}{hasPin&&<span className="tvp-lock" aria-label="PIN" title="PIN">🔒</span>}</b>
-        <small style={{color:th.t3}}>{co?co.f+" ":""}{m.role||m.group||(co?co.n:"")}</small>
-      </div>
-      <span className="tvp-mrow-cnt" style={{color:th.tx}}>{allowTxt}<small style={{color:th.t3}}>{dc!==1?t.dys:t.dy}{m.carry?<span title={X("carried")} style={{color:th.dk?"#6EE7B7":"#047857"}}>{" +"+fmtDays(m.carry)}</span>:null}</small></span>
+    className={"tvp-mrow tvp-cap"+(th.dk?" dk":"")+(isActive?" on":"")+(dim?" tvp-dim":"")+(capOver?" over":"")+(capAway?" away":"")} aria-disabled={dim&&!limited?true:undefined} style={{"--mc":c.d,"--mbg":th.bg,opacity:isDragging?0.4:1,borderTop:isDragOver?"2px solid "+th.ac:undefined}}>
+    <i className="tvp-cap-fill" aria-hidden="true" style={{width:capPct+"%"}}/>
+    <span className="tvp-av" style={{background:c.d,color:c.o}}>{photo?<img src={photo} alt="" className="tvp-av-img"/>:(m.name||"?")[0].toUpperCase()}{isApprover&&<span className="tvp-crown" title={t.approverLabel||"Approver"}>👑</span>}</span>
+    <div role="button" tabIndex={0} aria-pressed={isActive} aria-label={m.name+" · "+(dc===0?t.nd:fmtDays(dc)+" "+(dc!==1?t.dys:t.dy))+(capAway?" · "+V("capAway",{d:capAway}):"")} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick();}}} className="tvp-mrow-nm">
+      <b style={{color:isActive&&!th.dk?c.t:th.tx}}>{m.name}{hasPin&&<span className="tvp-lock" aria-label="PIN" title="PIN">🔒</span>}
+        {approvalMode&&!isApprover&&dc>0&&(m.approved?<span className="tvp-cap-st ok" title={V("ttApproved")}>✓</span>:<span className="tvp-cap-st wait" title={V("stWait")}>⏳</span>)}
+        {notes>0&&<span className="tvp-cap-st" title={V("stNotes",{n:notes})}>💬{notes}</span>}</b>
+      <small style={{color:th.t3}}>{capAway?<span className="tvp-cap-away" title={V("capAway",{d:capAway})}>● {V("tdBack",{d:capAway})}</span>:<>{co?co.f+" ":""}{m.role||m.group||(co?co.n:"")}</>}</small>
     </div>
-    {(function(){
-      // Status at a glance: what is left, whether the plan is approved, notes left on their days
-      const parts=[];const left=allow?Math.round((allow-dc)*10)/10:0;
-      if(allow)parts.push(<span key="l" style={{color:left<0?(th.dk?"#FCA5A5":"#B91C1C"):th.t2}}>{left<0?V("stOver",{n:fmtDays(-left)}):V("stLeft",{n:fmtDays(left)})}</span>);
-      if(approvalMode&&!isApprover&&dc>0)parts.push(m.approved?<span key="a" style={{color:th.dk?"#6EE7B7":"#047857"}}>✓ {V("ttApproved")}</span>:<span key="a" style={{color:th.dk?"#FCD34D":"#B45309"}}>{V("stWait")}</span>);
-      if(notes>0)parts.push(<span key="n" style={{color:th.t2}}>{V("stNotes",{n:notes})}</span>);
-      return parts.length?<div className="tvp-mstat">{parts}</div>:null;})()}
-    {allow&&!isActive?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
+    <span className="tvp-mrow-cnt" style={{color:capOver?capRed:th.tx}}>{allow?<>{fmtDays(dc)}<span className="of">/{fmtDays(allow)}</span></>:fmtDays(dc)}
+      <small style={{color:capOver?capRed:th.t3}}>{capLeft===null?(dc!==1?t.dys:t.dy):capOver?V("stOver",{n:fmtDays(-capLeft)}):V("stLeft",{n:fmtDays(capLeft)})}</small></span>
     {/* The split-view pop-up (option 3, mockups/member-popup-2026-11): the person's year on the left, every field on the right.
        It replaces the old in-row drawer; the row stays selected for marking days, and closing the pop-up goes back to the calendar. */}
     {pop&&isActive&&!isEditing&&typeof document!=="undefined"&&createPortal(<div className="tvp-pp-bg" onClick={onClosePop}>
