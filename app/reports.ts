@@ -1,5 +1,5 @@
 // Report and export builders (PDF report, approved-days PDF, print view, legacy .xls), moved out of app.tsx
-// so they load only when someone exports. Code unchanged.
+// so they load only when someone exports.
 import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { V } from "@/lib/v3Text";
 import { dateLocale, monthShort } from "@/lib/extraText";
@@ -9,533 +9,271 @@ import { EU_C, MC, dim, dk, esc, fdm, fileBase, pk, reportSafe, safeYear, withBu
 // Day totals as the planner shows them: a half day counts 0.5
 const fmtD = n => Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
 
-export function generatePDFReport(team, t) {
+// ─── Shared report design (team report, print view, approved schedule, year-end) ───
+// One look for every A4 export, in the same family as the wall planner: a deep violet header with the team logo,
+// KPI cards, rounded tables with avatars, usage bars and status pills, poster-style month cards, a quiet footer.
+// Everything is plain HTML/CSS that html2canvas renders the same in Chrome and Safari (no emoji, no web fonts).
+var REP_CSS = ''
+  + '*{box-sizing:border-box}html,body{margin:0;background:#fff}'
+  + 'body{width:1123px;font:12px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1B1440;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  + '.pg{padding:28px 34px 22px}'
+  + '.hero{position:relative;overflow:hidden;display:flex;align-items:center;gap:18px;padding:22px 26px;border-radius:22px;background:linear-gradient(120deg,#1E1B4B 0%,#4C1D95 55%,#9D174D 100%);color:#fff;margin-bottom:16px}'
+  + '.hero:after{content:"";position:absolute;right:-60px;top:-90px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(244,114,182,.45),rgba(244,114,182,0) 70%)}'
+  + '.hero .lg{position:relative;z-index:1;width:56px;height:56px;flex:none;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:26px;font-weight:800;color:#6D28D9}'
+  + '.hero .lg img{width:100%;height:100%;object-fit:contain}'
+  + '.hero .tx{position:relative;z-index:1;min-width:0}'
+  + '.hero .kick{font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#F9A8D4}'
+  + '.hero h1{margin:3px 0 2px;font-size:27px;line-height:1.1;letter-spacing:-.02em;font-weight:800}'
+  + '.hero .sub{font-size:12px;color:#DDD6FE}'
+  + '.hero .rt{position:relative;z-index:1;margin-left:auto;text-align:right;display:grid;gap:6px;justify-items:end}'
+  + '.hero .yr{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1;color:#fff}'
+  + '.hero .badge{display:inline-block;padding:5px 12px;border-radius:999px;background:#DCFCE7;color:#166534;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}'
+  + '.kpis{display:grid;gap:12px;margin-bottom:6px}'
+  + '.kpi{border-radius:16px;padding:13px 16px;background:#fff;border:1px solid #ECE9F5;box-shadow:0 10px 26px -20px rgba(40,20,110,.55)}'
+  + '.kpi b{display:block;font-size:26px;line-height:1.1;letter-spacing:-.02em;font-weight:800}'
+  + '.kpi span{display:block;margin-top:3px;font-size:9.5px;color:#6B6592;text-transform:uppercase;letter-spacing:.09em;font-weight:800}'
+  + '.kpi.v b{color:#6D28D9}.kpi.p b{color:#DB2777}.kpi.g b{color:#059669}.kpi.a b{color:#D97706}.kpi.r b{color:#DC2626}'
+  + '.sec{display:flex;align-items:center;gap:10px;margin:20px 0 10px;font-size:13.5px;font-weight:800;letter-spacing:-.01em}'
+  + '.sec:before{content:"";width:6px;height:18px;border-radius:3px;background:linear-gradient(#7C3AED,#DB2777)}'
+  + '.sec small{margin-left:auto;font-size:10.5px;font-weight:600;color:#8B86AE}'
+  + '.card{background:#fff;border:1px solid #ECE9F5;border-radius:16px;overflow:hidden}'
+  + 'table.t{width:100%;border-collapse:collapse}'
+  + '.t th{font-size:8.5px;line-height:1.25;text-transform:uppercase;letter-spacing:.06em;color:#6B6592;font-weight:800;text-align:left;padding:9px 8px;background:#F7F5FF;border-bottom:1px solid #ECE9F5;vertical-align:bottom}'
+  + '.t td{padding:7px 8px;border-bottom:1px solid #F1EFF8;font-size:11.5px;vertical-align:middle}'
+  + '.t tr:last-child td{border-bottom:0}.t tr.z td{background:#FCFBFF}'
+  + '.t .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.t .c{text-align:center}'
+  + '.t td.n b{font-size:13px}.t .dim{color:#A8A3C7}'
+  + '.who{display:flex;align-items:center;gap:9px;min-width:0}.who>div{min-width:0}.who b{display:block;font-size:12px;white-space:nowrap}.who small{display:block;font-size:10px;color:#8B86AE;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}'
+  + '.av{width:26px;height:26px;flex:none;border-radius:50%;color:#fff;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}'
+  + '.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap}'
+  + '.ok{background:#DCFCE7;color:#166534}.bad{background:#FEE2E2;color:#B91C1C}.warn{background:#FEF3C7;color:#92400E}.mute{background:#F1EFF8;color:#8B86AE}'
+  + '.bar{height:7px;border-radius:4px;background:#EEEAF8;overflow:hidden;width:100%;min-width:70px}.bar i{display:block;height:100%;border-radius:4px}'
+  + '.chips{display:flex;flex-wrap:wrap;gap:4px}.chip{display:inline-block;padding:2px 8px;border-radius:7px;font-size:10px;font-weight:700;white-space:nowrap}'
+  + '.heat{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}.heat i{height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:9.5px;font-weight:800}'
+  + '.mhd{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}.mhd span{text-align:center;font-size:9px;font-weight:800;color:#8B86AE;text-transform:uppercase}'
+  + '.cal{display:grid;gap:12px}'
+  + '.mc{background:#fff;border-radius:16px;padding:11px 11px 9px;border:1px solid #ECE9F5;box-shadow:0 10px 26px -22px rgba(40,20,110,.6)}'
+  + '.mc h3{margin:0 0 6px;font-size:13px;display:flex;justify-content:space-between;align-items:baseline}.mc h3 small{font-size:10px;font-weight:700;color:#7C3AED}'
+  + '.mg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}.mg .dh{font-size:8px;font-weight:800;text-align:center;color:#A8A3C7;text-transform:uppercase}'
+  + '.mg .c{height:24px;border-radius:6px;position:relative;padding:2px 4px;font-size:9.5px;font-weight:700;color:#3B3466}'
+  + '.mg .c.we{background:#F4F2FA;color:#B4AFD0}.mg .c.h{background:linear-gradient(135deg,#FEF3C7,#FDE68A);color:#92400E}.mg .c.a{background:#F5F3FF}'
+  + '.mg .bars{position:absolute;left:3px;right:3px;bottom:3px;display:flex;gap:1px}.mg .bars i{flex:1;height:4px;border-radius:2px}'
+  + '.mg em{position:absolute;top:2px;right:3px;font-style:normal;font-size:7.5px;font-weight:800;color:#B91C1C}'
+  + '.legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:10px 2px 0;font-size:10.5px;font-weight:600;color:#4A4270}'
+  + '.legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:11px;height:11px;border-radius:4px;display:inline-block}'
+  + '.notes{display:grid;gap:8px}.note{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:14px;font-size:11.5px}'
+  + '.note b{flex:none;width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#fff}'
+  + '.note.w{background:#FFFBEB;border:1px solid #FDE68A}.note.w b{background:#F59E0B}.note.r{background:#FEF2F2;border:1px solid #FECACA}.note.r b{background:#DC2626}'
+  + '.note.i{background:#F5F3FF;border:1px solid #DDD6FE}.note.i b{background:#7C3AED}.note.g{background:#ECFDF5;border:1px solid #A7F3D0}.note.g b{background:#059669}'
+  + '.sigs{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:22px}'
+  + '.sig{border:1px solid #ECE9F5;border-radius:16px;padding:14px 18px 12px}.sig b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6B6592}'
+  + '.sig span{display:block;font-size:13px;font-weight:700;margin-top:3px;min-height:18px}.sig .ln{display:flex;gap:18px;margin-top:26px}'
+  + '.sig .ln div{flex:1;border-top:1.5px solid #C9C4E0;padding-top:4px;font-size:9.5px;color:#8B86AE}'
+  + '.foot{display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:10px;border-top:1px solid #ECE9F5;font-size:10px;color:#8B86AE}'
+  + '.foot b{color:#6D28D9}'
+  + '.prt{position:fixed;top:14px;right:14px;z-index:9}.prt button{padding:10px 20px;border-radius:999px;border:0;background:linear-gradient(135deg,#7C3AED,#DB2777);color:#fff;font:700 13px inherit;cursor:pointer}'
+  + '@media print{.prt{display:none}body{width:auto}@page{size:A4 landscape;margin:10mm}}';
+
+var MONTHS_EN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+var monthsOf = function(t){ return (t && t.M) || MONTHS_EN; };
+var daysOf = function(t){ return [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"]; };
+var initial = function(s){ return esc(String(s || "?").trim().charAt(0).toUpperCase() || "?"); };
+var avatar = function(name, color){ return '<span class="av" style="background:' + color + '">' + initial(name) + "</span>"; };
+var countryName = function(code){ var co = code ? EU_C.find(function(c){ return c.c === code; }) : null; return co ? co.n : ""; };
+var shortDate = function(k){ try { var p = k.split("-"); return new Date(+p[0], +p[1]-1, +p[2]).toLocaleDateString(dateLocale(), { day: "numeric", month: "short" }); } catch(e){ return k; } };
+var today = function(){ return new Date().toLocaleDateString(dateLocale(), { day: "numeric", month: "long", year: "numeric" }); };
+
+// Leave periods as "3 Aug – 7 Aug" (consecutive working days, skipping weekends and holidays, are one period)
+function periodsOf(days, w7){
+  var s = days.slice().sort(), out = [], i = 0;
+  while (i < s.length) {
+    var a = s[i], b = a;
+    while (i + 1 < s.length && nextLeaveDay(s[i], s[i+1], w7)) { i++; b = s[i]; }
+    out.push(a === b ? shortDate(a) : shortDate(a) + " – " + shortDate(b));
+    i++;
+  }
+  return out;
+}
+
+function heroHtml(team, kicker, sub, right){
+  var logo = safeLogo(team.logo);
+  return '<div class="hero"><div class="lg">' + (logo ? '<img src="' + logo + '" alt="">' : initial(team.name)) + '</div>'
+    + '<div class="tx"><div class="kick">' + esc(kicker) + '</div><h1>' + esc(team.name || "") + '</h1><div class="sub">' + sub + '</div></div>'
+    + '<div class="rt">' + right + '</div></div>';
+}
+function kpis(list){
+  return '<div class="kpis" style="grid-template-columns:repeat(' + list.length + ',1fr)">' + list.map(function(k){ return '<div class="kpi ' + (k[2] || "") + '"><b>' + k[0] + '</b><span>' + esc(k[1]) + '</span></div>'; }).join("") + "</div>";
+}
+function footHtml(){ return '<div class="foot"><span>' + esc(V("rpGenOn", { d: today() })) + '</span><span><b>vacationplanner.team</b></span></div>'; }
+function docHtml(title, body, extraHead?){
+  return '<!doctype html><html lang="' + esc(document.documentElement.lang || "en") + '"><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>' + REP_CSS + '</style>' + (extraHead || "") + '</head><body><div class="pg">' + body + footHtml() + "</div></body></html>";
+}
+
+// Poster-style month card: coloured bars for who is away, gold public holidays, shaded weekends
+function monthCard(yr, mo, t, ms, hol, w7){
+  var n = dim(yr, mo), first = fdm(yr, mo), cells = "", cnt = 0;
+  for (var i = 0; i < first; i++) cells += "<div></div>";
+  for (var d = 1; d <= n; d++) {
+    var k = dk(yr, mo, d), we = !w7 && isWe(yr, mo, d), h = !!hol[k];
+    var away = ms.filter(function(m){ return m.days.has(k); });
+    away.forEach(function(m){ cnt += m.half.has(k) ? 0.5 : 1; });
+    cells += '<div class="c' + (we ? " we" : "") + (h ? " h" : "") + (away.length && !h && !we ? " a" : "") + '">' + d
+      + (away.length ? '<span class="bars">' + away.slice(0, 5).map(function(m){ return '<i style="background:' + m.c + '"></i>'; }).join("") + "</span>" : "")
+      + (away.length > 5 ? "<em>" + away.length + "</em>" : "") + "</div>";
+  }
+  return '<div class="mc"><h3>' + esc(monthsOf(t)[mo]) + "<small>" + (cnt ? fmtD(cnt) + " " + esc(t.dys || V("rpDays")) : "") + '</small></h3><div class="mg">'
+    + daysOf(t).map(function(x){ return '<div class="dh">' + esc(x) + "</div>"; }).join("") + cells + "</div></div>";
+}
+function calendarHtml(yr, t, ms, hol, w7, cols){
+  var s = '<div class="cal" style="grid-template-columns:repeat(' + cols + ',1fr)">';
+  for (var mo = 0; mo < 12; mo++) s += monthCard(yr, mo, t, ms, hol, w7);
+  return s + "</div>";
+}
+function legendHtml(ms){
+  return '<div class="legend">' + ms.map(function(m){ return '<span><i style="background:' + m.c + '"></i>' + esc(m.name) + "</span>"; }).join("")
+    + '<span><i style="background:linear-gradient(135deg,#FEF3C7,#FDE68A)"></i>' + esc(V("hmHol")) + '</span><span><i style="background:#F4F2FA"></i>' + esc(V("hmWe")) + "</span></div>";
+}
+function membersOf(team, yr, filter?){
+  var p = yr + "-";
+  return (team.members || []).map(function(m, i){
+    var days = (m.days || []).filter(function(d){ return String(d).startsWith(p); });
+    return { m: m, i: i, name: m.name || "", c: MC[i % MC.length].d, soft: MC[i % MC.length].b, days: new Set(days), half: new Set((m.half || []).filter(function(d){ return String(d).startsWith(p); })), list: days, pm: [] as number[],
+      used: usedOf({ days: days, half: m.half }) };
+  }).filter(filter || function(){ return true; });
+}
+function holidaysOf(list, yr){ var hol = {}; list.forEach(function(x){ if (x.m.country) getAllHolidays(x.m, yr).forEach(function(h){ hol[h] = true; }); }); return hol; }
+
+// The team report (PDF Report button and the print view share it)
+function teamReportHtml(team, t, forPrint){
   team = reportSafe(team);
-  var yr = safeYear(team);
-  var months = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
+  var yr = safeYear(team), w7 = !!team.w7, MO = monthsOf(t);
+  var ms = membersOf(team, yr), hol = holidaysOf(ms, yr);
+  var byDay: Record<string, string[]> = {}; ms.forEach(function(x){ x.list.forEach(function(d){ (byDay[d] = byDay[d] || []).push(x.name); }); });
+  var overlaps = Object.keys(byDay).filter(function(d){ return byDay[d].length >= 2; }).sort();
+  var total = ms.reduce(function(a, x){ return a + x.used; }, 0);
+  var perMonth = new Array(12).fill(0); ms.forEach(function(x){ x.list.forEach(function(d){ perMonth[+d.slice(5,7) - 1] += x.half.has(d) ? 0.5 : 1; }); });
+  var peak = perMonth.indexOf(Math.max.apply(null, perMonth));
+  var cov = avgCoverage(team.members, yr, w7, function(m){ return m.country ? getAllHolidays(m, yr) : []; });
+  var body = heroHtml(team, t.summary || V("rpSummary"), esc(ms.length + " " + (ms.length !== 1 ? t.mbs : t.mb)) + " · " + esc(V("psPeak", { m: MO[peak] })), '<div class="yr">' + yr + "</div>");
+  body += kpis([[fmtD(total), V("rpTotal"), "v"], [String(ms.length), V("rpTeam"), ""], [String(overlaps.length), V("rpOverlap"), overlaps.length ? "p" : ""], [cov + "%", V("rpAvgCov"), "g"]]);
 
-  // Collect all holidays
-  var allHols = {};
-  team.members.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){allHols[h]=true;}); });
-
-  // Overlap analysis
-  var allDays = {};
-  team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
-  var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
-  var totalDays = 0; team.members.forEach(function(m){totalDays+=usedOf(m);});
-
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' - '+yr+'</title>';
-  html += '<style>';
-  html += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;margin:30px 40px;color:#1f2937;font-size:12px}';
-  html += 'h1{font-size:22px;margin:0 0 2px;color:#1f2937}';
-  html += '.sub{font-size:12px;color:#6b7280;margin:0 0 16px}';
-  html += '.hdr{border-bottom:3px solid #7C3AED;padding-bottom:10px;margin-bottom:16px}';
-  html += '.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}';
-  html += '.leg-item{display:flex;align-items:center;gap:4px;font-size:11px}';
-  html += '.dot{width:10px;height:10px;border-radius:3px;display:inline-block}';
-  // Timeline styles
-  html += '.tl-title{font-size:13px;font-weight:700;margin:16px 0 8px;color:#374151}';
-  html += '.tl-row{display:flex;align-items:center;margin-bottom:3px}';
-  html += '.tl-name{width:90px;font-size:11px;font-weight:600;color:#374151;flex-shrink:0}';
-  html += '.tl-bar{display:flex;gap:0}';
-  html += '.tl-day{width:14px;height:14px;border-radius:2px;margin:0 0.5px}';
-  html += '.tl-hdr{display:flex;margin-left:90px;margin-bottom:2px}';
-  html += '.tl-hdr-d{width:14px;font-size:7px;text-align:center;color:#9ca3af;margin:0 0.5px}';
-  // Calendar grid
-  html += '.cal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}';
-  html += '.cal-month{border:1px solid #e5e7eb;border-radius:8px;padding:10px}';
-  html += '.cal-title{font-size:12px;font-weight:700;color:#1f2937;margin-bottom:6px}';
-  html += '.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}';
-  html += '.cal-lbl{font-size:8px;font-weight:700;color:#9ca3af;text-align:center;padding:2px}';
-  html += '.cal-d{font-size:9px;text-align:center;border-radius:3px;padding:3px 0;font-weight:400;color:#374151}';
-  html += '.cal-we{color:#d1d5db}';
-  html += '.cal-hol{background:#fee2e2;color:#dc2626;font-weight:700}';
-  html += '.cal-v1{color:#fff;font-weight:700;border-radius:3px}';
-  // Stats & table
-  html += '.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}';
-  html += '.stat{border:1px solid #e5e7eb;border-radius:8px;padding:10px;text-align:center}';
-  html += '.stat-val{font-size:20px;font-weight:800;color:#374151}';
-  html += '.stat-lbl{font-size:10px;color:#6b7280;margin-top:2px}';
-  html += 'table{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}';
-  html += 'th,td{padding:6px 10px;border:1px solid #e5e7eb;text-align:left}';
-  html += 'th{background:#f9fafb;font-weight:700;color:#374151}';
-  html += '.footer{margin-top:24px;font-size:9px;color:#d1d5db;text-align:right}';
-  html += '@media print{body{margin:20px}}';
-  html += '</style></head><body>';
-
-  // Header
-  html += '<div class="hdr"><h1>'+esc(team.name)+'</h1>';
-  html += '<div class="sub">'+yr+' &middot; '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' &middot; '+esc(V('rpGenOn',{d:new Date().toLocaleDateString(dateLocale())}))+'</div></div>';
-
-  // Legend
-  html += '<div class="legend">';
-  team.members.forEach(function(m,i){
-    var c=MC[i%MC.length];
-    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+fmtD(usedOf(m))+'d)</span></div>';
+  // Days off per person per month (heat map) + total and allowance use
+  var maxM = 1; ms.forEach(function(x){ var pm = new Array(12).fill(0); x.list.forEach(function(d){ pm[+d.slice(5,7) - 1] += x.half.has(d) ? 0.5 : 1; }); x.pm = pm; pm.forEach(function(v){ if (v > maxM) maxM = v; }); });
+  body += '<div class="sec">' + esc(V("rpMonthly")) + "</div>";
+  body += '<div class="card"><table class="t"><thead><tr><th style="width:190px">' + esc(V("rpMember")) + '</th><th><div class="mhd">' + MO.map(function(m, i){ return "<span>" + esc(monthShort(i)) + "</span>"; }).join("") + '</div></th><th class="n" style="width:70px">' + esc(V("rpDays")) + '</th><th style="width:130px">' + esc(V("yrAllow")) + "</th></tr></thead><tbody>";
+  ms.forEach(function(x, r){
+    var al = (Number(x.m.pto) || 0) + (Number(x.m.carry) || 0), pct = al ? Math.min(100, Math.round(x.used / al * 100)) : 0;
+    body += "<tr" + (r % 2 ? ' class="z"' : "") + '><td><div class="who">' + avatar(x.name, x.c) + "<div><b>" + esc(x.name) + "</b><small>" + esc([x.m.role, countryName(x.m.country)].filter(Boolean).join(" · ")) + '</small></div></div></td><td><div class="heat">'
+      + x.pm.map(function(v){ var a = v ? 0.22 + 0.78 * v / maxM : 0; return '<i style="background:' + (v ? x.c + Math.round(a * 255).toString(16).padStart(2, "0") : "#F4F2FA") + ";color:" + (v && a > 0.55 ? "#fff" : "#1B1440") + '">' + (v ? fmtD(v) : "") + "</i>"; }).join("")
+      + '</div></td><td class="n"><b>' + fmtD(x.used) + "</b></td><td>" + (al ? '<div style="display:flex;align-items:center;gap:8px"><div class="bar"><i style="width:' + pct + "%;background:" + (x.used > al ? "#DC2626" : x.c) + '"></i></div><span style="font-size:10px;font-weight:700;color:#6B6592;white-space:nowrap">' + fmtD(x.used) + "/" + fmtD(al) + "</span></div>" : '<span class="pill mute">—</span>') + "</td></tr>";
   });
-  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">'+esc(V("rpHoliday"))+'</span></div>';
-  html += '</div>';
+  body += "</tbody></table></div>";
 
-  // Stats boxes
-  var avgCov = avgCoverage(team.members, yr, !!team.w7, function(m){return m.country?getAllHolidays(m,yr):[];});
-  html += '<div class="stats">';
-  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">'+esc(V("rpTotal"))+'</div></div>';
-  html += '<div class="stat"><div class="stat-val" style="color:#EF4444">'+overlaps.length+'</div><div class="stat-lbl">'+esc(V("rpOverlap"))+'</div></div>';
-  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">'+esc(V("rpTeam"))+'</div></div>';
-  html += '<div class="stat"><div class="stat-val" style="color:#10B981">'+avgCov+'%</div><div class="stat-lbl">'+esc(V("rpAvgCov"))+'</div></div>';
-  html += '</div>';
+  body += '<div class="sec">' + esc(V("rpYearCal")) + " " + yr + "</div>" + calendarHtml(yr, t, ms, hol, w7, 4) + legendHtml(ms);
 
-  // Timeline per month (only months with activity)
-  for (var mo = 0; mo < 12; mo++) {
-    var daysInMonth = dim(yr, mo);
-    var hasActivity = false;
-    team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ var p=pk(d); if(p.m===mo) hasActivity=true; }); });
-    if (!hasActivity) continue;
-
-    html += '<div class="tl-title">'+months[mo]+' '+yr+' &mdash; Timeline</div>';
-    // Day headers
-    html += '<div class="tl-hdr">';
-    for(var d=1;d<=daysInMonth;d++) html += '<div class="tl-hdr-d">'+d+'</div>';
-    html += '</div>';
-    // Member bars
-    team.members.forEach(function(m,i){
-      var c = MC[i%MC.length];
-      html += '<div class="tl-row"><div class="tl-name">'+esc(m.name)+'</div><div class="tl-bar">';
-      for(var d=1;d<=daysInMonth;d++){
-        var key = dk(yr,mo,d);
-        var has = (m.days||[]).indexOf(key) >= 0; var isPending=false;
-        html += '<div class="tl-day" style="background:'+(has?c.d:(isPending?c.d+'80':'#f3f4f6'))+(isPending?';background-image:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.4) 2px,rgba(255,255,255,.4) 4px)':'')+'"></div>';
-      }
-      html += '</div></div>';
-    });
-  }
-
-  // Calendar grid — 12 months, 3 per row
-  html += '<div class="tl-title">'+esc(V("rpYearCal"))+'</div>';
-  html += '<div class="cal-grid">';
-  for (var mo2 = 0; mo2 < 12; mo2++) {
-    html += '<div class="cal-month"><div class="cal-title">'+months[mo2]+'</div><div class="cal-days">';
-    for(var dl=0;dl<7;dl++) html += '<div class="cal-lbl">'+dayL[dl]+'</div>';
-    var firstDay = fdm(yr,mo2);
-    var daysInMo = dim(yr,mo2);
-    for(var bl=0;bl<firstDay;bl++) html += '<div></div>';
-    for(var d2=1;d2<=daysInMo;d2++){
-      var key2=dk(yr,mo2,d2);
-      var dow=(firstDay+d2-1)%7;
-      var isWe2=dow>=5;
-      var isHol2=!!allHols[key2];
-      var who=[];
-      team.members.forEach(function(m,i){if((m.days||[]).indexOf(key2)>=0)who.push(i);});
-      var cls='cal-d';
-      var sty='';
-      if(isWe2) cls+=' cal-we';
-      if(isHol2) cls+=' cal-hol';
-      if(who.length===1) { cls+=' cal-v1'; sty='background:'+MC[who[0]%MC.length].d; }
-      else if(who.length===2) { cls+=' cal-v1'; sty='background:linear-gradient(135deg,'+MC[who[0]%MC.length].d+' 50%,'+MC[who[1]%MC.length].d+' 50%)'; }
-      else if(who.length>=3) { cls+=' cal-v1'; sty='background:#EF4444'; }
-      html += '<div class="'+cls+'"'+(sty?' style="'+sty+'"':'')+'>'+d2+'</div>';
-    }
-    html += '</div></div>';
-  }
-  html += '</div>';
-
-  // Summary table
-  html += '<div class="tl-title">'+(t.summary||'Member Summary')+'</div>';
-  html += '<table><tr><th>'+(t.mb||'Member')+'</th><th>'+(t.co||'Country')+'</th><th>'+(t.dys||'Days')+'</th><th>'+(t.timeline||'Periods')+'</th></tr>';
-  team.members.forEach(function(m,i){
-    var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
-    var sorted = (m.days||[]).slice().sort();
-    // Group into ranges
-    var ranges = [];
-    var ri = 0;
-    while(ri < sorted.length){
-      var start = sorted[ri]; var end = start;
-      while(ri+1 < sorted.length){
-        if(nextLeaveDay(sorted[ri],sorted[ri+1],!!team.w7)){ri++;end=sorted[ri];}else break;
-      }
-      if(start===end) ranges.push(start.slice(5));
-      else ranges.push(start.slice(5)+' to '+end.slice(5));
-      ri++;
-    }
-    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+esc(m.name)+'</td>';
-    html += '<td>'+(co?co.f+' '+co.n:'—')+'</td>';
-    html += '<td style="text-align:center;font-weight:700">'+fmtD(usedOf(m))+'</td>';
-    html += '<td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
+  body += '<div class="sec">' + esc(V("rpPeriods")) + "</div>";
+  body += '<div class="card"><table class="t"><thead><tr><th style="width:190px">' + esc(V("rpMember")) + '</th><th class="n" style="width:60px">' + esc(V("rpDays")) + "</th><th>" + esc(V("rpPeriods")) + "</th></tr></thead><tbody>";
+  ms.forEach(function(x, r){
+    var ps = periodsOf(x.list, w7);
+    body += "<tr" + (r % 2 ? ' class="z"' : "") + '><td><div class="who">' + avatar(x.name, x.c) + "<b>" + esc(x.name) + '</b></div></td><td class="n"><b>' + fmtD(x.used) + '</b></td><td><div class="chips">'
+      + (ps.length ? ps.map(function(p){ return '<span class="chip" style="background:' + x.soft + ";color:" + x.c + '">' + esc(p) + "</span>"; }).join("") : '<span class="dim">—</span>') + "</div></td></tr>";
   });
-  html += '</table>';
+  body += "</tbody></table></div>";
 
-  // Overlaps
-  if(overlaps.length){
-    html += '<div class="tl-title">'+(t.overlapDays||V('rpOverlap'))+' ('+overlaps.length+')</div>';
-    html += '<table><tr><th>'+esc(V("rpDate"))+'</th><th>'+esc(V("rpOut"))+'</th></tr>';
-    overlaps.forEach(function(e){
-      html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+(e[1] as string[]).map(esc).join(', ')+'</td></tr>';
+  if (overlaps.length) {
+    // Consecutive overlap days with the same people become one line ("3 Aug – 7 Aug")
+    var groups: { a: string; b: string; who: string[] }[] = [];
+    overlaps.forEach(function(d){
+      var g = groups[groups.length - 1], who = byDay[d].slice().sort();
+      if (g && g.who.join("|") === who.join("|") && nextLeaveDay(g.b, d, w7)) g.b = d; else groups.push({ a: d, b: d, who: who });
     });
-    html += '</table>';
+    var shown = groups.slice(0, 30);
+    body += '<div class="sec">' + esc(V("rpOverlap")) + "<small>" + overlaps.length + "</small></div>";
+    body += '<div class="card"><table class="t"><thead><tr><th style="width:190px">' + esc(V("rpDate")) + '</th><th class="n" style="width:60px">' + esc(V("rpDays")) + "</th><th>" + esc(V("rpOut")) + "</th></tr></thead><tbody>";
+    shown.forEach(function(g, r){
+      var nd = overlaps.filter(function(d){ return d >= g.a && d <= g.b && byDay[d].length === g.who.length; }).length;
+      body += "<tr" + (r % 2 ? ' class="z"' : "") + '><td><span class="pill ' + (g.who.length >= 3 ? "bad" : "warn") + '">' + esc(g.a === g.b ? shortDate(g.a) : shortDate(g.a) + " – " + shortDate(g.b)) + '</span></td><td class="n"><b>' + nd + '</b></td><td><div class="chips">'
+        + g.who.map(function(nm){ var x = ms.find(function(y){ return y.name === nm; }); return '<span class="chip" style="background:' + (x ? x.soft : "#F1EFF8") + ";color:" + (x ? x.c : "#4A4270") + '">' + esc(nm) + "</span>"; }).join("") + "</div></td></tr>";
+    });
+    if (groups.length > shown.length) body += '<tr><td colspan="3" class="dim">' + esc(V("rpMore", { n: groups.length - shown.length })) + "</td></tr>";
+    body += "</tbody></table></div>";
   }
+  var head = forPrint ? "" : "";
+  var html = docHtml((team.name || "") + " · " + yr, (forPrint ? '<div class="prt"><button onclick="window.print()">' + esc(V("rpPrint")) + "</button></div>" : "") + body, head);
+  return { html: html, yr: yr };
+}
 
-  html += '<div class="footer">Team Vacation Planner &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString(dateLocale())+'</div>';
-  html += '</body></html>';
+export function generatePDFReport(team, t) {
+  var r = teamReportHtml(team, t, false);
+  return pdfOrHtml(r.html, fileBase(team.name) + "_" + r.yr + "_report.pdf");
+}
 
-  var base = fileBase(team.name)+"_"+yr+"_report";
-  var fallback = function(){
-    var blob = new Blob([html], { type: "text/html" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a"); a.href = url; a.download = base+".html"; a.click();
-    setTimeout(function(){URL.revokeObjectURL(url);},1000);
-  };
-  return withBusy(downloadHtmlAsPdf(html, base+".pdf").catch(function(e){ console.warn("PDF failed, downloading HTML instead", e); fallback(); }));
+export function printReport(team, t) {
+  var r = teamReportHtml(team, t, true);
+  var win = window.open("", "_blank", "width=1180,height=820");
+  if (!win) { try { window.dispatchEvent(new CustomEvent("tvp-save-error", { detail: "Your browser blocked the print window. Allow pop-ups for this site and try again." })); } catch (e) { /* no window */ } return; }
+  win.document.write(r.html.replace("<body>", '<body style="margin:0 auto">'));
+  win.document.close(); win.focus();
+  setTimeout(function(){ win.print(); }, 600);
 }
 
 export function generateApprovedPDF(team, t) {
   team = reportSafe(team);
-  var yr = safeYear(team);
-  var MO = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var moS = MO.map(function(_m,i){return monthShort(i);});
-  var DL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
-  var apr = team.approver ? team.members.find(function(m){return m.id===team.approver;}) : null;
-  var aprName = apr ? apr.name : (t.approverLabel||"Approver");
-  var now = new Date();
-  var ds = now.getDate()+" "+MO[now.getMonth()]+" "+now.getFullYear();
-
-  var am = team.members.filter(function(m){
-    return m.approved===true && (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).length > 0;
+  var yr = safeYear(team), w7 = !!team.w7;
+  var apr = team.approver ? team.members.find(function(m){ return m.id === team.approver; }) : null;
+  var ms = membersOf(team, yr, function(x){ return x.m.approved === true && x.list.length > 0; }), hol = holidaysOf(ms, yr);
+  var tot = ms.reduce(function(a, x){ return a + x.used; }, 0);
+  var title = t.approvalCert || "Approved Vacation Schedule";
+  var body = heroHtml(team, title, esc(today()), '<div class="yr">' + yr + '</div><span class="badge">✓ ' + esc(t.approved || "Approved") + "</span>");
+  body += kpis([[String(ms.length), t.mbs || V("rpTeam"), ""], [fmtD(tot), V("rpDays") + " · " + (t.approved || "Approved"), "g"], [fmtD(Math.round(tot / (ms.length || 1) * 10) / 10), t.avgDays || "Avg/Person", "v"]]);
+  body += '<div class="sec">' + esc((t.approved || "Approved") + " · " + V("rpPeriods")) + "</div>";
+  body += '<div class="card"><table class="t"><thead><tr><th style="width:200px">' + esc(V("rpMember")) + '</th><th style="width:120px">' + esc(V("rpCountry")) + '</th><th class="n" style="width:60px">' + esc(V("rpDays")) + '</th><th style="width:130px">' + esc(V("yrAllow")) + "</th><th>" + esc(V("rpPeriods")) + "</th></tr></thead><tbody>";
+  ms.forEach(function(x, r){
+    var al = (Number(x.m.pto) || 0) + (Number(x.m.carry) || 0), pct = al ? Math.min(100, Math.round(x.used / al * 100)) : 0;
+    body += "<tr" + (r % 2 ? ' class="z"' : "") + '><td><div class="who">' + avatar(x.name, x.c) + "<div><b>" + esc(x.name) + "</b><small>" + esc(x.m.role || "") + "</small></div></div></td><td>" + esc(countryName(x.m.country) || "—") + '</td><td class="n"><b>' + fmtD(x.used) + "</b></td><td>"
+      + (al ? '<div style="display:flex;align-items:center;gap:8px"><div class="bar"><i style="width:' + pct + "%;background:" + x.c + '"></i></div><span style="font-size:10px;font-weight:700;color:#6B6592;white-space:nowrap">' + fmtD(x.used) + "/" + fmtD(al) + "</span></div>" : '<span class="pill mute">—</span>')
+      + '</td><td><div class="chips">' + periodsOf(x.list, w7).map(function(p){ return '<span class="chip" style="background:' + x.soft + ";color:" + x.c + '">' + esc(p) + "</span>"; }).join("") + "</div></td></tr>";
   });
-  var tot = 0;
-  am.forEach(function(m){ tot += usedOf({days:(m.days||[]).filter(function(x){return x.startsWith(String(yr));}),half:m.half}); });
-
-  // Labels
-  var L = {
-    title: t.approvalCert || "Approved Vacation Schedule",
-    badge: "✓ " + (t.approved||"APPROVED"),
-    members: t.mbs || "Members",
-    appDays: V("rpDays") + " · " + (t.approved||"Approved"),
-    avg: t.avgDays || "Avg/Person",
-    sect1: (t.approved||"Approved") + " — " + (t.summary||"Summary"),
-    member: t.mb || "Member",
-    country: t.co || "Country",
-    days: t.dys || "Days",
-    pto: t.pto || "PTO",
-    periods: V("rpPeriods"),
-    sect2: t.cal || "Calendar",
-    we: t.we || "Weekend",
-    hol: t.holiday || t.hol || "Holiday",
-    vacation: t.onVac || "Vacation",
-    approver: t.approverLabel || "Approver",
-    ack: t.mb || "Team Member",
-    date: V("rpDate")
-  };
-
-  var h = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' — '+L.title+' '+yr+'</title>';
-  h += '<style>';
-  h += '@page{size:A4 landscape;margin:10mm 12mm}';
-  h += '*{box-sizing:border-box}';
-  h += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;margin:0;padding:0;color:#111827;font-size:8.5px;line-height:1.3;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
-  // Header
-  h += '.hd{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #4f46e5;padding-bottom:8px;margin-bottom:8px}';
-  h += '.hd-l{display:flex;align-items:center;gap:10px}';
-  h += '.hd-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center}';
-  h += '.hd-icon svg{width:16px;height:16px}';
-  h += '.hd h1{font-size:14px;margin:0;font-weight:800;letter-spacing:-.3px}';
-  h += '.hd-sub{font-size:8px;color:#6b7280;margin:1px 0 0}';
-  h += '.badge{padding:3px 10px;border-radius:10px;font-size:7px;font-weight:800;letter-spacing:.6px;background:#dcfce7;color:#166534;border:1px solid #86efac;text-transform:uppercase}';
-  // Stats
-  h += '.st{display:flex;gap:12px;margin:6px 0 8px}';
-  h += '.st-c{flex:1;text-align:center;padding:6px 0;background:#f5f3ff;border-radius:6px;border:1px solid #e0e7ff}';
-  h += '.st-n{font-size:18px;font-weight:800;color:#4f46e5}';
-  h += '.st-l{font-size:6.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;font-weight:700}';
-  // Table
-  h += '.s{font-size:9px;font-weight:700;color:#312e81;margin:8px 0 4px;padding-bottom:2px;border-bottom:1.5px solid #c7d2fe}';
-  h += 'table{width:100%;border-collapse:collapse}';
-  h += 'th{background:#f5f3ff;color:#312e81;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:4px 5px;text-align:left;border-bottom:1.5px solid #c7d2fe}';
-  h += 'td{padding:3px 5px;border-bottom:1px solid #f3f4f6;font-size:8px}';
-  h += 'tr:nth-child(even){background:#faf9ff}';
-  h += 'tr{page-break-inside:avoid;break-inside:avoid}';
-  h += '.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle}';
-  h += '.ch{display:inline-block;padding:1px 6px;border-radius:3px;font-size:7px;font-weight:700;margin:0 1px;white-space:nowrap}';
-  // Calendar
-  h += '.cg{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin:4px 0 6px}';
-  h += '.cm{border:1px solid #e5e7eb;border-radius:4px;padding:3px;page-break-inside:avoid;break-inside:avoid}';
-  h += '.ct{font-size:7.5px;font-weight:700;text-align:center;color:#312e81;margin-bottom:2px}';
-  h += '.cd-g{display:grid;grid-template-columns:repeat(7,1fr);gap:0}';
-  h += '.dl{text-align:center;font-size:5.5px;color:#9ca3af;font-weight:700}';
-  h += '.d{text-align:center;font-size:6.5px;padding:1.5px 0;color:#6b7280}';
-  h += '.d-we{background:#f3f4f6;color:#c9c9c9}';
-  h += '.d-h{background:#fef2f2;color:#ef4444;font-weight:700}';
-  h += '.d-v{background:#ef4444;color:#fff;font-weight:800;border-radius:2px}';
-  h += '.d-v2{color:#fff;font-weight:800;border-radius:2px}';
-  // Legend
-  h += '.lg{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0;padding:3px 6px;background:#f9fafb;border-radius:3px;border:1px solid #e5e7eb;font-size:7px}';
-  h += '.lg-i{display:flex;align-items:center;gap:2px}';
-  h += '.lg-b{width:8px;height:8px;border-radius:2px;display:inline-block}';
-  // Footer
-  h += '.ft{display:flex;justify-content:space-between;align-items:flex-end;border-top:1.5px solid #4f46e5;padding-top:6px;margin-top:6px}';
-  h += '.sig{flex:1}';
-  h += '.sig-line{border-top:1px solid #374151;margin-top:20px;padding-top:3px}';
-  h += '.sig-n{font-size:9px;font-weight:700;color:#111827}';
-  h += '.sig-r{font-size:7px;color:#6b7280}';
-  h += '.wm{font-size:6px;color:#d1d5db;text-align:center;margin-top:4px;letter-spacing:.3px}';
-  h += '</style></head><body>';
-
-  // ── Header
-  h += '<div class="hd"><div class="hd-l">';
-  h += '<div class="hd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg></div>';
-  h += '<div><h1>'+esc(team.name)+'</h1><p class="hd-sub">'+L.title+' '+yr+' · '+ds+'</p></div>';
-  h += '</div><span class="badge">'+L.badge+'</span></div>';
-
-  // ── Stats
-  h += '<div class="st">';
-  h += '<div class="st-c"><div class="st-n">'+am.length+'</div><div class="st-l">'+L.members+'</div></div>';
-  h += '<div class="st-c"><div class="st-n">'+tot+'</div><div class="st-l">'+L.appDays+'</div></div>';
-  h += '<div class="st-c"><div class="st-n">'+Math.round(tot/(am.length||1))+'</div><div class="st-l">'+L.avg+'</div></div>';
-  h += '</div>';
-
-  // ── Table
-  h += '<div class="s">'+L.sect1+'</div>';
-  h += '<table><tr><th>'+L.member+'</th><th>'+L.country+'</th><th style="text-align:center;width:40px">'+L.days+'</th><th style="text-align:center;width:50px">'+L.pto+'</th><th>'+L.periods+'</th></tr>';
-  am.forEach(function(m) {
-    var days = (m.days||[]).filter(function(x){return x.startsWith(String(yr));}).sort();
-    var co = EU_C.find(function(x){return x.c===m.country;});
-    var mc = MC[team.members.indexOf(m)%MC.length];
-    // Periods
-    var rng=[],rS=null,rP=null,rK=null;
-    days.forEach(function(d){
-      var p=d.split("-");var dt=new Date(+p[0],+p[1]-1,+p[2]);
-      if(!rP){rS=d;rP=dt;rK=d;return;}
-      if(nextLeaveDay(rK,d,!!team.w7)){rP=dt;rK=d;}
-      else{rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));rS=d;rP=dt;rK=d;}
-    });
-    if(rS)rng.push(rS==_fd2(rP,moS)?_fd(rS,moS):_fd(rS,moS)+" – "+_fd2(rP,moS));
-    var usedN=usedOf({days:days,half:m.half});
-    const al=(m.pto||0)+(m.carry||0); var ps=al?fmtD(usedN)+"/"+fmtD(al)+(m.carry?" (+"+fmtD(m.carry)+")":""):"–";
-    h+='<tr><td><span class="dot" style="background:'+mc.d+'"></span><strong>'+esc(m.name)+'</strong></td>';
-    h+='<td>'+(co?co.f+" "+co.n:"–")+'</td>';
-    h+='<td style="text-align:center;font-weight:700;color:'+mc.d+';font-size:11px">'+fmtD(usedN)+'</td>';
-    h+='<td style="text-align:center;font-weight:600">'+ps+'</td>';
-    h+='<td>'+rng.map(function(r){return '<span class="ch" style="color:'+mc.d+';background:'+mc.d+'10;border:1px solid '+mc.d+'30">'+r+'</span>';}).join("")+'</td></tr>';
-  });
-  h+='</table>';
-
-  // ── Calendar (6 per row for landscape)
-  h+='<div class="s">'+L.sect2+' '+yr+'</div>';
-  h+='<div class="cg">';
-  var hs={};
-  am.forEach(function(m){if(m.country)getAllHolidays(m,yr).forEach(function(x){hs[x]=true;});});
-  for(var mo=0;mo<12;mo++){
-    h+='<div class="cm"><div class="ct">'+MO[mo]+'</div><div class="cd-g">';
-    for(var dl=0;dl<7;dl++)h+='<div class="dl">'+DL[dl]+'</div>';
-    var fd=fdm(yr,mo),dm2=dim(yr,mo);
-    for(var bl=0;bl<fd;bl++)h+='<div></div>';
-    for(var d=1;d<=dm2;d++){
-      var k=dk(yr,mo,d),dw=(fd+d-1)%7,we=dw>=5,ih=!!hs[k];
-      var w=[];am.forEach(function(m){if((m.days||[]).indexOf(k)>=0)w.push(team.members.indexOf(m));});
-      var cl="d",st="";
-      if(we)cl+=" d-we";
-      if(ih&&w.length===0)cl+=" d-h";
-      if(w.length===1){cl+=" d-v";st="background:"+MC[w[0]%MC.length].d;}
-      else if(w.length>=2){cl+=" d-v";st="background:#dc2626";}
-      h+='<div class="'+cl+'"'+(st?' style="'+st+'"':'')+'>'+d+'</div>';
-    }
-    h+='</div></div>';
-  }
-  h+='</div>';
-
-  // ── Legend
-  h+='<div class="lg">';
-  am.forEach(function(m){
-    var mc=MC[team.members.indexOf(m)%MC.length];
-    h+='<span class="lg-i"><span class="lg-b" style="background:'+mc.d+'"></span><strong>'+esc(m.name)+'</strong></span>';
-  });
-  h+='<span style="color:#d1d5db">|</span>';
-  h+='<span class="lg-i"><span class="lg-b" style="background:#f3f4f6;border:1px solid #d1d5db"></span>'+L.we+'</span>';
-  h+='<span class="lg-i"><span class="lg-b" style="background:#fef2f2;border:1px solid #fecaca"></span>'+L.hol+'</span>';
-  h+='<span class="lg-i"><span class="lg-b" style="background:#ef4444"></span>'+L.vacation+'</span>';
-  h+='</div>';
-
-  // ── Signatures
-  h+='<div class="ft">';
-  h+='<div class="sig"><div class="sig-line"><div class="sig-n">'+esc(aprName)+'</div><div class="sig-r">'+L.approver+' · '+ds+'</div></div></div>';
-  h+='<div style="width:40px"></div>';
-  h+='<div class="sig"><div class="sig-line"><div class="sig-n">&nbsp;</div><div class="sig-r">'+L.ack+' · '+L.date+'</div></div></div>';
-  h+='</div>';
-  h+='<div class="wm">vacationplanner.team · '+ds+'</div>';
-  h+='</body></html>';
-
-  var fname=fileBase(team.name)+"_"+yr+"_approved.pdf";
-  return withBusy(downloadHtmlAsPdf(h, fname).catch(function(e){
-    console.warn("PDF failed, opening print view instead", e);
-    var w2=window.open("","_blank");if(!w2)return;w2.document.write(h);w2.document.close();w2.focus();setTimeout(function(){w2.print();},500);
-  }));
+  body += "</tbody></table></div>";
+  body += '<div class="sec">' + esc((t.cal || "Calendar") + " " + yr) + "</div>" + calendarHtml(yr, t, ms, hol, w7, 6) + legendHtml(ms);
+  body += '<div class="sigs"><div class="sig"><b>' + esc(t.approverLabel || "Approver") + "</b><span>" + esc(apr ? apr.name : "") + '</span><div class="ln"><div>' + esc(V("yeSig")) + "</div><div>" + esc(V("yeDate")) + '</div></div></div><div class="sig"><b>' + esc(t.mb || V("rpMember")) + '</b><span></span><div class="ln"><div>' + esc(V("yeSig")) + "</div><div>" + esc(V("yeDate")) + "</div></div></div></div>";
+  return pdfOrHtml(docHtml((team.name || "") + " · " + title + " " + yr, body), fileBase(team.name) + "_" + yr + "_approved.pdf");
 }
 
-export function printReport(team, t) {
-  team = reportSafe(team);
-  var yr = safeYear(team);
-  var months = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  var dayL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
-
-  var allHols = {};
-  team.members.forEach(function(m){ if(m.country) getAllHolidays(m,yr).forEach(function(h){allHols[h]=true;}); });
-
-  var allDays = {};
-  team.members.forEach(function(m){ (m.days||[]).forEach(function(d){ if(!allDays[d])allDays[d]=[]; allDays[d].push(m.name); }); });
-  var overlaps = Object.entries(allDays).filter(function(e){return e[1].length>=2;}).sort(function(a,b){return a[0].localeCompare(b[0]);});
-  var totalDays = 0; team.members.forEach(function(m){totalDays+=usedOf(m);});
-
-  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(team.name)+' - '+yr+'</title>';
-  html += '<style>';
-  html += '*{box-sizing:border-box;margin:0;padding:0}';
-  html += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;margin:0;padding:24px 32px;color:#1f2937;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
-  html += '@page{margin:15mm;size:A4 landscape}';
-  html += 'h1{font-size:20px;margin:0 0 2px;color:#1f2937}';
-  html += '.sub{font-size:11px;color:#6b7280;margin:0 0 14px}';
-  html += '.hdr{border-bottom:3px solid #7C3AED;padding-bottom:8px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-end}';
-  html += '.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}';
-  html += '.leg-item{display:flex;align-items:center;gap:3px;font-size:10px}';
-  html += '.dot{width:8px;height:8px;border-radius:2px;display:inline-block}';
-  // Stats
-  html += '.stats{display:flex;gap:8px;margin-bottom:14px}';
-  html += '.stat{flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:8px;text-align:center}';
-  html += '.stat-val{font-size:18px;font-weight:800;color:#374151}';
-  html += '.stat-red{font-size:18px;font-weight:800;color:#EF4444}';
-  html += '.stat-grn{font-size:18px;font-weight:800;color:#10B981}';
-  html += '.stat-lbl{font-size:9px;color:#6b7280;margin-top:1px}';
-  // Timeline
-  html += '.tl-title{font-size:12px;font-weight:700;margin:14px 0 6px;color:#374151;border-bottom:2px solid #7C3AED;padding-bottom:3px}';
-  html += '.tl-row{display:flex;align-items:center;margin-bottom:2px}';
-  html += '.tl-name{width:80px;font-size:10px;font-weight:600;color:#374151;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
-  html += '.tl-bar{display:flex}';
-  html += '.tl-day{width:12px;height:12px;border-radius:2px;margin:0 0.5px}';
-  html += '.tl-hdr{display:flex;margin-left:80px;margin-bottom:1px}';
-  html += '.tl-hdr-d{width:12px;font-size:7px;text-align:center;color:#9ca3af;margin:0 0.5px}';
-  // Calendar
-  html += '.cal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}';
-  html += '.cal-month{border:1px solid #e5e7eb;border-radius:6px;padding:6px}';
-  html += '.cal-title{font-size:10px;font-weight:700;color:#1f2937;margin-bottom:4px}';
-  html += '.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}';
-  html += '.cal-lbl{font-size:7px;font-weight:700;color:#9ca3af;text-align:center;padding:1px}';
-  html += '.cal-d{font-size:8px;text-align:center;border-radius:2px;padding:2px 0;color:#374151}';
-  html += '.cal-we{color:#d1d5db}';
-  html += '.cal-hol{background:#fee2e2;color:#dc2626;font-weight:700}';
-  html += '.cal-v1{color:#fff;font-weight:700}';
-  // Table
-  html += 'table{width:100%;border-collapse:collapse;margin:8px 0;font-size:10px}';
-  html += 'th,td{padding:4px 8px;border:1px solid #e5e7eb;text-align:left}';
-  html += 'th{background:#f9fafb;font-weight:700;color:#374151}';
-  html += '.footer{margin-top:16px;font-size:8px;color:#d1d5db;text-align:right}';
-  html += '@media print{.no-print{display:none!important}}';
-  html += '</style></head><body>';
-
-  // Print button
-  html += '<div class="no-print" style="position:fixed;top:10px;right:10px;z-index:100"><button onclick="window.print()" style="padding:8px 20px;border-radius:8px;border:none;background:#7C3AED;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">'+esc(V("rpPrint"))+'</button></div>';
-
-  // Header
-  html += '<div class="hdr"><div><h1>'+esc(team.name)+'</h1><div class="sub">'+yr+' &middot; '+team.members.length+' '+(team.members.length!==1?t.mbs:t.mb)+' &middot; '+esc(V('rpGenOn',{d:new Date().toLocaleDateString(dateLocale())}))+'</div></div><div style="font-size:9px;color:#9ca3af">vacationplanner.team</div></div>';
-
-  // Legend
-  html += '<div class="legend">';
-  team.members.forEach(function(m,i){
-    var c=MC[i%MC.length];
-    html += '<div class="leg-item"><span class="dot" style="background:'+c.d+'"></span><strong>'+esc(m.name)+'</strong> <span style="color:#9ca3af">('+fmtD(usedOf(m))+'d)</span></div>';
+function yearEndPdfHtml(d, t){
+  var team = d.team, yr = d.yr, idx = {}; (team.members || []).forEach(function(m, i){ idx[m.name || ""] = i; });
+  var col = function(name){ return MC[(idx[name] || 0) % MC.length]; };
+  var taken = d.rows.reduce(function(a, r){ return a + r.taken; }, 0);
+  var body = heroHtml(team, V("yrTitle", { y: yr }), esc(d.rows.length + " " + (d.rows.length !== 1 ? (t.mbs || "") : (t.mb || ""))) + (d.approver ? " · " + esc(t.approverLabel || "Approver") + ": " + esc(d.approver) : ""), '<div class="yr">' + yr + "</div>");
+  body += kpis([[fmtN(taken), V("yrTaken"), "v"], [fmtN(d.unused), V("yeLeftT", { y: yr }), "g"], [String(d.noTwo.length), V("yeNoTwo", { names: "" }).replace(/[:：]\s*$/, "").trim(), d.noTwo.length ? "a" : ""], [String(d.over.length), V("yeOver", { names: "" }).replace(/[:：]\s*$/, "").trim(), d.over.length ? "r" : ""]]);
+  var yn = function(b){ return b === null ? '<span class="pill mute">—</span>' : b ? '<span class="pill ok">' + esc(V("yeYes")) + "</span>" : '<span class="pill warn">' + esc(V("yeNo")) + "</span>"; };
+  body += '<div class="sec">' + esc(V("yePeople")) + "</div>";
+  body += '<div class="card"><table class="t"><thead><tr><th>' + esc(V("yePerson")) + "</th><th>" + esc(V("yeCountry")) + '</th><th class="n">' + esc(V("yrAllow")) + '</th><th class="n">' + esc(V("yeCarry", { y: yr - 1 })) + '</th><th class="n">' + esc(V("yeTotal")) + '</th><th class="n">' + esc(V("yrTaken")) + '</th><th class="n">' + esc(V("yrLeft")) + '</th><th class="n">' + esc(V("yeLong")) + '</th><th class="c">' + esc(V("yeTwo")) + "</th>" + (d.appr ? '<th class="c">' + esc(V("yeAppr")) + "</th>" : "") + "</tr></thead><tbody>";
+  d.rows.forEach(function(r, i){
+    var c = col(r.name), pct = r.total ? Math.min(100, Math.round(r.taken / r.total * 100)) : 0, over = r.left !== null && r.left < 0;
+    body += "<tr" + (i % 2 ? ' class="z"' : "") + '><td><div class="who">' + avatar(r.name, c.d) + "<div><b>" + esc(r.name) + "</b><small>" + esc([r.role, r.group].filter(function(v, i, a){ return v && a.indexOf(v) === i; }).join(" · ")) + "</small></div></div></td>"
+      + "<td>" + esc(r.country || "—") + '</td><td class="n">' + (r.pto ? fmtN(r.pto) : '<span class="dim">—</span>') + '</td><td class="n">' + (r.carry ? fmtN(r.carry) : '<span class="dim">—</span>') + '</td><td class="n">' + (r.total ? fmtN(r.total) : '<span class="dim">—</span>')
+      + '</td><td class="n" style="width:84px"><b>' + fmtN(r.taken) + '</b>' + (r.total ? '<div class="bar" style="margin-top:4px;min-width:0"><i style="width:' + pct + "%;background:" + (over ? "#DC2626" : c.d) + '"></i></div>' : "") + '</td><td class="n">' + (r.left === null ? '<span class="dim">—</span>' : '<span class="pill ' + (over ? "bad" : r.left > 0 ? "ok" : "mute") + '">' + fmtN(r.left) + "</span>")
+      + '</td><td class="n">' + (r.longest || '<span class="dim">—</span>') + '</td><td class="c">' + yn(r.two) + "</td>" + (d.appr ? '<td class="c">' + yn(r.approved) + "</td>" : "") + "</tr>";
   });
-  html += '<div class="leg-item"><span class="dot" style="background:#fee2e2;border:1px solid #fecaca"></span><span style="color:#dc2626;font-weight:600">'+esc(V("rpHoliday"))+'</span></div>';
-  html += '</div>';
-
-  // Stats
-  var avgCov = avgCoverage(team.members, yr, !!team.w7, function(m){return m.country?getAllHolidays(m,yr):[];});
-  html += '<div class="stats">';
-  html += '<div class="stat"><div class="stat-val">'+totalDays+'</div><div class="stat-lbl">'+esc(V("rpTotal"))+'</div></div>';
-  html += '<div class="stat"><div class="stat-red">'+overlaps.length+'</div><div class="stat-lbl">'+esc(V("rpOverlap"))+'</div></div>';
-  html += '<div class="stat"><div class="stat-val">'+team.members.length+'</div><div class="stat-lbl">'+esc(V("rpTeam"))+'</div></div>';
-  html += '<div class="stat"><div class="stat-grn">'+avgCov+'%</div><div class="stat-lbl">'+esc(V("rpAvgCov"))+'</div></div>';
-  html += '</div>';
-
-  // Timeline per active month
-  for(var mo=0;mo<12;mo++){
-    var daysInMonth = dim(yr,mo);
-    var hasActivity = false;
-    team.members.forEach(function(m){(m.days||[]).forEach(function(d){var p=pk(d);if(p.m===mo)hasActivity=true;});});
-    if(!hasActivity) continue;
-    html += '<div class="tl-title">'+months[mo]+' '+yr+'</div>';
-    html += '<div class="tl-hdr">';
-    for(var d=1;d<=daysInMonth;d++) html += '<div class="tl-hdr-d">'+d+'</div>';
-    html += '</div>';
-    team.members.forEach(function(m,i){
-      var c=MC[i%MC.length];
-      html += '<div class="tl-row"><div class="tl-name">'+esc(m.name)+'</div><div class="tl-bar">';
-      for(var d2=1;d2<=daysInMonth;d2++){
-        var key=dk(yr,mo,d2);
-        var has=(m.days||[]).indexOf(key)>=0;var isPnd=false;
-        var isHol2=!!allHols[key];
-        var isWe2=isWe(yr,mo,d2);
-        html += '<div class="tl-day" style="background:'+(has?c.d:isPnd?c.d+'60':isHol2?'#fecaca':isWe2?'#f3f4f6':'#f9fafb')+(isPnd?';background-image:repeating-linear-gradient(45deg,transparent,transparent 2px,rgba(255,255,255,.5) 2px,rgba(255,255,255,.5) 4px)':'')+'"></div>';
-      }
-      html += '</div></div>';
-    });
-  }
-
-  // Calendar grid — 4 per row for landscape
-  html += '<div class="tl-title">'+esc(V("rpYearCal"))+' '+yr+'</div>';
-  html += '<div class="cal-grid">';
-  for(var mo3=0;mo3<12;mo3++){
-    html += '<div class="cal-month"><div class="cal-title">'+months[mo3]+'</div><div class="cal-days">';
-    for(var dl=0;dl<7;dl++) html += '<div class="cal-lbl">'+dayL[dl]+'</div>';
-    var firstDay=fdm(yr,mo3);
-    var daysInMo=dim(yr,mo3);
-    for(var bl=0;bl<firstDay;bl++) html += '<div></div>';
-    for(var d3=1;d3<=daysInMo;d3++){
-      var key3=dk(yr,mo3,d3);
-      var dow2=(firstDay+d3-1)%7;
-      var isWe3=dow2>=5;
-      var isHol3=!!allHols[key3];
-      var who2=[];
-      team.members.forEach(function(m,i){if((m.days||[]).indexOf(key3)>=0)who2.push(i);});
-      var cls2='cal-d';
-      var sty2='';
-      if(isWe3) cls2+=' cal-we';
-      if(isHol3) cls2+=' cal-hol';
-      if(who2.length===1){cls2+=' cal-v1';sty2='background:'+MC[who2[0]%MC.length].d;}
-      else if(who2.length===2){cls2+=' cal-v1';sty2='background:linear-gradient(135deg,'+MC[who2[0]%MC.length].d+' 50%,'+MC[who2[1]%MC.length].d+' 50%)';}
-      else if(who2.length>=3){cls2+=' cal-v1';sty2='background:#EF4444';}
-      html += '<div class="'+cls2+'"'+(sty2?' style="'+sty2+'"':'')+'>'+d3+'</div>';
-    }
-    html += '</div></div>';
-  }
-  html += '</div>';
-
-  // Summary table
-  html += '<div class="tl-title">'+esc(V("rpSummary"))+'</div>';
-  html += '<table><tr><th>'+esc(V("rpMember"))+'</th><th>'+esc(V("rpCountry"))+'</th><th>'+esc(V("rpDays"))+'</th><th>'+esc(V("rpPeriods"))+'</th></tr>';
-  team.members.forEach(function(m,i){
-    var co = m.country ? EU_C.find(function(c){return c.c===m.country;}) : null;
-    var sorted=(m.days||[]).slice().sort();
-    var ranges=[]; var ri=0;
-    while(ri<sorted.length){
-      var start=sorted[ri],end=start;
-      while(ri+1<sorted.length){if(nextLeaveDay(sorted[ri],sorted[ri+1],!!team.w7)){ri++;end=sorted[ri];}else break;}
-      if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
-    }
-    html += '<tr><td><span style="color:'+MC[i%MC.length].d+';font-weight:700">&#9679;</span> '+esc(m.name)+'</td><td>'+(co?co.f+' '+co.n:'—')+'</td><td style="text-align:center;font-weight:700">'+fmtD(usedOf(m))+'</td><td style="color:#6b7280">'+ranges.join(', ')+'</td></tr>';
+  body += "</tbody></table></div>";
+  // Points for attention
+  body += '<div class="sec">' + esc(V("yeNotes")) + '</div><div class="notes">';
+  var any = false;
+  if (d.over.length) { any = true; body += '<div class="note r"><b>!</b><div>' + esc(V("yeOver", { names: d.over.join(", ") })) + "</div></div>"; }
+  if (d.noTwo.length) { any = true; body += '<div class="note w"><b>!</b><div>' + esc(V("yeNoTwo", { names: d.noTwo.join(", ") })) + "</div></div>"; }
+  if (d.unused) { any = true; body += '<div class="note i"><b>i</b><div>' + esc(V("yeUnused", { n: fmtN(d.unused) })) + "</div></div>"; }
+  if (!any) body += '<div class="note g"><b>✓</b><div>' + esc(V("yeNone")) + "</div></div>";
+  body += '<div class="note i"><b>i</b><div>' + esc(V("yeHalf")) + "</div></div></div>";
+  // By country
+  body += '<div class="sec">' + esc(V("yeByCountry")) + "</div>";
+  body += '<div class="card"><table class="t"><thead><tr><th>' + esc(V("yeCountry")) + '</th><th class="n">' + esc(V("yePeople")) + '</th><th class="n">' + esc(V("yeTotal")) + '</th><th class="n">' + esc(V("yrTaken")) + '</th><th class="n">' + esc(V("yrLeft")) + '</th><th class="n">' + esc(V("yeAvg")) + "</th></tr></thead><tbody>";
+  d.countries.forEach(function(c, i){
+    body += "<tr" + (i % 2 ? ' class="z"' : "") + "><td><b>" + esc(c.country) + '</b></td><td class="n">' + c.people + '</td><td class="n">' + (c.total ? fmtN(c.total) : '<span class="dim">—</span>') + '</td><td class="n"><b>' + fmtN(c.taken) + '</b></td><td class="n">' + (c.total ? fmtN(c.left) : '<span class="dim">—</span>') + '</td><td class="n">' + fmtN(c.taken / c.people) + "</td></tr>";
   });
-  html += '</table>';
-
-  if(overlaps.length){
-    html += '<div class="tl-title">'+esc(V('rpOverlap'))+' ('+overlaps.length+')</div>';
-    html += '<table><tr><th>'+esc(V("rpDate"))+'</th><th>'+esc(V("rpOut"))+'</th></tr>';
-    overlaps.forEach(function(e){html += '<tr><td style="color:#EF4444;font-weight:600">'+e[0]+'</td><td>'+(e[1] as string[]).map(esc).join(', ')+'</td></tr>';});
-    html += '</table>';
-  }
-
-  html += '<div class="footer">'+esc(V('rpGenerated'))+' &middot; vacationplanner.team &middot; '+new Date().toLocaleDateString(dateLocale())+'</div>';
-  html += '</body></html>';
-
-  var win = window.open('','_blank','width=1100,height=800');
-  if (!win) { try { window.dispatchEvent(new CustomEvent("tvp-save-error", { detail: "Your browser blocked the print window. Allow pop-ups for this site and try again." })); } catch (e) { /* no window */ } return; }
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  setTimeout(function(){win.print();},500);
+  body += "</tbody></table></div>";
+  body += '<div class="sigs"><div class="sig"><b>' + esc(V("yeSign1")) + '</b><span></span><div class="ln"><div>' + esc(V("yeSig")) + "</div><div>" + esc(V("yeDate")) + '</div></div></div><div class="sig"><b>' + esc(V("yeSign2")) + "</b><span>" + esc(d.approver || "") + '</span><div class="ln"><div>' + esc(V("yeSig")) + "</div><div>" + esc(V("yeDate")) + "</div></div></div></div>";
+  return docHtml(V("yrTitle", { y: yr }) + " · " + (team.name || ""), body);
 }
 
 export function exportXLSLegacy(team, t) {
@@ -780,22 +518,7 @@ export function yearEndReport(team, t, kind){
       setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
     })());
   }
-  var th = heads.map(function(h){ return "<th>" + esc(h) + "</th>"; }).join("");
-  var tr = d.rows.map(function(r){ var cells = line(r); return "<tr" + (r.left !== null && r.left < 0 ? ' class="over"' : "") + ">" + cells.map(function(c, i){ return "<td" + (i >= 4 ? ' class="n"' : "") + ">" + esc(typeof c === "number" ? fmtN(c) : c) + "</td>"; }).join("") + "</tr>"; }).join("");
-  var ct = d.countries.map(function(c){ return "<tr><td>" + esc(c.country) + '</td><td class="n">' + c.people + '</td><td class="n">' + fmtN(c.total) + '</td><td class="n">' + fmtN(c.taken) + '</td><td class="n">' + fmtN(c.left) + '</td><td class="n">' + fmtN(c.taken / c.people) + "</td></tr>"; }).join("");
-  var sign = function(label, name){ return '<div class="sig"><b>' + esc(label) + "</b><span>" + esc(name || "") + '</span><div class="ln"><i>' + esc(V("yeSig")) + '</i></div><div class="ln"><i>' + esc(V("yeDate")) + "</i></div></div>"; };
-  var html = '<!doctype html><html lang="' + esc(document.documentElement.lang || "en") + '"><head><meta charset="utf-8"><title>' + esc(title) + '</title><style>'
-    + 'body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1B1440;margin:28px 34px;font-size:11px}'
-    + 'h1{font-size:20px;margin:0 0 2px}.sub{color:#6B6592;margin-bottom:16px}h2{font-size:13px;margin:18px 0 6px;color:#5B21B6;text-transform:uppercase;letter-spacing:.06em}'
-    + 'table{border-collapse:collapse;width:100%}th{background:#EDE9FE;text-align:left;padding:6px 7px;font-size:10px}td{padding:5px 7px;border-bottom:1px solid #ECE9F5}td.n{text-align:right;font-variant-numeric:tabular-nums}'
-    + 'tr.over td{color:#B91C1C;font-weight:600}.notes li{margin:3px 0}.foot{color:#6B6592;margin-top:8px}'
-    + '.signs{display:flex;gap:40px;margin-top:26px}.sig{flex:1;display:grid;gap:6px}.sig span{color:#4A4270}.ln{border-bottom:1px solid #8B86AE;height:30px;position:relative}.ln i{position:absolute;bottom:-14px;left:0;font-style:normal;font-size:9px;color:#8B86AE}'
-    + '</style></head><body><div class="hdr"><h1>' + esc(title) + '</h1><div class="sub">' + esc(gen) + ' · vacationplanner.team</div></div>'
-    + "<table><thead><tr>" + th + "</tr></thead><tbody>" + tr + "</tbody></table>"
-    + '<div class="card"><h2>' + esc(V("yeByCountry")) + "</h2><table><thead><tr><th>" + [V("yeCountry"), V("yePeople"), V("yeTotal"), V("yrTaken"), V("yrLeft"), V("yeAvg")].map(esc).join("</th><th>") + "</th></tr></thead><tbody>" + ct + "</tbody></table></div>"
-    + '<div class="card"><h2>' + esc(V("yeNotes")) + '</h2><ul class="notes">' + notes.map(function(n){ return "<li>" + esc(n) + "</li>"; }).join("") + '</ul><div class="foot">' + esc(V("yeHalf")) + "</div></div>"
-    + '<div class="card signs">' + sign(V("yeSign1"), "") + sign(V("yeSign2"), d.approver) + "</div></body></html>";
-  return pdfOrHtml(html, base + ".pdf");
+  return pdfOrHtml(yearEndPdfHtml(d, t), base + ".pdf");
 }
 
 

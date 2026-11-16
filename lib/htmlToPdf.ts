@@ -3,7 +3,9 @@
 // with html2canvas, and placed into jsPDF. Page breaks fall between rows, month cards and blocks.
 // Libraries are loaded only when the user clicks, so they never weigh on the first page load.
 
-const AVOID = "tr, .cal-month, .stat, .tl-row, .hdr, .legend, .tl-title, .cal-title, h1, h2, .s, .card, .row, table thead";
+const AVOID = "tr, .cal-month, .stat, .tl-row, .hdr, .legend, .tl-title, .cal-title, h1, .s, .card, .row, table thead, .hero, .kpis, .mc, .note, .sigs, li, p";
+// Section headings: a page may start right above one (so a heading is never left alone at the bottom of a page)
+const HEADS = ".sec, h2";
 
 export async function downloadHtmlAsPdf(html: string, filename: string, opts: { format?: "a4" | "a3"; onePage?: boolean } = {}): Promise<void> {
   const a3 = opts.format === "a3", pageW = a3 ? 1587 : 1123, pageH = a3 ? 1123 : 794;
@@ -38,6 +40,7 @@ export async function downloadHtmlAsPdf(html: string, filename: string, opts: { 
     const top = body.getBoundingClientRect().top;
     const breaks = Array.from(body.querySelectorAll(AVOID))
       .map(el => Math.round((el as HTMLElement).getBoundingClientRect().bottom - top))
+      .concat(Array.from(body.querySelectorAll(HEADS)).map(el => Math.round((el as HTMLElement).getBoundingClientRect().top - top) - 4))
       .filter(y => y > 0 && y < height).sort((a, b) => a - b);
 
     // One-page documents (the wall planner): capture everything at once and scale it to fit the sheet
@@ -71,6 +74,13 @@ export async function downloadHtmlAsPdf(html: string, filename: string, opts: { 
       });
       if (i > 0) pdf.addPage();
       pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", margin, margin, width * ptPerPx, (b - a) * ptPerPx, undefined, "FAST");
+    }
+    // Page numbers when there is more than one page
+    if (slices.length > 1) {
+      for (let i = 1; i <= slices.length; i++) {
+        pdf.setPage(i); pdf.setFontSize(8); pdf.setTextColor(139, 134, 174);
+        pdf.text(i + " / " + slices.length, pw - margin, ph - 6, { align: "right" });
+      }
     }
     // Save the same way as the other exports (a link in the page), which works in every browser
     const blob = pdf.output("blob");
