@@ -10,8 +10,10 @@ export async function downloadHtmlAsPdf(html: string, filename: string, opts: { 
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
-  // No scripts may ever run inside the report frame (html2canvas only needs to read its DOM)
-  frame.setAttribute("sandbox", "allow-same-origin");
+  // No scripts may ever run inside the report frame: a script-src 'none' policy in the report itself. (A sandboxed
+  // frame is not used: Safari then blocks html2canvas's own capture step and the export never finishes.)
+  const csp = '<meta http-equiv="Content-Security-Policy" content="script-src \'none\'; object-src \'none\'">';
+  html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + csp) : csp + html;
   frame.style.cssText = `position:fixed;left:-12000px;top:0;width:${pageW}px;height:${pageH}px;border:0;`;
   document.body.appendChild(frame);
   try {
