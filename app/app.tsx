@@ -1755,8 +1755,14 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
   const[screen,setScreen]=useState("home");const[team,setTeamRaw]=useState(null);const[viewYear,setViewYear]=useState(null);
   // Shown on the front page when a team could not be fetched (offline, server busy)
   const[notice,setNotice]=useState(null);
+  const[myTeams,setMyTeams]=useState([]);
+  // The front page's "Jump back in" cards keep their own copy of name, year, member count and logo. Copies loaded
+  // from the server (other people joining, edits from other browsers) must refresh it too, not only local edits.
+  const syncCard=doc=>{if(!doc||!doc.id)return;const mc=(doc.members||[]).length,lg=safeLogo(doc.logo);
+    setMyTeams(cur=>{const x=cur.find(e=>e.id===doc.id);if(!x||(x.mc===mc&&x.name===doc.name&&x.year===doc.year&&(x.logo||null)===(lg||null)))return cur;
+      const u=cur.map(e=>{if(e.id!==doc.id)return e;const nx={...e,name:doc.name,year:doc.year,mc};if(lg)nx.logo=lg;else delete nx.logo;return nx;});db.sv("my-teams",u);return u;});};
   // Opening a team picks its year: "year=YYYY" in the link if present, else the default
-  const setTeam=tm=>{let y=null;try{const lp=linkParams();const ym=lp.match(/[#&?]year=(\d{4})/);if(tm&&ym&&lp.indexOf("team="+tm.id)>=0)y=clampYear(parseInt(ym[1]));}catch(e){}setViewYear(y);setTeamRaw(tm);};const[myTeams,setMyTeams]=useState([]);const[lang,setLang]=useState(pageLang);const[theme,setTheme]=useState("light");
+  const setTeam=tm=>{let y=null;try{const lp=linkParams();const ym=lp.match(/[#&?]year=(\d{4})/);if(tm&&ym&&lp.indexOf("team="+tm.id)>=0)y=clampYear(parseInt(ym[1]));}catch(e){}setViewYear(y);setTeamRaw(tm);syncCard(tm);};const[lang,setLang]=useState(pageLang);const[theme,setTheme]=useState("light");
   const th=TH[theme];const t=TX[lang];
   setTextLang(lang);localizeCountries(lang);
   useEffect(()=>{try{document.documentElement.lang=lang;document.documentElement.dir=isRtl(lang)?"rtl":"ltr";
@@ -1907,7 +1913,7 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
   },[]);
 
   // Saves that had to be merged with someone else's edits come back here
-  useEffect(()=>{const fn=(id,doc)=>{setTeamRaw(cur=>cur&&cur.id===id?doc:cur);};SYNC.listeners.add(fn);return()=>{SYNC.listeners.delete(fn);};},[]);
+  useEffect(()=>{const fn=(id,doc)=>{setTeamRaw(cur=>cur&&cur.id===id?doc:cur);syncCard(doc);};SYNC.listeners.add(fn);return()=>{SYNC.listeners.delete(fn);};},[]);
   // Fresh data: reload the open team when the tab becomes visible again, and every 90 s while visible
   const openId=team&&team.id;
   useEffect(()=>{
@@ -1917,7 +1923,7 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
     const refresh=async()=>{
       if(busy||document.visibilityState!=="visible"||!syncIdle(openId))return;
       busy=true;
-      try{const fresh=await db.ld(`team:${openId}`,true);if(fresh&&syncIdle(openId))setTeamRaw(cur=>cur&&cur.id===openId&&JSON.stringify(cur)!==JSON.stringify(fresh)?fresh:cur);}finally{busy=false;}
+      try{const fresh=await db.ld(`team:${openId}`,true);if(fresh&&syncIdle(openId)){setTeamRaw(cur=>cur&&cur.id===openId&&JSON.stringify(cur)!==JSON.stringify(fresh)?fresh:cur);syncCard(fresh);}}finally{busy=false;}
     };
     // Background refresh only while someone is actually using the page (10 min idle → stop), so a
     // forgotten tab or wall screen doesn't keep the database awake; focus/visibility still refresh
