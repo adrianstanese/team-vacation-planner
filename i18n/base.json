@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 833,
+ "strings": 838,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -1755,6 +1755,33 @@
    "where": "Newer features: approvals, 'Who are you?' gate, PIN reset, time travel (version history), Team Wrapped (year-in-review story), Today tiles, printed/PDF reports (keys starting rp).",
    "file": "lib/v3Text.ts",
    "strings": {
+    "rbCode": {
+     "en": "Team code",
+     "max": 18
+    },
+    "rbGone": {
+     "en": "{n}% of {y} gone",
+     "ph": [
+      "{n}",
+      "{y}"
+     ],
+     "max": 31
+    },
+    "rbSavedAt": {
+     "en": "Saved {t}",
+     "ph": [
+      "{t}"
+     ],
+     "max": 18
+    },
+    "rbTheme": {
+     "en": "Theme",
+     "max": 11
+    },
+    "rbSettings": {
+     "en": "Settings",
+     "max": 16
+    },
     "dmTry": {
      "en": "Try the live demo"
     },

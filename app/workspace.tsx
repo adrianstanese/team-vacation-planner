@@ -1529,6 +1529,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const teamRef=useRef(team);teamRef.current=team;
   // Saved / Saving / Offline, shown in the header
   const[sync,setSync]=useState(()=>syncStateOf(team.id));
+  // Time of the last completed save, shown in the status ribbon under the header
+  const[savedAt,setSavedAt]=useState(null);const prevSync=useRef(sync);
+  useEffect(()=>{if(prevSync.current!=="saved"&&sync==="saved")setSavedAt(new Date());prevSync.current=sync;},[sync]);
   useEffect(()=>{const f=()=>setSync(syncStateOf(team.id));
     window.addEventListener("tvp-sync",f);window.addEventListener("online",f);window.addEventListener("offline",f);
     return()=>{window.removeEventListener("tvp-sync",f);window.removeEventListener("online",f);window.removeEventListener("offline",f);};},[team.id]);
@@ -1953,12 +1956,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           <div style={{fontSize:10,color:th.t3,display:"flex",alignItems:"center",gap:4}}><YearNav yr={yr} onYear={onYear} th={th} small/><span>· {team.members.length} {team.members.length!==1?t.mbs:t.mb}</span></div>
         </div>
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:3,minWidth:0,flexWrap:"wrap",justifyContent:"flex-end",...(mob?{flexShrink:0,maxWidth:108,rowGap:1}:{})}}>
-        {!mob&&<ThPk theme={theme} set={setTheme} th={th}/>}
-        {!mob&&<Fragment><svg width="22" height="22" viewBox="0 0 22 22" style={{flexShrink:0}}><circle cx="11" cy="11" r="9" fill="none" stroke={th.gbd} strokeWidth="2.5"/><circle cx="11" cy="11" r="9" fill="none" stroke={th.ac} strokeWidth="2.5" strokeDasharray={Math.round((new Date()-new Date(yr,0,1))/(365.25*864e5)*56.5)+" 56.5"} strokeLinecap="round" style={{transform:"rotate(-90deg)",transformOrigin:"11px 11px"}}/></svg><div style={{display:"flex",alignItems:"center",gap:3,padding:"3px 7px",background:th.al,borderRadius:16,cursor:"pointer",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)"}} onClick={()=>{try{navigator.clipboard.writeText(team.id)}catch(e){};flash(t.cp);}}><Ic n="copy" s={10} c={th.ac}/><span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{team.id.slice(0,8)}</span></div></Fragment>}
-        <LangDrop lang={lang} set={setLang} th={th}/>
-        <button onClick={()=>setSettings(!settings)} aria-label="Settings" aria-expanded={settings} title="Settings" style={{background:"none",border:"none",cursor:"pointer",padding:3,display:"flex"}}><Ic n="globe" s={15} c={th.t2}/></button>
-        <span role="status" aria-live="polite" className={"tvp-sync tvp-sync-"+sync} title={sync==="offline"?V("syncOfflineHint"):V(sync==="saving"?"syncSaving":"syncSaved")} style={{color:sync==="offline"?(th.dk?"#FCD34D":"#B45309"):th.t2}}><i aria-hidden="true"/><span className={mob?"tvp-sr":undefined}>{V(sync==="offline"?"syncOffline":sync==="saving"?"syncSaving":"syncSaved")}</span></span>
+      <div style={{display:"flex",alignItems:"center",gap:3,minWidth:0,flexWrap:"wrap",justifyContent:"flex-end",...(mob?{flexShrink:0,rowGap:1}:{})}}>
         {false&&<button type="button" className="v3-inbox-btn" onClick={()=>setShowInbox(true)} aria-label={V("inboxBadge",{n:pendN})} title={V("inbox")} style={{color:th.ac,background:th.al,borderColor:th.gbd||th.bd}}>✓{!mob&&<span>{V("inbox")}</span>}{pendN>0&&<b>{pendN}</b>}</button>}
         <span data-tour="share" style={{display:"contents"}}><Btn th={th} v="secondary" sz="sm" icon="share" label={mob?t.sh:undefined} onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn></span>
         <CoffeeButton lang={lang} iconOnly={mob}/>
@@ -1967,11 +1965,25 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       <i className="tvp-progress" aria-hidden="true" style={{background:th.ac}}/>
     </header>
 
+    {/* Status ribbon (option 4, mockups/header-toolbar-2026-11): save state with time, team code to copy, how far
+        through the year it is, then theme, language and settings. Scrolls away with the page. */}
+    {(function(){const now=new Date();const yp=yr===now.getFullYear()?Math.min(100,Math.max(0,Math.round((now.getTime()-new Date(yr,0,1).getTime())/(new Date(yr+1,0,1).getTime()-new Date(yr,0,1).getTime())*100))):null;
+      const themes=["light","dark","pink"];const nextTheme=themes[(themes.indexOf(theme)+1)%themes.length];
+      const stLabel=sync==="offline"?V("syncOffline"):sync==="saving"?V("syncSaving"):savedAt?V("rbSavedAt",{t:savedAt.toLocaleTimeString(dateLocale(),{hour:"2-digit",minute:"2-digit"})}):V("syncSaved");
+      return <div className={"tvp-rib"+(th.dk?" dk":"")} style={{background:th.gbg,borderBottom:"1px solid "+th.gbd,color:th.t2}}>
+        <span role="status" aria-live="polite" className={"tvp-sync tvp-sync-"+sync} title={sync==="offline"?V("syncOfflineHint"):undefined} style={{color:sync==="offline"?(th.dk?"#FCD34D":"#B45309"):th.t2}}><i aria-hidden="true"/>{stLabel}</span>
+        <span className="tvp-rib-it">{V("rbCode")} <button type="button" className="tvp-rib-code" style={{color:th.ac}} onClick={()=>{try{navigator.clipboard.writeText(team.id);}catch(e){}flash(t.cp);}} title={t.cl||"Copy"}><Ic n="copy" s={11} c={th.ac}/>{team.id.slice(0,8)}</button></span>
+        {yp!==null&&<span className="tvp-rib-it tvp-rib-yr"><span className="tvp-rib-bar" style={{background:th.gbd}}><i style={{width:yp+"%",background:th.ac}}/></span>{V("rbGone",{n:yp,y:yr})}</span>}
+        <span className="tvp-rib-r">
+          <button type="button" className="tvp-rib-ib" style={{borderColor:th.gbd,color:th.t2}} onClick={()=>setTheme(nextTheme)} aria-label={V("rbTheme")+": "+theme} title={V("rbTheme")}>
+            {theme==="dark"?<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>:theme==="pink"?<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.3 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>:<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>}</button>
+          <LangDrop lang={lang} set={setLang} th={th}/>
+          <button type="button" className="tvp-rib-ib" style={{borderColor:settings?th.ac:th.gbd,color:settings?th.ac:th.t2}} onClick={()=>setSettings(!settings)} aria-label={V("rbSettings")} aria-expanded={settings} title={V("rbSettings")}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+        </span>
+      </div>;})()}
+
     {settings&&<div style={{background:th.gbg,borderBottom:`1px solid ${th.gbd}`,padding:"8px 14px",display:"flex",gap:10,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,flexWrap:"wrap",justifyContent:"center",alignItems:"center"}}>
-      <ThPk theme={theme} set={setTheme} th={th}/>
       <div style={{display:"flex",gap:2,alignItems:"center"}}>{["#4F46E5","#1D4ED8","#0F766E","#15803D","#B45309","#DC2626","#BE185D","#475569"].map(function(col){return <button key={col} aria-label={"Accent colour "+col} aria-pressed={team.accentColor===col} onClick={function(){updateWithHistory({...team,accentColor:col});}} style={{width:12,height:12,borderRadius:"50%",background:col,border:team.accentColor===col?"2px solid #fff":"1px solid transparent",cursor:"pointer",boxShadow:team.accentColor===col?"0 0 0 1.5px "+col:"none",padding:0}}/>;})}</div>
-      <div style={{width:1,height:20,background:th.bd}}/>
-      <LangDrop lang={lang} set={setLang} th={th}/>
       <div style={{width:1,height:20,background:th.bd}}/>
       <Btn th={th} v="ghost" sz="sm" onClick={undo} disabled={!historyRef.current.length} style={{fontSize:11}}>↩ {X("undo")}</Btn>
       <Btn th={th} v="ghost" sz="sm" onClick={redo} disabled={!redoRef.current.length} style={{fontSize:11}}>↪ {X("redo")}</Btn>
