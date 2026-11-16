@@ -2121,7 +2121,6 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         {/* Conflict alerts */}
         {view==="cal"&&<WelcomeBack team={team} teamId={team.id} yr={yr} today={dk(CY,CM,CD)} holOf={holOf} w7={!!team.w7} meId={viewOnly?null:unlockedId} colorOf={colorOf}/>}
         {view==="cal"&&<TodayTiles team={team} yr={yr} th={th} colorOf={colorOf} holOf={holOf} holInfo={holInfoCb} active={am||null} threshold={threshold} showWrapped={wrOk} onWrapped={()=>setShowWr(true)} onPick={id=>setAId(id)}/>}
-        {view==="cal"&&team.members.some(m=>m.country)&&<HolidayGlobe yr={yr} holInfo={holInfoCb} countries={[...new Set(team.members.map(m=>m.country).filter(Boolean))] as string[]} teamCountries={[...new Set(team.members.map(m=>m.country).filter(Boolean))] as string[]} countryList={EU_C}/>}
         {view==="cal"&&noPin.length>0&&!gOpen&&!viewOnly&&<div className="tvp-nopin" role="note"><span aria-hidden="true">🔒</span><div><b>{V("npTitle",{n:noPin.length})}</b><p>{V("npText")}</p>
           <div className="tvp-nopin-names">{noPin.slice(0,12).map(x=><button type="button" key={x.id} onClick={()=>switchTo(x)}>{x.name}</button>)}{noPin.length>12&&<span>+{noPin.length-12}</span>}</div></div></div>}
         {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
@@ -2201,6 +2200,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           <div style={{display:"grid",gridTemplateColumns:mob?"1fr":quarter!==null?"repeat(3,1fr)":"repeat(3,1fr)",gap:mob?10:14}}>
             {allM.filter(({month})=>quarter===null||Math.floor(month/3)===quarter).map(({year,month})=> <Cal key={month} year={year} month={month} members={team.members} activeId={locked?null:aId} draft={aId?draftDays:null} onToggle={draftOn?togDraft:tog} touchEdit={touchEdit} tapStart={tapStart} onTapDay={tapDay} compact={mob&&quarter===null} th={th} t={t} holSet={holSet} w7={team.w7} approvalMode={approvalMode} team={team} setCommentDay={setCommentDay} holInfo={holInfo} lang={lang}/>)}
           </div>
+          <div style={{marginTop:18}}>{view==="cal"&&team.members.some(m=>m.country)&&<HolidayGlobe yr={yr} holInfo={holInfoCb} countries={[...new Set(team.members.map(m=>m.country).filter(Boolean))] as string[]} teamCountries={[...new Set(team.members.map(m=>m.country).filter(Boolean))] as string[]} countryList={EU_C}/>}</div>
           {touchUI&&<div style={{height:78}} aria-hidden="true"/>}
         </Fragment>}
 
