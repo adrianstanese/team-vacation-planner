@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 717,
+ "strings": 730,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -1755,6 +1755,68 @@
    "where": "Newer features: approvals, 'Who are you?' gate, PIN reset, time travel (version history), Team Wrapped (year-in-review story), Today tiles, printed/PDF reports (keys starting rp).",
    "file": "lib/v3Text.ts",
    "strings": {
+    "pfAria": {
+     "en": "{n}: details",
+     "ph": [
+      "{n}"
+     ],
+     "max": 24,
+     "note": "Screen-reader name of the pop-up with one person's details."
+    },
+    "pfProfile": {
+     "en": "Profile",
+     "max": 15
+    },
+    "pfDays": {
+     "en": "Vacation days",
+     "max": 25
+    },
+    "pfAccess": {
+     "en": "Role and access",
+     "max": 29
+    },
+    "pfName": {
+     "en": "Name",
+     "max": 10
+    },
+    "pfPlan": {
+     "en": "Mark days in the calendar",
+     "note": "Button that closes the person pop-up and returns to the calendar to mark this person's vacation days."
+    },
+    "pfNext": {
+     "en": "Next away",
+     "max": 18,
+     "note": "Label: the next date range this person is away."
+    },
+    "pfNone": {
+     "en": "No days planned yet"
+    },
+    "pfOf": {
+     "en": "of {n} days",
+     "ph": [
+      "{n}"
+     ],
+     "max": 22,
+     "note": "Under a big number of planned days, e.g. '9' over 'of 24 days'."
+    },
+    "pfStatus": {
+     "en": "Plan status",
+     "max": 22
+    },
+    "pfHols": {
+     "en": "Public holidays",
+     "max": 29
+    },
+    "pfIcs": {
+     "en": "Calendar file",
+     "max": 25,
+     "note": "Button: download this person's days as a calendar file (.ics)."
+    },
+    "pfBest": {
+     "en": "Best days",
+     "max": 18,
+     "note": "Button: suggest the best days to take off (bridge days)."
+    },
     "rpGenOn": {
      "en": "Generated {d}",
      "ph": [

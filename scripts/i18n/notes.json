@@ -100,7 +100,13 @@
     "pWinter": "Playful persona title.",
     "pSpring": "Playful persona title.",
     "pSteady": "Playful persona title for someone who spreads days evenly.",
-    "jobRole": "Job title (e.g. Designer), set by the team owner."
+    "jobRole": "Job title (e.g. Designer), set by the team owner.",
+    "pfAria": "Screen-reader name of the pop-up with one person's details.",
+    "pfOf": "Under a big number of planned days, e.g. '9' over 'of 24 days'.",
+    "pfPlan": "Button that closes the person pop-up and returns to the calendar to mark this person's vacation days.",
+    "pfNext": "Label: the next date range this person is away.",
+    "pfIcs": "Button: download this person's days as a calendar file (.ics).",
+    "pfBest": "Button: suggest the best days to take off (bridge days)."
   },
   "PROMO": {
     "feats": "Exactly 4 short feature chips, in order.",

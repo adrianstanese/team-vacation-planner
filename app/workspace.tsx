@@ -9,7 +9,7 @@ import CoffeeButton from "@/components/CoffeeButton";
 import nextDynamic from "next/dynamic";
 import TodayTiles from "@/components/v3/TodayTiles";
 import { V } from "@/lib/v3Text";
-import { nextLeaveDay, pendingApprovals, streaksOf, avgCoverage, addDays, dateOf, yearEndPrompt } from "@/lib/v3Util";
+import { nextLeaveDay, pendingApprovals, streaksOf, avgCoverage, addDays, dateOf, yearEndPrompt, keyOf, ranges as dayRanges } from "@/lib/v3Util";
 import { withTransition, celebrate, buzz } from "@/lib/motion";
 import "./frontpage.css";
 import { buildSheets } from "@/lib/xlsxSheets";
@@ -774,7 +774,7 @@ function ConflictAlerts({team,threshold,th,t}) {
   </div>;
 }
 
-function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null,notes=0,onCarryChange=null}){
+function MRow({pop=false,onClosePop=null,w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null,notes=0,onCarryChange=null}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const dc=usedOf(m);
   // Days for the year = the yearly allowance plus what was brought from the year before (m.carry, see lib/v3Util carryInfo)
   const allow=(m.pto||0)+(m.carry||0);const cy=m._cy||{auto:0,manual:false,left:null};
@@ -792,6 +792,15 @@ function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename
 
   // Option A: slim row; the selected person glows (in their colour) and opens a drawer with labelled fields
   const allowTxt=allow?fmtDays(dc)+" / "+fmtDays(allow):(dc===0?"—":fmtDays(dc));
+  // The pop-up's summary: days per month this year, the next stretch away, and where the plan stands
+  const pf=(function(){if(!pop||!isActive)return null;const hf=new Set(m.half||[]);const ys=String(yr||"");const ds=(m.days||[]).filter(function(d){return !ys||String(d).startsWith(ys);});
+    const months=Array(12).fill(0);ds.forEach(function(d){const k=parseInt(String(d).slice(5,7),10)-1;if(k>=0&&k<12)months[k]+=hf.has(d)?0.5:1;});
+    const fd=function(k){try{return dateOf(k).toLocaleDateString(dateLocale(),{day:"numeric",month:"short"});}catch(e){return k;}};
+    const rs=dayRanges([...ds].sort());const today=keyOf(new Date());const nx=rs.find(function(r){return r[1]>=today;});
+    const next=nx?(nx[0]===nx[1]?fd(nx[0]):fd(nx[0])+" – "+fd(nx[1])):(rs.length?"—":"");
+    const status=approvalMode&&!isApprover&&dc>0?(m.approved?"✓ "+V("ttApproved"):V("stWait")):"";
+    const mi=function(k){const t2=monthShort(k);return /^\d/.test(t2)?String(k+1):Array.from(t2)[0].toUpperCase();};
+    return {months:months,max:Math.max(1,...months),next:next,status:status,mi:mi};})();
   const pct=allow?Math.min(100,Math.round(dc/allow*100)):0;
   const barCol=dc>allow?"#EF4444":dc>allow*0.8?"#F59E0B":c.d;
   return <div draggable={!locked} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}
@@ -812,35 +821,72 @@ function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename
       if(notes>0)parts.push(<span key="n" style={{color:th.t2}}>{V("stNotes",{n:notes})}</span>);
       return parts.length?<div className="tvp-mstat">{parts}</div>:null;})()}
     {allow&&!isActive?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
-    {isActive&&!isEditing&&limited&&<div className="tvp-drawer" onClick={function(e){e.stopPropagation();}}>
-      {onSwitchTo&&<button type="button" className="tvp-mini tvp-mini-sw" onClick={onSwitchTo}>⇄ {V("swTo",{n:m.name||""})}</button>}
-      <label className="tvp-fld"><span style={{color:th.t3}}>{V("jobRole")}</span>
-        <input key={m.id+(m.role||"")} defaultValue={m.role||""} maxLength={40} placeholder={V("jobRolePh")} onBlur={function(e){const v=e.target.value.trim();if(v!==(m.role||""))onRoleChange(v);}} onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/></label>
-    </div>}
-    {isActive&&!isEditing&&!limited&&<div className="tvp-drawer" onClick={function(e){e.stopPropagation();}}>
-      <div className="tvp-two">
+    {/* The split-view pop-up (option 3, mockups/member-popup-2026-11): the person's year on the left, every field on the right.
+       It replaces the old in-row drawer; the row stays selected for marking days, and closing the pop-up goes back to the calendar. */}
+    {pop&&isActive&&!isEditing&&typeof document!=="undefined"&&createPortal(<div className="tvp-pp-bg" onClick={onClosePop}>
+      <div role="dialog" aria-modal="true" aria-label={V("pfAria",{n:m.name||""})} className={"tvp-pp"+(th.dk?" dk":"")} dir={isRtl()?"rtl":"ltr"} onClick={function(e){e.stopPropagation();}} style={{background:th.dk?"#1A1530":(String(th.bg).startsWith("linear")?"#FFFFFF":th.bg),color:th.tx,fontFamily:F,"--mc":c.d}}>
+        <TrapScope onClose={onClosePop}/>
+        <button type="button" className="tvp-pp-x" onClick={onClosePop} aria-label={t.close||"Close"}>✕</button>
+        <div className="tvp-pp-l">
+          <div className="tvp-pp-who">
+            <span className="tvp-pp-av" style={{background:c.d,color:c.o}}>{(m.name||"?")[0].toUpperCase()}{isApprover&&<i aria-hidden="true">👑</i>}</span>
+            <div><b>{m.name}{hasPin&&<span aria-label="PIN" title="PIN"> 🔒</span>}</b><small>{co?co.f+" "+co.n:""}{yr?(co?" · ":"")+yr:""}</small></div>
+          </div>
+          <div className="tvp-pp-ring" role="img" aria-label={fmtDays(dc)+" "+(allow?V("pfOf",{n:fmtDays(allow)}):(dc!==1?t.dys:t.dy))} style={{"--p":(allow?Math.min(100,dc/allow*100):(dc?100:0))+"%"}}><div><b>{fmtDays(dc)}</b><small>{allow?V("pfOf",{n:fmtDays(allow)}):(dc!==1?t.dys:t.dy)}</small></div></div>
+          <div className="tvp-pp-months" aria-hidden="true">{pf.months.map(function(n,k){return <span key={k}><i className={n?"on":""} style={{height:(n?Math.max(14,Math.round(n/pf.max*100)):6)+"%"}}/><em>{pf.mi(k)}</em></span>;})}</div>
+          <dl className="tvp-pp-facts">
+            <div><dt>{V("pfNext")}</dt><dd>{pf.next||V("pfNone")}</dd></div>
+            {pf.status&&<div><dt>{V("pfStatus")}</dt><dd>{pf.status}</dd></div>}
+            {yr&&m.country&&<div><dt>{V("pfHols")}</dt><dd>{getAllHolidays(m,yr).length}</dd></div>}
+            {allow?<div><dt>{t.workDaysLeft||"work days left"}</dt><dd>{yr&&m.country?workingDaysRemaining(m,yr,w7):"—"}</dd></div>:null}
+          </dl>
+        </div>
+        <div className="tvp-pp-r">
+          {limited?<>
+            <section className="tvp-pp-sec"><h3>{V("pfProfile")}</h3>
+              <label className="tvp-fld"><span style={{color:th.t3}}>{V("jobRole")}</span>
+                <input key={m.id+(m.role||"")} defaultValue={m.role||""} maxLength={40} placeholder={V("jobRolePh")} onBlur={function(e){const v=e.target.value.trim();if(v!==(m.role||""))onRoleChange(v);}} onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/></label>
+            </section>
+            {onSwitchTo&&<button type="button" className="tvp-mini tvp-mini-sw" onClick={onSwitchTo}>⇄ {V("swTo",{n:m.name||""})}</button>}
+          </>:<>
+            <section className="tvp-pp-sec"><h3>{V("pfProfile")}</h3>
+              <div className="tvp-two">
+                <label className="tvp-fld"><span style={{color:th.t3}}>{V("pfName")}</span>
+                  {!locked?<input key={m.id+"nm"+(m.name||"")} defaultValue={m.name||""} maxLength={30} onBlur={function(e){const v=e.target.value.trim();if(!v){e.target.value=m.name||"";return;}if(v!==m.name)onFinishRename(v);}} onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/>
+                    :<em style={{color:th.tx}}>{m.name}</em>}</label>
+                <label className="tvp-fld"><span style={{color:th.t3}}>{V("jobRole")}</span>
+                  {canEditRole?<input key={m.id+(m.role||"")} defaultValue={m.role||""} maxLength={40} placeholder={V("jobRolePh")} onBlur={function(e){const v=e.target.value.trim();if(v!==(m.role||""))onRoleChange(v);}} onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/>
+            :<em style={{color:th.tx}}>{m.role||"—"}</em>}</label>
+              </div>
+              <div className="tvp-two">
+                <div className="tvp-fld"><span style={{color:th.t3}}>{t.co||"Country"}</span>
+                  {!locked?<CountrySelect value={m.country} onChange={onCountryChange} th={th} t={t}/>:<em style={{color:th.tx}}>{co?co.f+" "+co.n:"—"}</em>}</div>
+                {m.country&&REGIONS[m.country]&&<label className="tvp-fld"><span style={{color:th.t3}}>{t.region||"Region"}</span>
+        <select value={m.region||""} onChange={function(e){onRegionChange(e.target.value||null);}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}>
+          <option value="">{defaultRegionName(m.country)?V("regDefault",{r:defaultRegionName(m.country)}):(t.natOnly||"National only")}</option>
+          {REGIONS[m.country].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
+        </select></label>}
+              </div>
+              {onGroupChange&&<label className="tvp-fld"><span style={{color:th.t3}}>{X("group")}</span>
+                <input key={m.id+"gr"+(m.group||"")} defaultValue={m.group||""} list="tvp-groups" maxLength={24} placeholder={X("groupPh")} onBlur={function(e){const v=e.target.value.trim();if(v!==(m.group||""))onGroupChange(v);}} onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/></label>}
+            </section>
+            <section className="tvp-pp-sec"><h3>{V("pfDays")}</h3>
+              <div className="tvp-three">
         <label className="tvp-fld"><span style={{color:th.t3}}>{t.pto||"PTO"}<i className="tvp-tip" tabIndex={0} title={V("ptoHelp")} aria-label={V("ptoHelp")}>i</i></span>
           <input type="number" min="0" max="366" placeholder="—" value={m.pto||""} onChange={function(e){onPtoChange(parseInt(e.target.value)||null);}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/></label>
-        <label className="tvp-fld"><span style={{color:th.t3}}>{V("jobRole")}</span>
-          {canEditRole?<input key={m.id+(m.role||"")} defaultValue={m.role||""} maxLength={40} placeholder={V("jobRolePh")} onBlur={function(e){const v=e.target.value.trim();if(v!==(m.role||""))onRoleChange(v);}} onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/>
-            :<em style={{color:th.tx}}>{m.role||"—"}</em>}</label>
-      </div>
-      {/* Days brought from last year: the person's own number, or (left empty) the planner's count shown as the hint */}
-      {yr&&onCarryChange&&<div className="tvp-two">
+                {yr&&onCarryChange&&<>
         <label className="tvp-fld"><span style={{color:th.t3}}>{V("cyLabel",{y:yr-1})}<i className="tvp-tip" tabIndex={0} title={V("cyHelp",{y:yr-1})} aria-label={V("cyHelp",{y:yr-1})}>i</i></span>
           <input key={m.id+"cy"+yr+(cy.manual?String((m.carryY||{})[yr]):"auto")} type="number" min="0" max="366" step="0.5" inputMode="decimal" placeholder={cy.auto?fmtDays(cy.auto):"—"} defaultValue={cy.manual?String((m.carryY||{})[yr]):""}
             onBlur={function(e){const raw=e.target.value.trim();const cur=cy.manual?Number((m.carryY||{})[yr]):null;const v=raw===""?null:Math.max(0,Math.min(366,Math.round((parseFloat(raw)||0)*2)/2));if(v!==cur)onCarryChange(v);}}
             onKeyDown={function(e){if(e.key==="Enter")e.currentTarget.blur();}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}/></label>
         <div className="tvp-fld"><span style={{color:th.t3}}>{V("cyTotal",{y:yr})}</span><em style={{color:th.tx,fontWeight:700}}>{allow?fmtDays(allow):"—"}</em></div>
-      </div>}
+                </>}
+              </div>
       {allow?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
       {m.carry?<div className="tvp-meta" style={{color:th.t3}}>{V("cyLeft",{y:yr-1,a:fmtDays(Math.max(0,Math.round((m.carry-dc)*10)/10)),b:fmtDays(m.carry)})}{cy.manual&&cy.auto&&cy.auto!==m.carry?" · "+V("cyAuto",{n:fmtDays(cy.auto)}):""}</div>:null}
       {yr&&m.country&&<div className="tvp-meta" style={{color:th.t3}}>{workingDaysRemaining(m,yr,w7)} {t.workDaysLeft||"work days left"} · {getAllHolidays(m,yr).length} {t.holCount||"holidays"}</div>}
-      {m.country&&REGIONS[m.country]&&<label className="tvp-fld"><span style={{color:th.t3}}>{t.region||"Region"}</span>
-        <select value={m.region||""} onChange={function(e){onRegionChange(e.target.value||null);}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}>
-          <option value="">{defaultRegionName(m.country)?V("regDefault",{r:defaultRegionName(m.country)}):(t.natOnly||"National only")}</option>
-          {REGIONS[m.country].map(function(r){return <option key={r.id} value={r.id}>{r.n}</option>;})}
-        </select></label>}
+            </section>
+            <section className="tvp-pp-sec"><h3>{V("pfAccess")}</h3>
       {!creatorMode&&<button type="button" role="switch" aria-checked={!!isApprover} className="tvp-switch" onClick={function(){onSetApprover();}} style={{borderColor:th.gbd,background:th.sf}}>
         <span><b style={{color:th.tx}}>{t.approverLabel||"Approver"}</b><small style={{color:th.t3}}>{V("apSwitchSub")}</small></span><i className={isApprover?"":"off"}/>
       </button>}
@@ -851,13 +897,17 @@ function MRow({w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename
         :!hasPin?<small className="tvp-arhint" style={{color:th.t3}}>{V("arNeedPin")}</small>:null)}
       {isApprover&&approvalMode&&onOpenApprovals&&<button type="button" className="tvp-mini" onClick={onOpenApprovals}>✓ {V("inbox")}{pendN>0&&<b>{pendN}</b>}</button>}
       {!hasPin&&onSetPin&&!locked&&<button type="button" className="tvp-mini tvp-mini-pin" onClick={onSetPin}><Ic n="lock" s={12} c="#92400E"/> {X("setPin")}</button>}
-      {!locked&&<div className="tvp-acts">
-        <button type="button" onClick={onStartRename} style={{borderColor:th.gbd,color:th.tx}}><Ic n="edit" s={13} c={th.t2}/><span>{V("renameBtn")}</span></button>
-        {m.country&&<button type="button" onClick={onOptimize} title={t.bestDays||"Suggest best days"} aria-label={(t.bestDays||"Suggest best days")+" "+m.name} style={{borderColor:th.gbd}}><Ic n="sun" s={13} c="#F59E0B"/></button>}
-        <button type="button" onClick={onExportICS} title={t.export} aria-label={"ICS · "+m.name} style={{borderColor:th.gbd}}><Ic n="download" s={13} c={th.t2}/></button>
-        <button type="button" onClick={onDelete} title={X("removeN",{n:m.name})} aria-label={X("removeN",{n:m.name})} style={{borderColor:th.gbd}}><Ic n="trash" s={13} c="#B91C1C"/></button>
-      </div>}
-    </div>}
+            </section>
+          </>}
+          <div className="tvp-pp-acts">
+            {!limited&&<button type="button" className="tvp-pp-go" onClick={onClosePop}><Ic n="grid" s={14} c="#fff"/> {V("pfPlan")}</button>}
+            {!locked&&!limited&&m.country&&<button type="button" onClick={onOptimize} style={{borderColor:th.gbd,color:th.tx}}><Ic n="sun" s={14} c="#F59E0B"/> {V("pfBest")}</button>}
+            {!limited&&<button type="button" onClick={onExportICS} style={{borderColor:th.gbd,color:th.tx}}><Ic n="download" s={14} c={th.t2}/> {V("pfIcs")}</button>}
+            {!locked&&!limited&&<button type="button" className="dng" onClick={onDelete}><Ic n="trash" s={14} c="#B91C1C"/> {X("removeN",{n:m.name||""})}</button>}
+          </div>
+        </div>
+      </div>
+    </div>,document.body)}
   </div>;
 }
 
@@ -1393,7 +1443,7 @@ function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members
 
 export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=null,th,t,lang,setLang,theme,setTheme}){
   const[halfMode,setHalfMode]=useState(false);const[delOpen,setDelOpen]=useState(false);const[delText,setDelText]=useState("");const NY=NY_TX[lang]||NY_TX.en;
-  const[aId,setAId]=useState(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
+  const[aId,setAId]=useState(null);const[popId,setPopId]=useState(null);const popAfterPin=useRef(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
   // ─── PIN feature state (Step 1: declarations only, no UI yet) ─────
   const[nPin,setNPin]=useState("");
   const[nIsApprover,setNIsApprover]=useState(false);
@@ -1722,7 +1772,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     if (!m) { setPinPrompt(null); return; }
     if (!hasPinOf(m)) {
       setUnlockedId(m.id);
-      setAId(m.id);
+      setAId(m.id);if(popAfterPin.current===m.id)setPopId(m.id);popAfterPin.current=null;
       setPinPrompt(null);
       setPinInput("");
       return;
@@ -1732,7 +1782,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     if (r.status === 429) { flash(r.error || "Too many tries"); }
     if (r.ok) {
       setUnlockedId(m.id);
-      setAId(m.id);
+      setAId(m.id);if(popAfterPin.current===m.id)setPopId(m.id);popAfterPin.current=null;
       setPinPrompt(null);
       setPinInput("");
     } else {
@@ -1790,6 +1840,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
 
   // ─── Who are you? gate ───
   // Act as another person: their PIN (or set one if they have none). If this tab already unlocked them, switch at once.
+  // Closing the person pop-up goes back to the calendar with them still selected (on phones the member list closes too)
+  const closePop=()=>{setPopId(null);if(mob)setSb(false);};
   const switchTo=m=>{if(!m||m.id===unlockedId)return;if(!window.confirm(hasPinOf(m)?V("swQ",{n:m.name||""}):V("swQNew",{n:m.name||""})))return;
     if(hasPinOf(m)&&getTokens(team.id)[m.id]){setUnlockedId(m.id);setAId(m.id);flash(V("gtYou",{n:m.name||""}));return;}
     try{localStorage.removeItem(meKey);}catch(e){}setUnlockedId(null);setAId(null);setGMid(m.id);setGStep(hasPinOf(m)?"pin":"setpin");setGPin("");setGPin2("");setGErr("");};
@@ -1951,14 +2003,13 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           </div>}
           {team.members.map((m,i)=> <MRow key={m.id} w7={!!team.w7} notes={notesOf(m)} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{
               const dimmed=!ownerMode&&!!unlockedId&&m.id!==unlockedId;
-              if(dimmed){if(canEditRoles){setAId(m.id===aId?unlockedId:m.id);}else switchTo(m);return;}
-              if(m.id===aId){setAId(null);return;}
+              if(dimmed){if(canEditRoles){setAId(m.id);setPopId(m.id);}else switchTo(m);return;}
+              if(m.id===aId){setPopId(m.id);return;}
               const meUnlocked=team.members.find(x=>x.id===unlockedId);
               const meIsAppr=meUnlocked&&(meUnlocked.isApprover||team.approver===meUnlocked.id);
-              if(hasPinOf(m)&&unlockedId!==m.id&&!meIsAppr){setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
-              setAId(m.id);
-              if(mob)setSb(false);
-            }} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onCarryChange={v=>setCarry(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>setShowOptimizer(m.id)} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>setView("approvals"):null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} onSwitchTo={()=>switchTo(m)} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
+              if(hasPinOf(m)&&unlockedId!==m.id&&!meIsAppr){popAfterPin.current=m.id;setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
+              setAId(m.id);setPopId(m.id);
+            }} pop={m.id===popId&&m.id===aId} onClosePop={closePop} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onCarryChange={v=>setCarry(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>{setPopId(null);setShowOptimizer(m.id);}} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>{closePop();setView("approvals");}:null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} onSwitchTo={()=>{setPopId(null);switchTo(m);}} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}
