@@ -20,7 +20,8 @@ export async function downloadHtmlAsPdf(html: string, filename: string, opts: { 
     // Reports may auto-print; neutralise that inside the hidden frame
 
     await new Promise(r => setTimeout(r, 150));
-    try { await (doc as Document & { fonts?: FontFaceSet }).fonts?.ready; } catch { /* ignore */ }
+    // Some browsers never settle fonts.ready inside a sandboxed frame: wait at most 1.5 s
+    try { await Promise.race([(doc as Document & { fonts?: FontFaceSet }).fonts?.ready, new Promise(r => setTimeout(r, 1500))]); } catch { /* ignore */ }
     const body = doc.body;
     body.style.background = "#ffffff";
     const width = Math.max(body.scrollWidth, pageW);
@@ -57,7 +58,12 @@ export async function downloadHtmlAsPdf(html: string, filename: string, opts: { 
       if (i > 0) pdf.addPage();
       pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", margin, margin, width * ptPerPx, (b - a) * ptPerPx, undefined, "FAST");
     }
-    pdf.save(filename);
+    // Save the same way as the other exports (a link in the page), which works in every browser
+    const blob = pdf.output("blob");
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename; a.rel = "noopener"; a.style.display = "none";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   } finally {
     frame.remove();
   }

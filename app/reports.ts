@@ -738,6 +738,19 @@ function yearEndData(team){
 }
 var fmtN = function(n){ return n === null || n === undefined ? "—" : String(Math.round(n*10)/10); };
 
+// PDF exports: say that the file is being prepared, and if the PDF cannot be made, download the HTML version and say so
+function pdfOrHtml(html, filename, opts?){
+  var tell = function(msg){ try { window.dispatchEvent(new CustomEvent("tvp-save-error", { detail: msg })); } catch(e){ /* no window */ } };
+  var note = setTimeout(function(){ tell("⏳ " + V("pdfMaking")); }, 400);
+  return withBusy(downloadHtmlAsPdf(html, filename, opts).catch(function(e){
+    console.warn("PDF failed, downloading HTML instead", e);
+    var url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    var a = document.createElement("a"); a.href = url; a.download = filename.replace(/\.pdf$/, ".html"); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
+    tell(V("pdfFail"));
+  }).finally(function(){ clearTimeout(note); }));
+}
+
 export function yearEndReport(team, t, kind){
   var d = yearEndData(team);
   var title = V("yrTitle", { y: d.yr }) + " · " + (d.team.name || "");
@@ -782,7 +795,7 @@ export function yearEndReport(team, t, kind){
     + '<div class="card"><h2>' + esc(V("yeByCountry")) + "</h2><table><thead><tr><th>" + [V("yeCountry"), V("yePeople"), V("yeTotal"), V("yrTaken"), V("yrLeft"), V("yeAvg")].map(esc).join("</th><th>") + "</th></tr></thead><tbody>" + ct + "</tbody></table></div>"
     + '<div class="card"><h2>' + esc(V("yeNotes")) + '</h2><ul class="notes">' + notes.map(function(n){ return "<li>" + esc(n) + "</li>"; }).join("") + '</ul><div class="foot">' + esc(V("yeHalf")) + "</div></div>"
     + '<div class="card signs">' + sign(V("yeSign1"), "") + sign(V("yeSign2"), d.approver) + "</div></body></html>";
-  return withBusy(downloadHtmlAsPdf(html, base + ".pdf"));
+  return pdfOrHtml(html, base + ".pdf");
 }
 
 
@@ -833,5 +846,5 @@ export function wallPoster(team, t){
     + '<div class="foot"><div class="chips"><span class="chip">' + esc(V("psTotal", { n: Math.round(total*10)/10 })) + '</span><span class="chip">' + esc(V("psPeak", { m: MO[peak] })) + '</span><span class="chip">' + esc(V("psPeople", { n: ms.length })) + "</span>"
     + '<span class="key"><i style="background:linear-gradient(135deg,#FEF3C7,#FDE68A)"></i>' + esc(V("hmHol")) + '</span><span class="key"><i style="background:#F1EFF8"></i>' + esc(V("hmWe")) + "</span></div>"
     + "<span>vacationplanner.team</span></div></body></html>";
-  return withBusy(downloadHtmlAsPdf(html, fileBase(team.name) + "_" + yr + "_wall-planner.pdf", { format: "a3" }));
+  return pdfOrHtml(html, fileBase(team.name) + "_" + yr + "_wall-planner.pdf", { format: "a3" });
 }

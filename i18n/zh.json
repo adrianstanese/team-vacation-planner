@@ -884,7 +884,9 @@
     "voNew": "替换为新链接（旧链接将失效）",
     "voMake": "创建只读链接",
     "voBadge": "仅查看",
-    "ofBadge": "离线副本，更新于 {t}"
+    "ofBadge": "离线副本，更新于 {t}",
+    "pdfMaking": "正在生成 PDF…",
+    "pdfFail": "此浏览器无法生成 PDF，已改为下载 HTML 版本。请打开后打印为 PDF。"
   },
   "COFFEE": {
     "cta": "请我喝杯咖啡",
