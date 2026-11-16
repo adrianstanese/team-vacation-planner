@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 838,
+ "strings": 877,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -1755,6 +1755,176 @@
    "where": "Newer features: approvals, 'Who are you?' gate, PIN reset, time travel (version history), Team Wrapped (year-in-review story), Today tiles, printed/PDF reports (keys starting rp).",
    "file": "lib/v3Text.ts",
    "strings": {
+    "voTab": {
+     "en": "View only",
+     "max": 18
+    },
+    "voTitle": {
+     "en": "Read-only link for managers"
+    },
+    "voDesc": {
+     "en": "Shows who is away and when. No notes, approvals or allowances, and nothing can be changed. Separate from the team link."
+    },
+    "voNew": {
+     "en": "Replace with a new link (the old one stops working)"
+    },
+    "voMake": {
+     "en": "Create a view-only link"
+    },
+    "voBadge": {
+     "en": "View only",
+     "max": 18
+    },
+    "ofBadge": {
+     "en": "Offline copy from {t}",
+     "ph": [
+      "{t}"
+     ]
+    },
+    "psBtn": {
+     "en": "Wall planner (A3)"
+    },
+    "psSub": {
+     "en": "Team vacation plan"
+    },
+    "psTotal": {
+     "en": "{n} days off planned",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "psPeak": {
+     "en": "Busiest month: {m}",
+     "ph": [
+      "{m}"
+     ]
+    },
+    "psPeople": {
+     "en": "{n} people",
+     "ph": [
+      "{n}"
+     ],
+     "max": 20
+    },
+    "wbTitle": {
+     "en": "Back from a break"
+    },
+    "wbHi": {
+     "en": "Welcome back, {n}!",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "wbAway": {
+     "en": "You were away {a} – {b}.",
+     "ph": [
+      "{a}",
+      "{b}"
+     ]
+    },
+    "wbMissed": {
+     "en": "What did I miss?",
+     "max": 31
+    },
+    "wbNothing": {
+     "en": "Nothing changed while you were away."
+    },
+    "wbJoined": {
+     "en": "{n} joined the team",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "wbLeft": {
+     "en": "{n} left the team",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "wbBack": {
+     "en": "{n} is back today",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "tipAdd": {
+     "en": "Tip: add {d} and get {n} days off in a row instead of {m}.",
+     "ph": [
+      "{d}",
+      "{n}",
+      "{m}"
+     ]
+    },
+    "tipDo": {
+     "en": "Add it",
+     "max": 13
+    },
+    "drBtn": {
+     "en": "Private draft",
+     "max": 25
+    },
+    "drHint": {
+     "en": "Try out days only on this device; nobody else sees them until you publish"
+    },
+    "drOn": {
+     "en": "Private draft: tap days to pencil them in"
+    },
+    "drKept": {
+     "en": "You have a private draft"
+    },
+    "drCount": {
+     "en": "{n} draft days",
+     "ph": [
+      "{n}"
+     ],
+     "max": 27
+    },
+    "drPriv": {
+     "en": "only on this device"
+    },
+    "drPub": {
+     "en": "Publish to the team"
+    },
+    "drDrop": {
+     "en": "Discard",
+     "max": 15
+    },
+    "drExit": {
+     "en": "Done",
+     "max": 10
+    },
+    "drReal": {
+     "en": "Already booked",
+     "max": 27
+    },
+    "glTitle": {
+     "en": "Holidays around the team"
+    },
+    "glDrag": {
+     "en": "Drag to spin",
+     "max": 24
+    },
+    "glPrev": {
+     "en": "Previous month",
+     "max": 27
+    },
+    "glNext": {
+     "en": "Next month",
+     "max": 20
+    },
+    "glSum": {
+     "en": "{n} holidays in {c} countries",
+     "ph": [
+      "{n}",
+      "{c}"
+     ]
+    },
+    "glNone": {
+     "en": "No public holidays in the team's countries this month"
+    },
+    "ssLbl": {
+     "en": "Seasonal decorations"
+    },
     "rbCode": {
      "en": "Team code",
      "max": 18

@@ -1,7 +1,7 @@
 "use client";
 // The team screen (calendar, views, members, exports) and the code only it uses, split out of app.tsx so the
 // front page loads without it. Shared helpers and constants are imported from ./app.
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import qrcode from "qrcode-generator";
 import { createPortal, flushSync } from "react-dom";
 import BottomDuo from "@/components/WorkoseniePromo";
@@ -34,6 +34,9 @@ const TimeTravel=nextDynamic(()=>import("@/components/v3/TimeTravel"),{ssr:false
 
 const Wrapped=nextDynamic(()=>import("@/components/v3/Wrapped"),{ssr:false});
 const YearEnd=nextDynamic(()=>import("@/components/v3/YearEnd"),{ssr:false});
+const WelcomeBack=nextDynamic(()=>import("@/components/v3/WelcomeBack"),{ssr:false});
+const HolidayGlobe=nextDynamic(()=>import("@/components/v3/HolidayGlobe"),{ssr:false});
+const Seasons=nextDynamic(()=>import("@/components/v3/Seasons"),{ssr:false});
 const ApprovalsView=nextDynamic(()=>import("@/components/v3/ApprovalsView"),{ssr:false});
 
 // Public holidays of a member for a year, cached by country + region
@@ -426,7 +429,7 @@ function HolidayCard({info,dateKey,rect,lang,th,onClose,onHover=null}){
   </div>,document.body);
 }
 
-function Cal({year,month,members,activeId,onToggle,onDragSelect=null,compact,th,t,holSet,w7,approvalMode,team,setCommentDay=null,holInfo=null,lang="en",touchEdit=false,tapStart=null,onTapDay=null}) {
+function Cal({draft=null,year,month,members,activeId,onToggle,onDragSelect=null,compact,th,t,holSet,w7,approvalMode,team,setCommentDay=null,holInfo=null,lang="en",touchEdit=false,tapStart=null,onTapDay=null}) {
   const[card,setCard]=useState(null);const cardTimer=useRef(null);
   const openCard=(key,el)=>{if(!holInfo)return;const info=holInfo(key);if(!info.length)return;setCard({key,info,rect:el.getBoundingClientRect()});};
   const closeCard=useCallback(()=>{clearTimeout(cardTimer.current);setCard(null);},[]);
@@ -561,6 +564,7 @@ function Cal({year,month,members,activeId,onToggle,onDragSelect=null,compact,th,
             style={{outline:tapStart===key?"3px solid "+th.ac:undefined,outlineOffset:tapStart===key?2:undefined,position:"relative",aspectRatio:"1",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRadius:8,cursor:(we&&!w7)||!activeId?"default":"pointer",transition:"transform .12s",transform:day===popDay?"scale(1.15)":"",
               backgroundColor:String(vacBg).indexOf("gradient(")>=0?"transparent":vacBg, backgroundImage:[pendingStripe,String(vacBg).indexOf("gradient(")>=0?vacBg:""].filter(Boolean).join(",")||"none", border:vacBorder, transition:"background .1s",
               opacity:past&&mh.length===0&&!isA?0.4:1,minHeight:compact?28:34,userSelect:"none",
+              ...(draft&&draft.has(key)&&!isA&&ac?{outline:"2px dashed "+ac.d,outlineOffset:-3,backgroundImage:"repeating-linear-gradient(135deg,"+ac.d+"26 0 5px,transparent 5px 10px)"}:{}),
               boxShadow:vacShadow+(th.bg==="#0B0F1A"&&(isA||mh.length>0)?",0 0 8px "+(isA&&ac?ac.d+"35":mh.length>0?MC[members.indexOf(mh[0])%MC.length].d+"25":""):"")}}>
             <span style={{fontSize:compact?11:12,fontWeight:isTd?700:vacWeight,color:isTd&&mh.length===0?th.ac:vacChip?INK:vacColor,fontFamily:F,lineHeight:1,...(vacChip?{background:"rgba(255,255,255,.9)",borderRadius:6,padding:"2px 4px"}:{})}}>{day}</span>
             {showCount>0&&<span style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:"#fff",color:"#EF4444",fontSize:8,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:"1.5px solid #EF4444"}}>{showCount}</span>}
@@ -935,7 +939,7 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,onBookDays=null,w7=f
 }
 
 // ─── Share Modal ──────────────────────────────────────────────────
-function ShareModal({teamId,teamName,onClose,th,t}){
+function ShareModal({teamId,teamName,onClose,th,t,viewKey=null,onMakeView=null}){
   const[cp,setCp]=useState(false);const[tab,setTab]=useState("link");
   const link=`${window.location.origin}${window.location.pathname}#team=${teamId}`;
   const embedCode=getEmbedCode(teamId);
@@ -953,7 +957,7 @@ function ShareModal({teamId,teamName,onClose,th,t}){
       </div>
       {/* Tabs */}
       <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
-        {[{k:"link",i:"link",l:t.cl},{k:"qr",i:"grid",l:"QR"},{k:"ical",i:"calendar",l:t.subscribe},{k:"widget",i:"bar",l:t.widget},{k:"embed",i:"code",l:t.embed}].map(o=> <button key={o.k} onClick={()=>setTab(o.k)} style={{padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",border:o.k===tab?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:o.k===tab?th.al:"transparent",color:o.k===tab?th.ac:th.t2,display:"flex",alignItems:"center",gap:4}}><Ic n={o.i} s={13} c={o.k===tab?th.ac:th.t3}/>{o.l}</button>)}
+        {[{k:"link",i:"link",l:t.cl},{k:"qr",i:"grid",l:"QR"},{k:"ical",i:"calendar",l:t.subscribe},{k:"widget",i:"bar",l:t.widget},{k:"embed",i:"code",l:t.embed},...(onMakeView?[{k:"view",i:"lock",l:V("voTab")}]:[])].map(o=> <button key={o.k} onClick={()=>setTab(o.k)} style={{padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:600,fontFamily:F,cursor:"pointer",border:o.k===tab?`1.5px solid ${th.ac}`:`1px solid ${th.bd}`,background:o.k===tab?th.al:"transparent",color:o.k===tab?th.ac:th.t2,display:"flex",alignItems:"center",gap:4}}><Ic n={o.i} s={13} c={o.k===tab?th.ac:th.t3}/>{o.l}</button>)}
       </div>
       {tab==="link"&&<Fragment>
         <p style={{margin:"0 0 10px",fontSize:13,color:th.t2}}>{t.shs} {teamName}</p>
@@ -988,6 +992,17 @@ function ShareModal({teamId,teamName,onClose,th,t}){
         <p style={{margin:"0 0 10px",fontSize:13,color:th.t2}}>{X("embedD")}</p>
         <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,marginBottom:12,wordBreak:"break-all",fontSize:11,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{embedCode}</div>
         <Btn th={th} onClick={()=>copy(embedCode)} icon={cp?"check":"copy"} style={{width:"100%",justifyContent:"center"}}>{cp?t.cp:t.copyEmbed}</Btn>
+      </Fragment>}
+      {tab==="view"&&<Fragment>
+        <div className="tvp-vo-card" style={{borderColor:th.gbd}}>
+          <span className="tvp-vo-eye" aria-hidden="true">👁</span>
+          <div><b style={{color:th.tx}}>{V("voTitle")}</b><p style={{color:th.t2}}>{V("voDesc")}</p></div>
+        </div>
+        {viewKey?<Fragment>
+          <div style={{background:th.bg,borderRadius:8,padding:"10px 12px",border:`1px solid ${th.bd}`,margin:"12px 0",wordBreak:"break-all",fontSize:12,color:th.t2,fontFamily:FM,lineHeight:1.5}}>{`${window.location.origin}/#view=${viewKey}`}</div>
+          <Btn th={th} onClick={()=>copy(`${window.location.origin}/#view=${viewKey}`)} icon={cp?"check":"copy"} disabled={false} style={{width:"100%",justifyContent:"center",marginBottom:8}}>{cp?t.cp:t.cl}</Btn>
+          <button type="button" onClick={()=>onMakeView(true)} style={{display:"block",margin:"0 auto",background:"none",border:"none",color:th.t3,fontSize:12,textDecoration:"underline",cursor:"pointer"}}>{V("voNew")}</button>
+        </Fragment>:<Btn th={th} onClick={()=>onMakeView(false)} icon="link" disabled={false} style={{width:"100%",justifyContent:"center",marginTop:12}}>{V("voMake")}</Btn>}
       </Fragment>}
       <p style={{margin:"12px 0 0",fontSize:11,color:th.t3,textAlign:"center"}}>{X("stored")}</p>
     </div>
@@ -1465,7 +1480,11 @@ function YearEndPrompt({team,rawTeam,yr,onYear,onOpen,th,lang}){
 function WhosOutBanner({team,th,t}){var today=dk(CY,CM,CD);var out=(team.members||[]).filter(function(m){return(m.days||[]).indexOf(today)>=0;});if(!out.length)return <div style={{padding:"8px 14px",background:"rgba(16,185,129,.08)",borderRadius:10,border:"1px solid rgba(16,185,129,.15)",marginBottom:10,display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:600,color:"#059669"}}><span>✅</span>{t.fullTeam||"Full team in today!"}</div>;return <div style={{padding:"8px 14px",background:out.length>=3?"rgba(239,68,68,.06)":"rgba(245,158,11,.06)",borderRadius:10,border:"1px solid "+(out.length>=3?"rgba(239,68,68,.15)":"rgba(245,158,11,.15)"),marginBottom:10}}><div style={{fontSize:10,fontWeight:700,color:out.length>=3?"#DC2626":"#D97706",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>{t.outToday||"Out today"} ({out.length})</div><div style={{display:"flex",flexWrap:"wrap",gap:4}}>{out.map(function(m){var mc=MC[team.members.indexOf(m)%MC.length];return <span key={m.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:8,background:mc.b,fontSize:11,fontWeight:600,color:mc.t}}><span style={{width:6,height:6,borderRadius:"50%",background:mc.d}}></span>{m.name}</span>;})}</div></div>;}
 
 export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDeleteForever=null,th,t,lang,setLang,theme,setTheme}){
-  const[halfMode,setHalfMode]=useState(false);const[delOpen,setDelOpen]=useState(false);const[delText,setDelText]=useState("");const NY=NY_TX[lang]||NY_TX.en;
+  const[halfMode,setHalfMode]=useState(false);
+  // "Before you book" tip: after days are added, one extra working day that joins a weekend or public holiday
+  const[tip,setTip]=useState(null);const tipTimer=useRef(null);
+  // Private draft: maybe-days kept only in this browser (per team, person and year) until published
+  const[draftOn,setDraftOn]=useState(false);const[draftVer,setDraftVer]=useState(0);const[delOpen,setDelOpen]=useState(false);const[delText,setDelText]=useState("");const NY=NY_TX[lang]||NY_TX.en;
   const[aId,setAId]=useState(null);const[popId,setPopId]=useState(null);const[tour,setTour]=useState(false);const popAfterPin=useRef(null);const[eId,setEId]=useState(null);const[adding,setAdding]=useState(false);const[nn,setNn]=useState("");const[nc,setNc]=useState(null);const[nr,setNr]=useState(null);
   // ─── PIN feature state (Step 1: declarations only, no UI yet) ─────
   const[nPin,setNPin]=useState("");
@@ -1584,7 +1603,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   // Auto-show share modal for freshly created teams so user gets the link immediately
   useEffect(()=>{if(team.members.length===0&&!showSh){setShowSh(true);}},[]);
   const flash=m=>{setToast(m);setTimeout(()=>setToast(null),2500);};
-  const yr=team.year||CY;const locked=!!team.locked;const isAdmin=!team.adminId||true;// In this version, everyone can admin
+  const viewOnly=!!team.viewOnly;
+  const yr=team.year||CY;const locked=!!team.locked||viewOnly;const isAdmin=!team.adminId||true;// In this version, everyone can admin
 
   // Compute holidays for all team countries
   // Every member's public holidays, national and regional (the calendar used to mark national days only)
@@ -1595,6 +1615,26 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const[showInbox,setShowInbox]=useState(false);const[showTT,setShowTT]=useState(false);const[showWr,setShowWr]=useState(false);const[showYE,setShowYE]=useState(false);
   const colorOf=useCallback(id=>{const i=team.members.findIndex(m=>m.id===id);return MC[(i<0?0:i)%MC.length];},[team.members]);
   const holInfoCb=useCallback(key=>holidayInfo(key,team.members,yr,hNames),[team.members,yr,hNames]);
+  const draftKey="tvp-draft-"+team.id+"-"+(aId||"")+"-"+yr;
+  const draftDays=useMemo(()=>{if(!aId)return new Set();try{return new Set(JSON.parse(localStorage.getItem(draftKey)||"[]"));}catch(e){return new Set();}},[draftKey,draftVer,aId]);
+  const saveDraft=set=>{try{if(set.size)localStorage.setItem(draftKey,JSON.stringify([...set].sort()));else localStorage.removeItem(draftKey);}catch(e){}setDraftVer(v=>v+1);};
+  const togDraft=(y,m,d)=>{const key=dk(y,m,d);const mem=teamRef.current.members.find(x=>x.id===aId);if(!mem)return;if((mem.days||[]).includes(key)){flash(V("drReal"));return;}
+    const n=new Set(draftDays);if(n.has(key))n.delete(key);else n.add(key);saveDraft(n);buzz();};
+  const scheduleTip=(memberId,key)=>{clearTimeout(tipTimer.current);tipTimer.current=setTimeout(()=>{
+    const cur=teamRef.current;const m=cur.members.find(x=>x.id===memberId);if(!m||!(m.days||[]).includes(key))return;
+    const y=Number(key.slice(0,4)),hol=holSetOf(m,y),w7=!!cur.w7;const st=streaksOf(m,y,hol,w7).find(x=>x.start<=key&&x.end>=key);if(!st)return;
+    const off=k=>(m.days||[]).includes(k)||hol.has(k)||(!w7&&[0,6].includes(dateOf(k).getDay()));let best=null;
+    for(const cand of [addDays(st.start,-1),addDays(st.end,1)]){if(off(cand)||!cand.startsWith(y+"-"))continue;
+      const ns=streaksOf({...m,days:[...(m.days||[]),cand]},y,hol,w7).find(x=>x.start<=cand&&x.end>=cand);
+      if(ns&&ns.length-st.length>=2&&(!best||ns.length>best.len))best={cand,len:ns.length,from:st.length};}
+    if(best){setTip({memberId,...best});clearTimeout(tipTimer.current);tipTimer.current=setTimeout(()=>setTip(null),14000);}},900);};
+  // Seasonal decorations (components/v3/Seasons): on unless switched off in Settings; Diwali lamps when someone in
+  // the team is in India and Diwali is within two days
+  const[decoOn,setDecoOn]=useState(()=>{try{return localStorage.getItem("tvp-seasons")!=="off";}catch(e){return true;}});
+  const skin=useMemo(()=>{const td=new Date();let diw=false;
+    if(team.members.some(m=>m.country==="IN")&&td.getFullYear()===yr){for(let i=-2;i<=2&&!diw;i++){const d=new Date(td.getFullYear(),td.getMonth(),td.getDate()+i);
+      diw=holInfoCb(dk(d.getFullYear(),d.getMonth(),d.getDate())).some(g=>g.cc==="IN"&&/diwali|deepavali|दीपावली/i.test((g.en||"")+" "+g.local));}}
+    const m=td.getMonth();return diw?"lamps":m===11||m<=1?"snow":m<=4?"blossom":m<=7?"sun":"leaves";},[team.members,yr,holInfoCb]);
   const holOf=useCallback(m=>holSetOf(m,yr),[yr]);
   // Export code loads ahead of the first click, so print windows open straight from the click (popup blockers)
   useEffect(()=>{const t0=setTimeout(()=>{import("./reports").catch(()=>{});},1200);return()=>clearTimeout(t0);},[]);
@@ -1603,7 +1643,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   // Teams with a creator: only the current approver sees Approvals (the owner browser too while the creator is still the approver)
   // No approver with a PIN left (removed, reset): the owner browser or the creator may manage approvals again
   const apHasPin=team.members.some(x=>hasPinOf(x)&&(x.isApprover||x.id===team.approver));
-  const canApprove=team.creatorId?(unlockedIsApprover||(!!getOwner(team.id)&&(team.approver===team.creatorId||!apHasPin))||(!apHasPin&&!!unlockedId&&unlockedId===team.creatorId)):(!!getOwner(team.id)||unlockedIsApprover);
+  const canApprove=!viewOnly&&!!(team.creatorId?(unlockedIsApprover||(!!getOwner(team.id)&&(team.approver===team.creatorId||!apHasPin))||(!apHasPin&&!!unlockedId&&unlockedId===team.creatorId)):(!!getOwner(team.id)||unlockedIsApprover));
   const pinResets=(Array.isArray(team.pinResets)?team.pinResets:[]).filter(r=>r&&team.members.some(x=>x.id===r.id&&hasPinOf(x)));
   const pendN=pendN0+(canApprove?pinResets.length:0);
   const resetPinFor=async id=>{const who=(team.members.find(x=>x.id===id)||{}).name||"";await waitIdle(team.id);
@@ -1723,6 +1763,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     }),log:addLogEntry(team,(member.name||"Member")+what+key)});
     buzz();
     try{const pc=document.querySelector('[data-ym="'+y+"-"+m+'"] [data-day="'+d+'"]');if(pc){pc.classList.remove("tvp-popd");void (pc as HTMLElement).offsetWidth;pc.classList.add("tvp-popd");setTimeout(()=>pc.classList.remove("tvp-popd"),400);}}catch(e){}
+    setTip(null);if(!has&&!halfMode)scheduleTip(member.id,key);
     if(!has){try{const hol=holSetOf(member,y);const before=streaksOf({...member,days:ds},y,hol,!!team.w7).find(st=>st.start<=key&&st.end>=key);
       const after=streaksOf({...member,days:nd},y,hol,!!team.w7).find(st=>st.start<=key&&st.end>=key);
       if(after&&after.leave>=5&&!(before&&before.leave>=5)){const cell=document.querySelector('[data-ym="'+y+"-"+m+'"] [data-day="'+d+'"]');celebrate(cell);flash("🎉 "+V("celebrate",{n:after.length}));}}catch(e){}}
@@ -1793,7 +1834,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const meM=unlockedId?team.members.find(m=>m.id===unlockedId):null;
   const allM=Array.from({length:12},(_,i)=>({year:yr,month:i}));
 
-  const[vk,setVk]=useState(0);const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:t.activityLog||"Log"},{k:"analytics",i:"bar",l:t.analytics||"Analytics"},{k:"trips",i:"globe",l:t.trips||"Trips"}];
+  const[vk,setVk]=useState(0);const views=[{k:"cal",i:"grid",l:t.cal},{k:"heatmap",i:"grid",l:t.heatmap},{k:"timeline",i:"bar",l:t.timeline},{k:"coverage",i:"bar",l:t.coverage},{k:"summary",i:"flag",l:t.summary},{k:"log",i:"edit",l:t.activityLog||"Log"},{k:"analytics",i:"bar",l:t.analytics||"Analytics"},{k:"trips",i:"globe",l:t.trips||"Trips"}].filter(v=>!viewOnly||(v.k!=="log"&&v.k!=="trips"));
 
   // ─── PIN unlock modal ────────────────────────────────────────────
   const tryUnlock = async () => {
@@ -1874,7 +1915,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const closePop=()=>{setPopId(null);if(mob)setSb(false);};
   // Guided first visit (components/v3/Tour): once per team in this browser, after joining or signing in
   const tourKey="tvp-tour-"+team.id;
-  const maybeTour=()=>{let seen=false;try{seen=!!localStorage.getItem(tourKey);}catch(e){}if(!seen)setTimeout(()=>setTour(true),700);};
+  const maybeTour=()=>{if(viewOnly)return;let seen=false;try{seen=!!localStorage.getItem(tourKey);}catch(e){}if(!seen)setTimeout(()=>setTour(true),700);};
   const endTour=()=>{setTour(false);try{localStorage.setItem(tourKey,"1");}catch(e){}};
   const switchTo=m=>{if(!m||m.id===unlockedId)return;if(!window.confirm(hasPinOf(m)?V("swQ",{n:m.name||""}):V("swQNew",{n:m.name||""})))return;
     if(hasPinOf(m)&&getTokens(team.id)[m.id]){setUnlockedId(m.id);setAId(m.id);flash(V("gtYou",{n:m.name||""}));return;}
@@ -1898,7 +1939,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     setUnlockedId(id);setAId(id);gReset();setGName("");setGCo(null);};
   // This tab already holds a PIN session for the remembered person: the effect above signs them in, so no gate flash
   const tokMe=(()=>{try{const me=localStorage.getItem(meKey);return me&&getTokens(team.id)[me]&&team.members.some(x=>x.id===me&&hasPinOf(x))?me:null;}catch(e){return null;}})();
-  const gOpen=team.members.length>0&&!unlockedId&&!ownerMode&&!tokMe;
+  const gOpen=!viewOnly&&team.members.length>0&&!unlockedId&&!ownerMode&&!tokMe;
   const gM=team.members.find(x=>x.id===gMid);
   const pinBox=(v,set,ph,onEnter,autoF)=><input autoFocus={autoF} type="password" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={v} placeholder={ph} aria-label={/^_+$/.test(ph)?X("pinTitle"):ph} onChange={e=>{set(e.target.value.replace(/\D/g,"").slice(0,6));setGErr("");}} onKeyDown={e=>{if(e.key==="Enter")onEnter();}} className="tvp-gpin" style={{borderColor:v.length===6?"#10B981":th.gbd,background:th.sf,color:th.tx}}/>;
   const gateEl=gOpen?<div className="tvp-gate" role="dialog" aria-modal="true" aria-labelledby="tvp-gate-t">
@@ -1959,7 +2000,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       </div>
       <div style={{display:"flex",alignItems:"center",gap:3,minWidth:0,flexWrap:"wrap",justifyContent:"flex-end",...(mob?{flexShrink:0,rowGap:1}:{})}}>
         {false&&<button type="button" className="v3-inbox-btn" onClick={()=>setShowInbox(true)} aria-label={V("inboxBadge",{n:pendN})} title={V("inbox")} style={{color:th.ac,background:th.al,borderColor:th.gbd||th.bd}}>✓{!mob&&<span>{V("inbox")}</span>}{pendN>0&&<b>{pendN}</b>}</button>}
-        <span data-tour="share" style={{display:"contents"}}><Btn th={th} v="secondary" sz="sm" icon="share" label={mob?t.sh:undefined} onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn></span>
+        {!viewOnly&&<span data-tour="share" style={{display:"contents"}}><Btn th={th} v="secondary" sz="sm" icon="share" label={mob?t.sh:undefined} onClick={()=>setShowSh(true)}>{mob?"":t.sh}</Btn></span>}
         <CoffeeButton lang={lang} iconOnly={mob}/>
 
       </div>
@@ -1973,13 +2014,14 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       const stLabel=sync==="offline"?V("syncOffline"):sync==="saving"?V("syncSaving"):savedAt?V("rbSavedAt",{t:savedAt.toLocaleTimeString(dateLocale(),{hour:"2-digit",minute:"2-digit"})}):V("syncSaved");
       return <div className={"tvp-rib"+(th.dk?" dk":"")} style={{background:th.gbg,borderBottom:"1px solid "+th.gbd,color:th.t2}}>
         <span role="status" aria-live="polite" className={"tvp-sync tvp-sync-"+sync} title={sync==="offline"?V("syncOfflineHint"):undefined} style={{color:sync==="offline"?(th.dk?"#FCD34D":"#B45309"):th.t2}}><i aria-hidden="true"/>{stLabel}</span>
-        <span className="tvp-rib-it">{V("rbCode")} <button type="button" className="tvp-rib-code" style={{color:th.ac}} onClick={()=>{try{navigator.clipboard.writeText(team.id);}catch(e){}flash(t.cp);}} title={t.cl||"Copy"}><Ic n="copy" s={11} c={th.ac}/>{team.id.slice(0,8)}</button></span>
+        {!viewOnly&&<span className="tvp-rib-it">{V("rbCode")} <button type="button" className="tvp-rib-code" style={{color:th.ac}} onClick={()=>{try{navigator.clipboard.writeText(team.id);}catch(e){}flash(t.cp);}} title={t.cl||"Copy"}><Ic n="copy" s={11} c={th.ac}/>{team.id.slice(0,8)}</button></span>}
+        {viewOnly&&<span className="tvp-rib-it tvp-rib-vo">{team.offlineCopy?"📴 "+V("ofBadge",{t:new Date(team.offlineCopy).toLocaleString(dateLocale(),{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}):"👁 "+V("voBadge")}</span>}
         {yp!==null&&<span className="tvp-rib-it tvp-rib-yr"><span className="tvp-rib-bar" style={{background:th.gbd}}><i style={{width:yp+"%",background:th.ac}}/></span>{V("rbGone",{n:yp,y:yr})}</span>}
         <span className="tvp-rib-r">
           <button type="button" className="tvp-rib-ib" style={{borderColor:th.gbd,color:th.t2}} onClick={()=>setTheme(nextTheme)} aria-label={V("rbTheme")+": "+theme} title={V("rbTheme")}>
             {theme==="dark"?<svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>:theme==="pink"?<svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.3 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>:<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>}</button>
           <LangDrop lang={lang} set={setLang} th={th}/>
-          <button type="button" className="tvp-rib-ib" style={{borderColor:settings?th.ac:th.gbd,color:settings?th.ac:th.t2}} onClick={()=>setSettings(!settings)} aria-label={V("rbSettings")} aria-expanded={settings} title={V("rbSettings")}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+          {!viewOnly&&<button type="button" className="tvp-rib-ib" style={{borderColor:settings?th.ac:th.gbd,color:settings?th.ac:th.t2}} onClick={()=>setSettings(!settings)} aria-label={V("rbSettings")} aria-expanded={settings} title={V("rbSettings")}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>}
         </span>
       </div>;})()}
 
@@ -1989,6 +2031,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       <Btn th={th} v="ghost" sz="sm" onClick={undo} disabled={!historyRef.current.length} style={{fontSize:11}}>↩ {X("undo")}</Btn>
       <Btn th={th} v="ghost" sz="sm" onClick={redo} disabled={!redoRef.current.length} style={{fontSize:11}}>↪ {X("redo")}</Btn>
       <Btn th={th} v="ghost" sz="sm" icon={null} disabled={false} onClick={()=>setShowTT(true)} style={{fontSize:11}}>⏳ {V("tt")}</Btn>
+      <button type="button" role="switch" aria-checked={decoOn} className="tvp-deco-sw" onClick={()=>{const v=!decoOn;setDecoOn(v);try{localStorage.setItem("tvp-seasons",v?"on":"off");}catch(e){}}} style={{borderColor:th.gbd,color:th.tx}}><span aria-hidden="true">{skin==="snow"?"❄️":skin==="blossom"?"🌸":skin==="sun"?"☀️":skin==="lamps"?"🪔":"🍂"}</span>{V("ssLbl")}<i className={decoOn?"on":""}/></button>
       {yr<=CY&&yr>=((rawTeam&&rawTeam.year)||yr)&&<Btn th={th} v="ghost" sz="sm" icon={null} disabled={false} onClick={()=>setShowYE(true)} style={{fontSize:11}}>🗓️ {V("yeBtn")}</Btn>}
       <div style={{width:1,height:20,background:th.bd}}/>
       {isAdmin&&mayLock&&<Btn th={th} v="ghost" sz="sm" icon={locked?"unlock":"lock"} onClick={toggleLock}>{locked?t.unlock:t.lock}</Btn>}
@@ -2046,6 +2089,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
             <div style={{display:"flex",gap:4}}><Btn th={th} sz="sm" onClick={confirmAdd} disabled={!nn.trim()||!nc||nPin.length!==6} icon="check" style={{flex:1,justifyContent:"center"}}>{t.add}</Btn><Btn th={th} v="ghost" sz="sm" onClick={()=>{setAdding(false);setNn("");setNc(null);setNr(null);setNPin("");setNIsApprover(false);}}>{t.can}</Btn></div>
           </div>}
           {team.members.map((m,i)=> <MRow key={m.id} w7={!!team.w7} notes={notesOf(m)} member={m} index={i} dragIdx={i} onDragStart={()=>setDragMIdx(i)} onDragOver={(e)=>{e.preventDefault();setDragOverIdx(i);}} onDrop={()=>{if(dragMIdx!==null)reorderMember(dragMIdx,i);setDragMIdx(null);setDragOverIdx(null);}} onDragEnd={()=>{setDragMIdx(null);setDragOverIdx(null);}} isDragOver={dragOverIdx===i} isDragging={dragMIdx===i} th={th} t={t} locked={locked} isActive={m.id===aId} isEditing={m.id===eId} onClick={()=>{
+              if(viewOnly){setAId(m.id===aId?null:m.id);return;}
               const dimmed=!ownerMode&&!!unlockedId&&m.id!==unlockedId;
               if(dimmed){if(canEditRoles){setAId(m.id);setPopId(m.id);}else switchTo(m);return;}
               if(m.id===aId){setPopId(m.id);return;}
@@ -2075,8 +2119,10 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           </div>}
         </div>}
         {/* Conflict alerts */}
+        {view==="cal"&&<WelcomeBack team={team} teamId={team.id} yr={yr} today={dk(CY,CM,CD)} holOf={holOf} w7={!!team.w7} meId={viewOnly?null:unlockedId} colorOf={colorOf}/>}
         {view==="cal"&&<TodayTiles team={team} yr={yr} th={th} colorOf={colorOf} holOf={holOf} holInfo={holInfoCb} active={am||null} threshold={threshold} showWrapped={wrOk} onWrapped={()=>setShowWr(true)} onPick={id=>setAId(id)}/>}
-        {view==="cal"&&noPin.length>0&&!gOpen&&<div className="tvp-nopin" role="note"><span aria-hidden="true">🔒</span><div><b>{V("npTitle",{n:noPin.length})}</b><p>{V("npText")}</p>
+        {view==="cal"&&team.members.some(m=>m.country)&&<HolidayGlobe yr={yr} holInfo={holInfoCb} countries={[...new Set(team.members.map(m=>m.country).filter(Boolean))] as string[]} teamCountries={[...new Set(team.members.map(m=>m.country).filter(Boolean))] as string[]} countryList={EU_C}/>}
+        {view==="cal"&&noPin.length>0&&!gOpen&&!viewOnly&&<div className="tvp-nopin" role="note"><span aria-hidden="true">🔒</span><div><b>{V("npTitle",{n:noPin.length})}</b><p>{V("npText")}</p>
           <div className="tvp-nopin-names">{noPin.slice(0,12).map(x=><button type="button" key={x.id} onClick={()=>switchTo(x)}>{x.name}</button>)}{noPin.length>12&&<span>+{noPin.length-12}</span>}</div></div></div>}
         {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
         <datalist id="tvp-groups">{([...new Set(team.members.map(m=>m.group).filter(Boolean))] as string[]).map(g=><option key={g} value={g}/>)}</datalist>
@@ -2096,6 +2142,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
             <span style={{fontSize:12,fontWeight:600,color:ac.t}}>{t.ed}: {am.name}</span>
             <span style={{fontSize:11,color:ac.t,opacity:.7}}>{t.tap}</span>
           </div>
+          <button onClick={()=>{setDraftOn(v=>!v);setHalfMode(false);}} aria-pressed={draftOn} title={V("drHint")} style={{padding:"6px 12px",borderRadius:20,border:"1.5px dashed "+ac.d,background:draftOn?ac.d:"transparent",color:draftOn?ac.o:ac.t,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>📝 {V("drBtn")}</button>
           <button onClick={()=>setHalfMode(h=>!h)} aria-pressed={halfMode} title={X("halfTitle")} style={{padding:"6px 12px",borderRadius:20,border:"1.5px solid "+ac.d,background:halfMode?ac.d:"transparent",color:halfMode?ac.o:ac.t,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",whiteSpace:"nowrap"}}>{halfMode?X("halfOn"):X("halfDay")}</button>
           <button onClick={()=>{setAId(null);setHalfMode(false);flash(am.name+": "+fmtDays(usedOf(am))+" "+((usedOf(am)===1)?t.dy:t.dys));}} style={{padding:"6px 16px",borderRadius:20,border:"none",background:ac.d,color:ac.o,fontSize:12,fontWeight:700,fontFamily:F,cursor:"pointer",display:"flex",alignItems:"center",gap:5,boxShadow:"0 2px 8px "+ac.d+"40",whiteSpace:"nowrap"}}><Ic n="check" s={14} c={ac.o}/>{V("prCodeOk")} · {fmtDays(usedOf(am))} {(usedOf(am)===1)?t.dy:t.dys}</button>
         </div>}
@@ -2135,6 +2182,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           <button onClick={function(){setShowSh(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="share" s={10} c={th.ac}/>{V("shareQr")}</button>
           <button data-export="print" onClick={function(){R("printReport")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{t.printBtn}</button>
           <button onClick={function(){setShowCSVImport(true)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid "+th.bd,background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="download" s={10} c={th.ac}/>{V("importLbl")}</button>
+          <button data-export="poster" onClick={function(){R("wallPoster")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"none",background:"linear-gradient(135deg,#7C3AED,#DB2777)",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#fff",display:"flex",alignItems:"center",gap:3,boxShadow:"0 4px 12px -6px rgba(124,58,237,.8)"}}>🖼️ {V("psBtn")}</button>
           <button data-export="year-end-xlsx" onClick={function(){R("yearEndReport")(team,t,"xlsx")}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #7C3AED55",background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3}}><Ic n="download" s={10} c={th.ac}/>{V("yeBtnX")}</button>
           <button data-export="year-end-pdf" onClick={function(){R("yearEndReport")(team,t,"pdf")}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #7C3AED55",background:th.sf,cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:600,color:th.ac,display:"flex",alignItems:"center",gap:3}}><Ic n="download" s={10} c={th.ac}/>{V("yeBtnP")}</button>
           {approvalMode&&am&&am.approved===true&&(am.days||[]).length>0&&<button data-export="approved" onClick={function(){R("generateApprovedPDF")(team,t)}} style={{padding:"4px 10px",borderRadius:20,border:"1px solid #A7F3D0",background:"#ECFDF5",cursor:"pointer",fontFamily:F,fontSize:10,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:3,whiteSpace:"nowrap"}}><Ic n="check" s={10} c="#059669"/>{t.approvedPdf||"Approved PDF"}</button>}
@@ -2151,7 +2199,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
             </div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:mob?"1fr":quarter!==null?"repeat(3,1fr)":"repeat(3,1fr)",gap:mob?10:14}}>
-            {allM.filter(({month})=>quarter===null||Math.floor(month/3)===quarter).map(({year,month})=> <Cal key={month} year={year} month={month} members={team.members} activeId={locked?null:aId} onToggle={tog} touchEdit={touchEdit} tapStart={tapStart} onTapDay={tapDay} compact={mob&&quarter===null} th={th} t={t} holSet={holSet} w7={team.w7} approvalMode={approvalMode} team={team} setCommentDay={setCommentDay} holInfo={holInfo} lang={lang}/>)}
+            {allM.filter(({month})=>quarter===null||Math.floor(month/3)===quarter).map(({year,month})=> <Cal key={month} year={year} month={month} members={team.members} activeId={locked?null:aId} draft={aId?draftDays:null} onToggle={draftOn?togDraft:tog} touchEdit={touchEdit} tapStart={tapStart} onTapDay={tapDay} compact={mob&&quarter===null} th={th} t={t} holSet={holSet} w7={team.w7} approvalMode={approvalMode} team={team} setCommentDay={setCommentDay} holInfo={holInfo} lang={lang}/>)}
           </div>
           {touchUI&&<div style={{height:78}} aria-hidden="true"/>}
         </Fragment>}
@@ -2193,7 +2241,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     </div>
 
     {mob&&sb&&<div onClick={()=>setSb(false)} style={{position:"fixed",inset:0,top:56,background:"rgba(0,0,0,.3)",zIndex:80}}/>}
-    {showSh&&<ShareModal teamId={team.id} teamName={team.name} onClose={()=>setShowSh(false)} th={th} t={t}/>}
+    {showSh&&<ShareModal teamId={team.id} teamName={team.name} onClose={()=>setShowSh(false)} th={th} t={t} viewKey={team.viewKey||null} onMakeView={viewOnly?null:(renew)=>{if(!unlockedId&&!ownerMode&&!getOwner(team.id)){flash(X("pinEnter"));return;}
+      const a=new Uint8Array(24);crypto.getRandomValues(a);const k=[...a].map(b=>"abcdefghijklmnopqrstuvwxyz0123456789"[b%36]).join("");
+      updateWithHistory({...team,viewKey:k,log:addLogEntry(team,renew?"View-only link replaced":"View-only link created")});}}/>}
     
     {/* Touch: one bar above the tab bar. Looking by default; "Edit my days" switches the calendar to tap mode.
         It sits here, outside <main>: main carries a view-transition name and an entrance animation, and either one
@@ -2337,6 +2387,22 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
 
     <Toast message={toast} visible={!!toast}/>
     {tour&&<Tour steps={plannerSteps()} onDone={endTour}/>}
+    {decoOn&&<Seasons skin={skin}/>}
+    {am&&!viewOnly&&(draftOn||draftDays.size>0)&&view==="cal"&&<div className={"tvp-draftbar"+(th.dk?" dk":"")} role="region" aria-label={V("drBtn")} style={{"--mc":colorOf(am.id).d} as React.CSSProperties}>
+      <span className="tvp-draftbar-i" aria-hidden="true">📝</span>
+      <span className="tvp-draftbar-t"><b>{draftOn?V("drOn"):V("drKept")}</b><small>{V("drCount",{n:draftDays.size})} · {V("drPriv")}</small></span>
+      <span className="tvp-draftbar-a">
+        {draftDays.size>0&&<button type="button" className="pri" onClick={()=>{bookDays(am.id,[...draftDays].sort());saveDraft(new Set());setDraftOn(false);}}>{V("drPub")}</button>}
+        {draftDays.size>0&&<button type="button" onClick={()=>saveDraft(new Set())}>{V("drDrop")}</button>}
+        <button type="button" onClick={()=>setDraftOn(v=>!v)}>{draftOn?V("drExit"):V("drBtn")}</button>
+      </span>
+    </div>}
+    {tip&&!draftOn&&!((team.members.find(x=>x.id===tip.memberId)||{}).days||[]).includes(tip.cand)&&<div className={"tvp-booktip"+(th.dk?" dk":"")} role="status">
+      <span className="tvp-booktip-i" aria-hidden="true">💡</span>
+      <span className="tvp-booktip-t">{V("tipAdd",{d:(()=>{try{return dateOf(tip.cand).toLocaleDateString(dateLocale(),{weekday:"short",day:"numeric",month:"short"});}catch(e){return tip.cand;}})(),n:tip.len,m:tip.from})}</span>
+      <button type="button" className="pri" onClick={()=>{bookDays(tip.memberId,[tip.cand]);setTip(null);}}>{V("tipDo")}</button>
+      <button type="button" className="x" aria-label={t.close||"Close"} onClick={()=>setTip(null)}>✕</button>
+    </div>}
     {pinModalEl}
     {setPinModalEl}
     {gateEl}

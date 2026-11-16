@@ -15,6 +15,17 @@ const NO_STORE = { "Cache-Control": "no-store", "Vercel-CDN-Cache-Control": "no-
 // GET ?id=  → the team JSON without PIN or owner hashes; its version comes in the X-Updated-At header
 export async function GET(request: NextRequest) {
   const sql = await getSql();
+  // View-only link (#view=KEY, made in Share): availability only, no team id, no notes, approvals or allowances
+  const view = request.nextUrl.searchParams.get("view");
+  if (view !== null) {
+    if (!/^[a-z0-9]{20,40}$/.test(view)) return NextResponse.json(null, { headers: NO_STORE });
+    const vr = await sql`SELECT data FROM teams WHERE data->>'viewKey' = ${view} AND expires_at > NOW() LIMIT 1`;
+    if (!vr.length) return NextResponse.json(null, { headers: NO_STORE });
+    const d = vr[0].data as TeamDoc & Record<string, unknown>;
+    const keep = ["id", "name", "country", "region", "days", "half", "photo", "group", "role"];
+    return NextResponse.json({ id: "view", viewOnly: true, name: d.name, year: d.year, w7: d.w7, logo: d.logo, accentColor: d.accentColor,
+      members: (d.members || []).map(m => Object.fromEntries(Object.entries(m || {}).filter(([k]) => keep.includes(k)))) }, { headers: NO_STORE });
+  }
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
   if (!ID.test(id)) return NextResponse.json(null, { headers: NO_STORE });

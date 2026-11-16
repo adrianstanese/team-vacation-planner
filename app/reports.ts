@@ -4,7 +4,7 @@ import { downloadHtmlAsPdf } from "@/lib/htmlToPdf";
 import { V } from "@/lib/v3Text";
 import { dateLocale, monthShort } from "@/lib/extraText";
 import { nextLeaveDay, avgCoverage, streaksOf } from "@/lib/v3Util";
-import { EU_C, MC, dim, dk, esc, fdm, fileBase, pk, reportSafe, safeYear, withBusy, _fd, _fd2, getAllHolidays, isWe, usedOf } from "./app";
+import { EU_C, MC, dim, dk, esc, fdm, fileBase, pk, reportSafe, safeYear, withBusy, _fd, _fd2, getAllHolidays, isWe, usedOf, safeLogo } from "./app";
 
 // Day totals as the planner shows them: a half day counts 0.5
 const fmtD = n => Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
@@ -783,4 +783,55 @@ export function yearEndReport(team, t, kind){
     + '<div class="card"><h2>' + esc(V("yeNotes")) + '</h2><ul class="notes">' + notes.map(function(n){ return "<li>" + esc(n) + "</li>"; }).join("") + '</ul><div class="foot">' + esc(V("yeHalf")) + "</div></div>"
     + '<div class="card signs">' + sign(V("yeSign1"), "") + sign(V("yeSign2"), d.approver) + "</div></body></html>";
   return withBusy(downloadHtmlAsPdf(html, base + ".pdf"));
+}
+
+
+// ─── Wall planner poster (A3 landscape PDF) ───
+// The whole year on one sheet for the office wall: 12 month cards, each day showing who is away as coloured bars,
+// public holidays of the team's countries in gold, weekends shaded, a legend of everyone, and the team's logo.
+export function wallPoster(team, t){
+  team = reportSafe(team);
+  var yr = safeYear(team), w7 = !!team.w7;
+  var MO = t.M || ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var DL = [t.mo||"Mo",t.tu||"Tu",t.we2||"We",t.th||"Th",t.fr||"Fr",t.sa||"Sa",t.su||"Su"];
+  var ms = (team.members||[]).map(function(m, i){ return { name: m.name || "", c: MC[i % MC.length].d, days: new Set((m.days||[]).filter(function(d){ return String(d).startsWith(yr + "-"); })), half: new Set(m.half || []) }; });
+  var hol = new Set(); (team.members||[]).forEach(function(m){ if (m.country) getAllHolidays(m, yr).forEach(function(h){ hol.add(h); }); });
+  var perMonth = new Array(12).fill(0), total = 0;
+  ms.forEach(function(m){ m.days.forEach(function(d){ var v = m.half.has(d) ? 0.5 : 1; perMonth[Number(d.slice(5,7)) - 1] += v; total += v; }); });
+  var peak = perMonth.indexOf(Math.max.apply(null, perMonth));
+  var logo = safeLogo(team.logo);
+  var month = function(mo){
+    var n = dim(yr, mo), first = fdm(yr, mo), cells = "";
+    for (var i = 0; i < first; i++) cells += '<div class="c e"></div>';
+    for (var d = 1; d <= n; d++) {
+      var k = dk(yr, mo, d), we = !w7 && isWe(yr, mo, d), h = hol.has(k);
+      var away = ms.filter(function(m){ return m.days.has(k); });
+      var bars = away.slice(0, 4).map(function(m){ return '<i style="background:' + m.c + '"></i>'; }).join("");
+      cells += '<div class="c' + (we ? " we" : "") + (h ? " h" : "") + (away.length ? " a" : "") + '"><span>' + d + "</span>" + (away.length ? '<b class="bars">' + bars + "</b>" : "") + (away.length > 4 ? '<em>' + away.length + "</em>" : "") + "</div>";
+    }
+    return '<section class="m"><h3>' + esc(MO[mo]) + '<small>' + (perMonth[mo] ? (Math.round(perMonth[mo]*10)/10) + " " + esc(t.dys || "days") : "") + "</small></h3><div class=\"g\">" + DL.map(function(x){ return '<div class="dh">' + esc(x) + "</div>"; }).join("") + cells + "</div></section>";
+  };
+  var legend = ms.map(function(m){ return '<span class="lg"><i style="background:' + m.c + '"></i>' + esc(m.name) + "</span>"; }).join("");
+  var html = '<!doctype html><html><head><meta charset="utf-8"><style>'
+    + '*{box-sizing:border-box}body{margin:0;width:1587px;height:1123px;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1B1440;background:linear-gradient(135deg,#F5F3FF 0%,#FFFFFF 45%,#ECFEFF 100%);padding:34px 40px 26px}'
+    + '.hdr{display:flex;align-items:center;gap:22px;margin-bottom:22px}.logo{width:76px;height:76px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;color:#fff;background:linear-gradient(135deg,#7C3AED,#2563EB);box-shadow:0 14px 30px -14px rgba(76,29,149,.7);overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover}'
+    + '.ttl{flex:0 0 auto}.ttl h1{margin:0;font-size:42px;letter-spacing:-.02em;line-height:1.05}.ttl p{margin:4px 0 0;font-size:16px;color:#6B6592}.yr{color:#7C3AED;margin-left:6px}'
+    + '.legend{flex:1;display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:flex-end;max-height:84px;overflow:hidden}.lg{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}.lg i{width:12px;height:12px;border-radius:4px}'
+    + '.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.m{background:#fff;border-radius:20px;padding:14px 14px 12px;box-shadow:0 10px 28px -18px rgba(40,20,110,.45);border:1px solid rgba(124,58,237,.10)}'
+    + '.m h3{margin:0 0 8px;font-size:18px;display:flex;justify-content:space-between;align-items:baseline}.m h3 small{font-size:12px;font-weight:600;color:#7C3AED}'
+    + '.g{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.dh{font-size:10px;font-weight:700;text-align:center;color:#8B86AE;text-transform:uppercase;padding-bottom:2px}'
+    + '.c{height:34px;border-radius:8px;position:relative;display:flex;align-items:flex-start;justify-content:flex-start;padding:3px 5px;font-size:11.5px;font-weight:600;color:#3B3466}.c.e{background:none}'
+    + '.c.we{background:#F1EFF8;color:#9C97BC}.c.h{background:linear-gradient(135deg,#FEF3C7,#FDE68A);color:#92400E}.c.a{background:#F5F3FF}.c.a.h{background:linear-gradient(135deg,#FEF3C7,#FDE68A)}'
+    + '.bars{position:absolute;left:4px;right:4px;bottom:4px;display:flex;gap:2px}.bars i{flex:1;height:6px;border-radius:3px}.c em{position:absolute;top:3px;right:4px;font-style:normal;font-size:9px;font-weight:800;color:#B91C1C}'
+    + '.foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:13px;color:#6B6592}.chips{display:flex;gap:10px}.chip{padding:6px 12px;border-radius:999px;background:#fff;border:1px solid rgba(124,58,237,.15);font-weight:600;color:#3B3466}'
+    + '.key{display:inline-flex;align-items:center;gap:6px;margin-left:12px}.key i{width:14px;height:14px;border-radius:4px;display:inline-block}'
+    + '</style></head><body>'
+    + '<div class="hdr"><div class="logo">' + (logo ? '<img src="' + logo + '" alt="">' : esc((team.name||"?").trim().charAt(0).toUpperCase())) + '</div>'
+    + '<div class="ttl"><h1>' + esc(team.name || "") + ' <span class="yr">' + yr + '</span></h1><p>' + esc(V("psSub")) + "</p></div>"
+    + '<div class="legend">' + legend + "</div></div>"
+    + '<div class="grid">' + [0,1,2,3,4,5,6,7,8,9,10,11].map(month).join("") + "</div>"
+    + '<div class="foot"><div class="chips"><span class="chip">' + esc(V("psTotal", { n: Math.round(total*10)/10 })) + '</span><span class="chip">' + esc(V("psPeak", { m: MO[peak] })) + '</span><span class="chip">' + esc(V("psPeople", { n: ms.length })) + "</span>"
+    + '<span class="key"><i style="background:linear-gradient(135deg,#FEF3C7,#FDE68A)"></i>' + esc(V("hmHol")) + '</span><span class="key"><i style="background:#F1EFF8"></i>' + esc(V("hmWe")) + "</span></div>"
+    + "<span>vacationplanner.team</span></div></body></html>";
+  return withBusy(downloadHtmlAsPdf(html, fileBase(team.name) + "_" + yr + "_wall-planner.pdf", { format: "a3" }));
 }

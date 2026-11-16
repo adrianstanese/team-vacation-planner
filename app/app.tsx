@@ -24,7 +24,9 @@ import { nextLeaveDay, carryInfo } from "@/lib/v3Util";
 // the front page fetches it when the browser is idle, so opening a team stays instant.
 const loadWS=()=>import("./workspace");
 const WS=nextDynamic(loadWS,{ssr:false,loading:()=><div style={{minHeight:"100vh"}} aria-busy="true"/>});
-if(typeof window!=="undefined"){try{if(/team=/.test(window.location.hash)||(/[?&]team=/.test(window.location.search)&&!/[?&]view=/.test(window.location.search)))loadWS();else{const ric=(window as Window&{requestIdleCallback?:(cb:()=>void)=>number}).requestIdleCallback;if(ric)ric(()=>{loadWS();});else setTimeout(()=>{loadWS();},1500);}}catch(e){}}
+if(typeof window!=="undefined"){try{if(/team=|view=[a-z0-9]{20}/.test(window.location.hash)||(/[?&]team=/.test(window.location.search)&&!/[?&]view=/.test(window.location.search)))loadWS();else{const ric=(window as Window&{requestIdleCallback?:(cb:()=>void)=>number}).requestIdleCallback;if(ric)ric(()=>{loadWS();});else setTimeout(()=>{loadWS();},1500);}}catch(e){}}
+// Offline mode: a small service worker keeps the app and the last pages visited for use without a connection
+if(typeof window!=="undefined"&&process.env.NODE_ENV==="production"&&"serviceWorker" in navigator){try{window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js").catch(()=>{});});}catch(e){}}
 // Report and export builders load on the first click (app/reports.ts)
 export const R=fn=>(...a)=>import("./reports").then(m=>m[fn](...a)).catch(e=>{console.error(e);try{window.dispatchEvent(new CustomEvent("tvp-save-error",{detail:"Could not start the export. Reload the page and try again."}));}catch(_){/* no window */}});
 // ─── Algorithmic Holiday Engine (2026–2035) ──────────────────────
@@ -799,7 +801,9 @@ const db={
       // Team data → try API first, then window.storage, then localStorage
       if(k.startsWith("team:")&&s){
         var teamId=k.replace("team:","");LOAD_FAILED[teamId]=false;
-        try{var res=await fetch(API_BASE+"?id="+teamId,{cache:"no-store"});if(res.ok){var data=await res.json();if(data){var v=res.headers.get("X-Updated-At");if(v&&syncIdle(teamId)){SYNC.VER[teamId]=v;SYNC.BASE[teamId]=JSON.stringify(data);}return data;}}else LOAD_FAILED[teamId]=true;}catch(e){LOAD_FAILED[teamId]=true;}
+        try{var res=await fetch(API_BASE+"?id="+teamId,{cache:"no-store"});if(res.ok){var data=await res.json();if(data){var v=res.headers.get("X-Updated-At");if(v&&syncIdle(teamId)){SYNC.VER[teamId]=v;SYNC.BASE[teamId]=JSON.stringify(data);}try{localStorage.setItem("tvp-snap-"+teamId,JSON.stringify({at:Date.now(),data:{...data,members:(data.members||[]).map(m=>{const{photo,...r}=m||{};return r;})}}));}catch(e){}return data;}}else LOAD_FAILED[teamId]=true;}catch(e){LOAD_FAILED[teamId]=true;
+          // No connection (the request itself failed): show the last copy this browser saw, read-only (never saved back, so it cannot overwrite newer data)
+          try{{var sn=JSON.parse(localStorage.getItem("tvp-snap-"+teamId)||"null");if(sn&&sn.data){LOAD_FAILED[teamId]=false;return {...sn.data,viewOnly:true,offlineCopy:sn.at};}}}catch(e2){}}
         // No answer: never fall back to an old copy kept in this browser (saving it later could overwrite newer data)
         if(LOAD_FAILED[teamId])return null;
       }
@@ -1752,7 +1756,7 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
   const pageLang=TX[pl]?pl:"en";
   if(about)PAGE0={lang:pageLang,about,countries:countries&&countries.length?countries:null};
 
-  const[screen,setScreen]=useState("home");const[team,setTeamRaw]=useState(null);const[viewYear,setViewYear]=useState(null);
+  const[screen,setScreen]=useState("home");const[team,setTeamRaw]=useState(null);const[vTeam,setVTeam]=useState(null);const[viewYear,setViewYear]=useState(null);
   // Shown on the front page when a team could not be fetched (offline, server busy)
   const[notice,setNotice]=useState(null);
   const[myTeams,setMyTeams]=useState([]);
@@ -1821,6 +1825,8 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
 
     // Owner link (#team=ID&owner=KEY): keep the key in this browser and remove it from the address bar
     try{const ok=linkParams().match(/team=([a-z0-9]+)/i),ow=linkParams().match(/[#&?]owner=([A-Za-z0-9_-]{20,64})/);if(ok&&ow){setOwner(ok[1],ow[1]);window.history.replaceState(null,"","#team="+ok[1]);}}catch(e){}
+    // View-only link (#view=KEY): availability only, never added to my teams
+    try{const vk=(window.location.hash||"").match(/[#&]view=([a-z0-9]{20,40})\b/);if(vk){const r=await fetch("/api/team?view="+vk[1],{cache:"no-store"}).then(x=>x.json()).catch(()=>null);if(r&&r.viewOnly){setVTeam(r);return;}setNotice(X("loadErr"));}}catch(e){}
     // Link-only access: check URL hash
     const hash=linkParams();const match=hash.match(/team=([a-z0-9]+)/i);
     if(match){const ld=await db.ld(`team:${match[1]}`,true);
@@ -1850,7 +1856,7 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
   const vy=team?(viewYear||defaultViewYear(team)):CY;
   const changeYear=y=>{if(!team)return;const ny=clampYear(y);const cur=viewYear||defaultViewYear(team);withTransition(()=>flushSync(()=>setViewYear(ny)),ny>cur?"next":ny<cur?"prev":"");try{window.history.replaceState(null,"","#team="+team.id+(ny===defaultViewYear(team)?"":"&year="+ny));}catch(e){}};
 
-  const update=u0=>{const u=mergeYearView(u0,team);setTeamRaw(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>{if(x.id!==u.id)return x;const nx={...x,name:u.name,year:u.year,mc:u.members.length};const lg=safeLogo(u.logo);if(lg)nx.logo=lg;else delete nx.logo;return nx;});setMyTeams(ut);db.sv("my-teams",ut);};
+  const update=u0=>{if(team&&team.offlineCopy)return;const u=mergeYearView(u0,team);setTeamRaw(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>{if(x.id!==u.id)return x;const nx={...x,name:u.name,year:u.year,mc:u.members.length};const lg=safeLogo(u.logo);if(lg)nx.logo=lg;else delete nx.logo;return nx;});setMyTeams(ut);db.sv("my-teams",ut);};
 
   const goHome=()=>{opening.current=null;shownId.current=null;withTransition(()=>flushSync(()=>{setTeam(null);setScreen("home");}),"home");window.location.hash="";};
 
@@ -1923,7 +1929,7 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
     const refresh=async()=>{
       if(busy||document.visibilityState!=="visible"||!syncIdle(openId))return;
       busy=true;
-      try{const fresh=await db.ld(`team:${openId}`,true);if(fresh&&syncIdle(openId)){setTeamRaw(cur=>cur&&cur.id===openId&&JSON.stringify(cur)!==JSON.stringify(fresh)?fresh:cur);syncCard(fresh);}}finally{busy=false;}
+      try{const fresh=await db.ld(`team:${openId}`,true);if(fresh&&!fresh.offlineCopy&&syncIdle(openId)){setTeamRaw(cur=>cur&&cur.id===openId&&JSON.stringify(cur)!==JSON.stringify(fresh)?fresh:cur);syncCard(fresh);}}finally{busy=false;}
     };
     // Background refresh only while someone is actually using the page (10 min idle → stop), so a
     // forgotten tab or wall screen doesn't keep the database awake; focus/visibility still refresh
@@ -1951,6 +1957,8 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
     delTeam(id);goHome();
   };
 
+  if(vTeam){const vvy=viewYear||vTeam.year||CY;const tv=teamForYear(vTeam,vvy);
+    return <ErrorBoundary><WS key="view" team={tv} rawTeam={vTeam} onYear={y=>setViewYear(clampYear(y))} onUpdate={()=>{}} onGoHome={()=>{setVTeam(null);window.location.hash="";}} onDeleteForever={()=>{}} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;}
   if(screen==="ws"&&team) {
     const tv=teamForYear(team,vy);
     // Check for special view modes via hash params

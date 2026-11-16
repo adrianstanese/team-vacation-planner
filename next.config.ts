@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
     const hasTeam = [{ type: "query" as const, key: "team" }];
     return [
       { source: "/:path*", headers: base },
+      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache" }, { key: "Service-Worker-Allowed", value: "/" }] },
       { source: "/admin", headers: noFrame },
       { source: "/api/admin", headers: noFrame },
       { source: "/", has: hasTeam, headers: teamView },

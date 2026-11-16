@@ -5,13 +5,14 @@
 
 const AVOID = "tr, .cal-month, .stat, .tl-row, .hdr, .legend, .tl-title, .cal-title, h1, h2, .s, .card, .row, table thead";
 
-export async function downloadHtmlAsPdf(html: string, filename: string): Promise<void> {
+export async function downloadHtmlAsPdf(html: string, filename: string, opts: { format?: "a4" | "a3" } = {}): Promise<void> {
+  const a3 = opts.format === "a3", pageW = a3 ? 1587 : 1123, pageH = a3 ? 1123 : 794;
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
   // No scripts may ever run inside the report frame (html2canvas only needs to read its DOM)
   frame.setAttribute("sandbox", "allow-same-origin");
-  frame.style.cssText = "position:fixed;left:-12000px;top:0;width:1123px;height:794px;border:0;";
+  frame.style.cssText = `position:fixed;left:-12000px;top:0;width:${pageW}px;height:${pageH}px;border:0;`;
   document.body.appendChild(frame);
   try {
     const doc = frame.contentDocument!;
@@ -22,10 +23,10 @@ export async function downloadHtmlAsPdf(html: string, filename: string): Promise
     try { await (doc as Document & { fonts?: FontFaceSet }).fonts?.ready; } catch { /* ignore */ }
     const body = doc.body;
     body.style.background = "#ffffff";
-    const width = Math.max(body.scrollWidth, 1123);
+    const width = Math.max(body.scrollWidth, pageW);
     const height = Math.max(body.scrollHeight, doc.documentElement.scrollHeight);
 
-    const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4", compress: true });
+    const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: a3 ? "a3" : "a4", compress: true });
     const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), margin = 18;
     const ptPerPx = (pw - 2 * margin) / width;
     const pagePx = Math.floor((ph - 2 * margin) / ptPerPx);

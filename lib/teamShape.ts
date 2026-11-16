@@ -14,6 +14,8 @@ export function cleanTeam(input: Obj): Obj {
   if ("name" in t) t.name = str(t.name, 80);
   if ("year" in t) { const y = int(t.year, 2000, 2100); if (y === undefined) delete t.year; else t.year = y; }
   if ("logo" in t && !(typeof t.logo === "string" && t.logo.length < 60000 && LOGO.test(t.logo))) delete t.logo;
+  if ("viewKey" in t && !(typeof t.viewKey === "string" && /^[a-z0-9]{20,40}$/.test(t.viewKey))) delete t.viewKey;
+  delete t.viewOnly; // a flag of the view-only copy, never stored
   if ("accentColor" in t && !(typeof t.accentColor === "string" && /^#[0-9A-Fa-f]{6}$/.test(t.accentColor))) delete t.accentColor;
   if ("carryMax" in t) { const c = int(t.carryMax, 0, 60); if (!c) delete t.carryMax; else t.carryMax = c; }
   if ("creatorId" in t && !(typeof t.creatorId === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(t.creatorId))) delete t.creatorId;
