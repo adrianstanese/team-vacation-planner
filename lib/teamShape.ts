@@ -23,7 +23,9 @@ export function cleanTeam(input: Obj): Obj {
   if ("pinResets" in t) { const a = Array.isArray(t.pinResets) ? t.pinResets.filter(r => isObj(r) && typeof r.id === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(r.id)).slice(0, 20).map(r => ({ id: (r as Obj).id as string, at: str((r as Obj).at, 40) })) : []; if (a.length) t.pinResets = a; else delete t.pinResets; }
   if ("threshold" in t) { const c = int(t.threshold, 1, 50); if (c === undefined) delete t.threshold; else t.threshold = c; }
   if (Array.isArray(t.members)) {
-    t.members = t.members.filter(isObj).slice(0, 50).map(m0 => {
+    const seen = new Set<string>();
+    // One entry per member id (a duplicated id would make two people share one PIN and one set of days)
+    t.members = t.members.filter(isObj).filter(m => { const id = String(m.id || ""); if (!id) return true; if (seen.has(id)) return false; seen.add(id); return true; }).slice(0, 50).map(m0 => {
       const m: Obj = { ...m0 };
       m.id = str(m.id, 64);
       if ("name" in m) m.name = str(m.name, 60);

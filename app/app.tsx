@@ -782,6 +782,8 @@ async function syncFlush(id){
 // Set by db.ld for a team: the last load got no usable answer (offline, rate limit, server error). Callers use it to
 // tell "could not ask" from "the server says this team is gone", so a network hiccup never drops a team from the list.
 const LOAD_FAILED={};
+// Offline copy of a team (read-only when there is no connection): photos left out to keep it small
+function snapSave(id,data){try{if(!id||!data||id==="view")return;localStorage.setItem("tvp-snap-"+id,JSON.stringify({at:Date.now(),data:{...data,members:(data.members||[]).map(m=>{const{photo,...r}=m||{};return r;})}}));}catch(e){}}
 const db={
   async sv(k,d,s=false){
     try {
@@ -801,7 +803,7 @@ const db={
       // Team data → try API first, then window.storage, then localStorage
       if(k.startsWith("team:")&&s){
         var teamId=k.replace("team:","");LOAD_FAILED[teamId]=false;
-        try{var res=await fetch(API_BASE+"?id="+teamId,{cache:"no-store"});if(res.ok){var data=await res.json();if(data){var v=res.headers.get("X-Updated-At");if(v&&syncIdle(teamId)){SYNC.VER[teamId]=v;SYNC.BASE[teamId]=JSON.stringify(data);}try{localStorage.setItem("tvp-snap-"+teamId,JSON.stringify({at:Date.now(),data:{...data,members:(data.members||[]).map(m=>{const{photo,...r}=m||{};return r;})}}));}catch(e){}return data;}}else LOAD_FAILED[teamId]=true;}catch(e){LOAD_FAILED[teamId]=true;
+        try{var res=await fetch(API_BASE+"?id="+teamId,{cache:"no-store"});if(res.ok){var data=await res.json();if(data){var v=res.headers.get("X-Updated-At");if(v&&syncIdle(teamId)){SYNC.VER[teamId]=v;SYNC.BASE[teamId]=JSON.stringify(data);}snapSave(teamId,data);return data;}}else LOAD_FAILED[teamId]=true;}catch(e){LOAD_FAILED[teamId]=true;
           // No connection (the request itself failed): show the last copy this browser saw, read-only (never saved back, so it cannot overwrite newer data)
           try{{var sn=JSON.parse(localStorage.getItem("tvp-snap-"+teamId)||"null");if(sn&&sn.data){LOAD_FAILED[teamId]=false;return {...sn.data,viewOnly:true,offlineCopy:sn.at};}}}catch(e2){}}
         // No answer: never fall back to an old copy kept in this browser (saving it later could overwrite newer data)
@@ -1856,7 +1858,7 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
   const vy=team?(viewYear||defaultViewYear(team)):CY;
   const changeYear=y=>{if(!team)return;const ny=clampYear(y);const cur=viewYear||defaultViewYear(team);withTransition(()=>flushSync(()=>setViewYear(ny)),ny>cur?"next":ny<cur?"prev":"");try{window.history.replaceState(null,"","#team="+team.id+(ny===defaultViewYear(team)?"":"&year="+ny));}catch(e){}};
 
-  const update=u0=>{if(team&&team.offlineCopy)return;const u=mergeYearView(u0,team);setTeamRaw(u);db.sv(`team:${u.id}`,u,true);const ut=myTeams.map(x=>{if(x.id!==u.id)return x;const nx={...x,name:u.name,year:u.year,mc:u.members.length};const lg=safeLogo(u.logo);if(lg)nx.logo=lg;else delete nx.logo;return nx;});setMyTeams(ut);db.sv("my-teams",ut);};
+  const update=u0=>{if(team&&team.offlineCopy)return;const u=mergeYearView(u0,team);setTeamRaw(u);db.sv(`team:${u.id}`,u,true);snapSave(u.id,u);const ut=myTeams.map(x=>{if(x.id!==u.id)return x;const nx={...x,name:u.name,year:u.year,mc:u.members.length};const lg=safeLogo(u.logo);if(lg)nx.logo=lg;else delete nx.logo;return nx;});setMyTeams(ut);db.sv("my-teams",ut);};
 
   const goHome=()=>{opening.current=null;shownId.current=null;withTransition(()=>flushSync(()=>{setTeam(null);setScreen("home");}),"home");window.location.hash="";};
 
@@ -1872,6 +1874,10 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
   useEffect(()=>{
     const h=async()=>{
       let lp="";try{lp=window.location.hash||"";}catch(e){}
+      // A view-only link pasted while the app is open
+      const vk=lp.match(/[#&]view=([a-z0-9]{20,40})(?![a-z0-9])/);
+      if(vk){const r=await fetch("/api/team?view="+vk[1],{cache:"no-store"}).then(x=>x.json()).catch(()=>null);if(r&&r.viewOnly){setViewYear(null);setVTeam(r);}else setNotice(X("loadErr"));return;}
+      setVTeam(null);
       const m=lp.match(/team=([a-z0-9]+)/i);
       if(!m){opening.current=null;if(shownId.current){setTeam(null);setScreen("home");}return;}
       const id=m[1];
@@ -1907,7 +1913,7 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
     const chk=()=>{try{
       if(document.visibilityState!=="visible")return;
       const d=new Date();if(d.getFullYear()===CY&&d.getMonth()===CM&&d.getDate()===CD)return;
-      if(navigator.onLine===false||/view=(badge|json|print|tsv)/i.test(linkParams()))return;
+      if(navigator.onLine===false||/view=(badge|json|print|tsv)(?![a-z0-9])/i.test(linkParams()))return;
       const el=document.activeElement as HTMLElement|null;
       if(el&&(/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)||el.isContentEditable))return;
       if(document.querySelector('[role="dialog"],[role="alertdialog"]'))return;
@@ -1924,7 +1930,7 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
   const openId=team&&team.id;
   useEffect(()=>{
     if(!openId)return;
-    if(/view=(badge|json|print|tsv)/i.test(linkParams()))return; // widgets reload themselves every 30 min
+    if(/view=(badge|json|print|tsv)(?![a-z0-9])/i.test(linkParams()))return; // widgets reload themselves every 30 min
     let busy=false;
     const refresh=async()=>{
       if(busy||document.visibilityState!=="visible"||!syncIdle(openId))return;
@@ -1948,7 +1954,7 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
     window.addEventListener("beforeunload",h);return()=>window.removeEventListener("beforeunload",h);
   },[openId]);
 
-  const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);try{localStorage.removeItem("team:"+id);}catch(e){}};
+  const delTeam=id=>{const u=myTeams.filter(x=>x.id!==id);setMyTeams(u);db.sv("my-teams",u);try{localStorage.removeItem("team:"+id);localStorage.removeItem("tvp-snap-"+id);Object.keys(localStorage).filter(k=>k.startsWith("tvp-draft-"+id+"-")).forEach(k=>localStorage.removeItem(k));}catch(e){}};
   // Delete for everyone: only from inside the team, after typing its name; the server keeps a restorable copy
   const deleteForever=async id=>{
     const r=await fetch(API_BASE+"?id="+id,{method:"DELETE",headers:{"X-Owner-Key":getOwner(id)}}).catch(()=>null);
@@ -1957,13 +1963,13 @@ export default function App({pageLang:pl="en",about=null,countries=null}){
     delTeam(id);goHome();
   };
 
-  if(vTeam){const vvy=viewYear||vTeam.year||CY;const tv=teamForYear(vTeam,vvy);
-    return <ErrorBoundary><WS key="view" team={tv} rawTeam={vTeam} onYear={y=>setViewYear(clampYear(y))} onUpdate={()=>{}} onGoHome={()=>{setVTeam(null);window.location.hash="";}} onDeleteForever={()=>{}} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;}
+  if(vTeam){const vvy=viewYear||defaultViewYear(vTeam);const tv=teamForYear(vTeam,vvy);
+    return <ErrorBoundary><WS key="view" team={tv} rawTeam={vTeam} onYear={y=>setViewYear(clampYear(y))} onUpdate={()=>{}} onGoHome={()=>{setVTeam(null);setViewYear(null);window.location.hash="";}} onDeleteForever={()=>{}} th={th} t={t} lang={lang} setLang={cL} theme={theme} setTheme={cT}/><CookieNotice th={th} t={t}/></ErrorBoundary>;}
   if(screen==="ws"&&team) {
     const tv=teamForYear(team,vy);
     // Check for special view modes via hash params
     const hash = linkParams();
-    const viewMatch = hash.match(/view=(badge|json|print|tsv)/i);
+    const viewMatch = hash.match(/view=(badge|json|print|tsv)(?![a-z0-9])/i);
     if (viewMatch) {
       const vw = viewMatch[1].toLowerCase();
       if (vw === "badge") return <ErrorBoundary><div style={{minHeight:"100vh",background:th.bg}}><BadgeView team={team} th={th} t={t}/></div></ErrorBoundary>;

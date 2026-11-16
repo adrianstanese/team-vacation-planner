@@ -58,7 +58,10 @@ export default function HolidayGlobe({ yr, countries, holInfo, teamCountries, co
     return out;
   }, [yr, month, holInfo, countries]);
   const lit = useMemo(() => [...new Set(items.flatMap(i => i.groups.map(g => g.cc)))], [items]);
-  const litRef = useRef(lit); useEffect(() => { litRef.current = lit; }, [lit]);
+  const litRef = useRef(lit);
+  // Redraw request from outside the animation loop (with reduced motion the loop stops after each frame)
+  const reqRef = useRef<() => void>(() => {});
+  useEffect(() => { litRef.current = lit; reqRef.current(); }, [lit]);
   const teamRef = useRef(teamCountries); useEffect(() => { teamRef.current = teamCountries; }, [teamCountries]);
   const name = (cc: string) => (countryList.find(c => c.c === cc) || { n: cc }).n;
 
@@ -83,6 +86,7 @@ export default function HolidayGlobe({ yr, countries, holInfo, teamCountries, co
     const enter = () => { held = true; }, leave = () => { held = false; req(); };
     canvas.addEventListener("pointerenter", enter); canvas.addEventListener("pointerleave", leave);
     function req() { if (!raf && !dead) raf = requestAnimationFrame(frame); }
+    reqRef.current = req;
     function frame(t: number) {
       raf = 0; const dt = Math.min(64, t - last); last = t;
       const f = focusRef.current;
@@ -153,7 +157,7 @@ export default function HolidayGlobe({ yr, countries, holInfo, teamCountries, co
       canvas.removeEventListener("pointerdown", down); canvas.removeEventListener("pointermove", mv); canvas.removeEventListener("pointerup", up); canvas.removeEventListener("pointercancel", up);
       canvas.removeEventListener("pointerenter", enter); canvas.removeEventListener("pointerleave", leave); };
   }, []);
-  useEffect(() => { focusRef.current = focus; }, [focus]);
+  useEffect(() => { focusRef.current = focus; reqRef.current(); }, [focus]);
 
   const mName = new Date(yr, month, 15).toLocaleDateString(dateLocale(), { month: "long", year: "numeric" });
   const rtl = isRtl();
@@ -171,8 +175,8 @@ export default function HolidayGlobe({ yr, countries, holInfo, teamCountries, co
       <ul className="tvp-globe-list">
         {items.map(it => {
           const d = dateOf(it.key);
-          return it.groups.map(g => <li key={it.key + g.cc}>
-            <button type="button" className={focus === g.cc ? "on" : ""} onClick={() => setFocus(f => (f === g.cc ? null : g.cc))} onMouseEnter={() => setFocus(g.cc)}>
+          return it.groups.map((g, gi) => <li key={it.key + g.cc + gi}>
+            <button type="button" className={focus === g.cc ? "on" : ""} onClick={() => setFocus(f => (f === g.cc ? null : g.cc))}>
               <span className="tvp-globe-date"><b>{d.getDate()}</b><small>{d.toLocaleDateString(dateLocale(), { weekday: "short" })}</small></span>
               <span className="tvp-globe-txt">
                 <span className="tvp-globe-hn"><img src={"/flags/" + g.cc + ".svg"} alt="" width={14} height={14} className="tvp-flag" />{g.local}</span>

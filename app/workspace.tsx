@@ -65,7 +65,6 @@ const CSS_ANIMS = `
 @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
 .tvp-fade { animation: fadeIn .3s ease-out both; }
 .tvp-slide { animation: fadeSlide .25s ease-out both; }
-.tvp-pop { animation: popIn .2s ease-out both; }
 .tvp-skel { animation: pulse 1.5s ease-in-out infinite; border-radius: 6px; }
 .tvp-glow { animation: glow 3s ease-in-out infinite; }
 .tvp-botnav { position:fixed; bottom:0; left:0; right:0; z-index:95; display:flex; align-items:stretch; padding:6px 0 env(safe-area-inset-bottom,8px); }
@@ -1101,9 +1100,9 @@ function AnalyticsDashboard({team,yr,th,t}) {
       <div style={{display:"flex",alignItems:"flex-end",gap:4,height:120}}>
         {monthly.map(function(count,i) {
           var pct = count > 0 ? Math.max(8, Math.round(count/maxMo*100)) : 0;
-          return <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+          return <div key={i} style={{flex:1,height:"100%",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
             <span style={{fontSize:9,fontWeight:700,color:th.ac,fontFamily:FM}}>{count>0?count:""}</span>
-            <div style={{width:"100%",height:pct+"%",minHeight:count>0?8:2,background:count>0?"linear-gradient(180deg,"+th.ac+",#6366F1)":th.sh,borderRadius:3,transition:"height .5s"}}/>
+            <div style={{flex:1,width:"100%",display:"flex",alignItems:"flex-end"}}><div style={{width:"100%",height:pct+"%",minHeight:count>0?8:2,background:count>0?"linear-gradient(180deg,"+th.ac+",#6366F1)":th.sh,borderRadius:3,transition:"height .5s"}}/></div>
             <span style={{fontSize:8,color:th.t3,fontWeight:600}}>{monthShort(i)}</span>
           </div>;
         })}
@@ -1601,8 +1600,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
 
   useEffect(()=>{const h=()=>{const m=window.innerWidth<768;setMob(m);if(!m)setSb(true);};window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
   // Auto-show share modal for freshly created teams so user gets the link immediately
-  useEffect(()=>{if(team.members.length===0&&!showSh){setShowSh(true);}},[]);
-  const flash=m=>{setToast(m);setTimeout(()=>setToast(null),2500);};
+  useEffect(()=>{if(team.members.length===0&&!showSh&&!viewOnly){setShowSh(true);}},[]);
+  const toastT=useRef(null);
+  const flash=m=>{setToast(m);clearTimeout(toastT.current);toastT.current=setTimeout(()=>setToast(null),2500);};
   const viewOnly=!!team.viewOnly;
   const yr=team.year||CY;const locked=!!team.locked||viewOnly;const isAdmin=!team.adminId||true;// In this version, everyone can admin
 
@@ -1636,6 +1636,11 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       diw=holInfoCb(dk(d.getFullYear(),d.getMonth(),d.getDate())).some(g=>g.cc==="IN"&&/diwali|deepavali|दीपावली/i.test((g.en||"")+" "+g.local));}}
     const m=td.getMonth();return diw?"lamps":m===11||m<=1?"snow":m<=4?"blossom":m<=7?"sun":"leaves";},[team.members,yr,holInfoCb]);
   const holOf=useCallback(m=>holSetOf(m,yr),[yr]);
+  // Holidays of last, this and next year (breaks and back-to-work dates can cross New Year)
+  const holAll=useCallback(m=>{const s=new Set<string>();[yr-1,yr,yr+1].forEach(y=>holSetOf(m,y).forEach(d=>s.add(d)));return s;},[yr]);
+  // This year's people with the days of every year, from the stored team
+  const spanTeam=useMemo(()=>{const r=rawTeam||team;const byId=new Map<string,{days?:string[];half?:string[]}>((r.members||[]).map(m=>[m.id,m]));
+    return {...team,members:team.members.map(m=>{const x=byId.get(m.id);return x?{...m,days:x.days||m.days,half:x.half||m.half}:m;})};},[rawTeam,team]);
   // Export code loads ahead of the first click, so print windows open straight from the click (popup blockers)
   useEffect(()=>{const t0=setTimeout(()=>{import("./reports").catch(()=>{});},1200);return()=>clearTimeout(t0);},[]);
   const pendN0=(team.approver?pendingApprovals(team,yr,threshold).length:0)+(team.creatorId&&team.approverReq&&team.approverReq.id!==team.approver&&team.members.some(x=>x.id===team.approverReq.id&&hasPinOf(x))?1:0);
@@ -1735,8 +1740,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   const canEditRoles=!!getOwner(team.id)||(team.creatorId?unlockedId===team.creatorId:!team.hasOwner);
   const setRole=(id,val)=>{const cur=teamRef.current;updateWithHistory({...cur,members:cur.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.role=String(val).slice(0,40);else delete nx.role;return nx;})});};
   // Long-weekend finder in the person pop-up: books the suggested days (same rules as the best-days window)
-  const bookDays=(id,take)=>{if(locked){flash(t.locked);return;}if(isPinLocked(id)){flash(X("pinEnter"));return;}const mem=team.members.find(x=>x.id===id);if(!mem)return;const add=take.filter(d=>!(mem.days||[]).includes(d));if(!add.length)return;
-    updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,days:[...(x.days||[]),...add]}:x),log:addLogEntry(team,(mem.name||"Member")+" added "+add[0]+(add.length>1?" → "+add[add.length-1]:""))});flash(V("lwBooked",{d:add.length===1?add[0]:add[0]+" – "+add[add.length-1]}));};
+  // Returns true when the days were booked (or were already booked), false when booking was refused
+  const bookDays=(id,take)=>{const team=teamRef.current;if(locked){flash(t.locked);return false;}if(isPinLocked(id)){flash(X("pinEnter"));return false;}const mem=team.members.find(x=>x.id===id);if(!mem)return false;const add=take.filter(d=>!(mem.days||[]).includes(d));if(!add.length)return true;
+    updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,days:[...(x.days||[]),...add]}:x),log:addLogEntry(team,(mem.name||"Member")+" added "+add[0]+(add.length>1?" → "+add[add.length-1]:""))});flash(V("lwBooked",{d:add.length===1?add[0]:add[0]+" – "+add[add.length-1]}));return true;};
   const setPhoto=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.photo=val;else delete nx.photo;return nx;}),log:addLogEntry(team,(val?"Photo updated: ":"Photo removed: ")+((team.members.find(x=>x.id===id)||{}).name||""))});};
   const setGroup=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.group=val.slice(0,24);else delete nx.group;return nx;})});};
   const setRegion=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
@@ -2119,8 +2125,8 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
           </div>}
         </div>}
         {/* Conflict alerts */}
-        {view==="cal"&&<WelcomeBack team={team} teamId={team.id} yr={yr} today={dk(CY,CM,CD)} holOf={holOf} w7={!!team.w7} meId={viewOnly?null:unlockedId} colorOf={colorOf}/>}
-        {view==="cal"&&<TodayTiles team={team} yr={yr} th={th} colorOf={colorOf} holOf={holOf} holInfo={holInfoCb} active={am||null} threshold={threshold} showWrapped={wrOk} onWrapped={()=>setShowWr(true)} onPick={id=>setAId(id)}/>}
+        {view==="cal"&&<WelcomeBack team={team} spanTeam={spanTeam} toView={raw=>teamForYear(raw,yr)} teamId={team.id} yr={yr} today={dk(CY,CM,CD)} holOf={holAll} w7={!!team.w7} meId={viewOnly?null:unlockedId} colorOf={colorOf}/>}
+        {view==="cal"&&<TodayTiles team={team} spanTeam={spanTeam} holAll={holAll} yr={yr} th={th} colorOf={colorOf} holOf={holOf} holInfo={holInfoCb} active={am||null} threshold={threshold} showWrapped={wrOk} onWrapped={()=>setShowWr(true)} onPick={id=>setAId(id)}/>}
         {view==="cal"&&noPin.length>0&&!gOpen&&!viewOnly&&<div className="tvp-nopin" role="note"><span aria-hidden="true">🔒</span><div><b>{V("npTitle",{n:noPin.length})}</b><p>{V("npText")}</p>
           <div className="tvp-nopin-names">{noPin.slice(0,12).map(x=><button type="button" key={x.id} onClick={()=>switchTo(x)}>{x.name}</button>)}{noPin.length>12&&<span>+{noPin.length-12}</span>}</div></div></div>}
         {view==="cal"&&<ConflictAlerts team={team} threshold={threshold} th={th} t={t}/>}
@@ -2392,7 +2398,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       <span className="tvp-draftbar-i" aria-hidden="true">📝</span>
       <span className="tvp-draftbar-t"><b>{draftOn?V("drOn"):V("drKept")}</b><small>{V("drCount",{n:draftDays.size})} · {V("drPriv")}</small></span>
       <span className="tvp-draftbar-a">
-        {draftDays.size>0&&<button type="button" className="pri" onClick={()=>{bookDays(am.id,[...draftDays].sort());saveDraft(new Set());setDraftOn(false);}}>{V("drPub")}</button>}
+        {draftDays.size>0&&<button type="button" className="pri" onClick={()=>{if(bookDays(am.id,[...draftDays].sort())){saveDraft(new Set());setDraftOn(false);}}}>{V("drPub")}</button>}
         {draftDays.size>0&&<button type="button" onClick={()=>saveDraft(new Set())}>{V("drDrop")}</button>}
         <button type="button" onClick={()=>setDraftOn(v=>!v)}>{draftOn?V("drExit"):V("drBtn")}</button>
       </span>

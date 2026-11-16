@@ -12,6 +12,8 @@ const MAX_BYTES = 600_000; // a 50-person team with 10 years of days is about 25
 const MAX_NEW_PER_HOUR = 20; // new teams per IP
 const NO_STORE = { "Cache-Control": "no-store", "Vercel-CDN-Cache-Control": "no-store" };
 
+let viewIndexed = false;
+
 // GET ?id=  → the team JSON without PIN or owner hashes; its version comes in the X-Updated-At header
 export async function GET(request: NextRequest) {
   const sql = await getSql();
@@ -19,12 +21,19 @@ export async function GET(request: NextRequest) {
   const view = request.nextUrl.searchParams.get("view");
   if (view !== null) {
     if (!/^[a-z0-9]{20,40}$/.test(view)) return NextResponse.json(null, { headers: NO_STORE });
-    const vr = await sql`SELECT data FROM teams WHERE data->>'viewKey' = ${view} AND expires_at > NOW() LIMIT 1`;
-    if (!vr.length) return NextResponse.json(null, { headers: NO_STORE });
+    if (!viewIndexed) { viewIndexed = true; try { await sql`CREATE INDEX IF NOT EXISTS teams_viewkey ON teams ((data->>'viewKey')) WHERE data ? 'viewKey'`; } catch { viewIndexed = false; } }
+    // Opening the link is use of the team: keep it from expiring (at most one write a month, as for ?id=)
+    const vr = await sql`WITH touch AS (
+        UPDATE teams SET expires_at = NOW() + INTERVAL '36 months'
+        WHERE data->>'viewKey' = ${view} AND expires_at > NOW() AND expires_at < NOW() + INTERVAL '35 months')
+      SELECT data FROM teams WHERE data->>'viewKey' = ${view} AND expires_at > NOW() LIMIT 2`;
+    // A key found in two teams (copied into another team) is refused, so a link can never show the wrong team
+    if (vr.length !== 1) return NextResponse.json(null, { headers: NO_STORE });
     const d = vr[0].data as TeamDoc & Record<string, unknown>;
     const keep = ["id", "name", "country", "region", "days", "half", "photo", "group", "role"];
+    const ms = Array.isArray(d.members) ? d.members : [];
     return NextResponse.json({ id: "view", viewOnly: true, name: d.name, year: d.year, w7: d.w7, logo: d.logo, accentColor: d.accentColor,
-      members: (d.members || []).map(m => Object.fromEntries(Object.entries(m || {}).filter(([k]) => keep.includes(k)))) }, { headers: NO_STORE });
+      members: ms.map(m => Object.fromEntries(Object.entries(m || {}).filter(([k]) => keep.includes(k)))) }, { headers: NO_STORE });
   }
   const id = request.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });

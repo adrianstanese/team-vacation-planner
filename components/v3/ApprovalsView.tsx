@@ -4,7 +4,7 @@
 // without clashes, and a way to turn approvals on for teams that have no approver yet. The server still decides who
 // may approve (lib/teamAuth.ts).
 import { useEffect, useMemo, useRef, useState } from "react";
-import { pendingApprovals, ranges, used, dateOf, addDays, type TeamView, type Member } from "@/lib/v3Util";
+import { pendingApprovals, periods, used, dateOf, addDays, type TeamView, type Member } from "@/lib/v3Util";
 import { V } from "@/lib/v3Text";
 import { dateLocale } from "@/lib/extraText";
 import "./v3.css";
@@ -18,7 +18,7 @@ const span = ([a, b]: [string, string]) => { const o: string[] = []; for (let k 
 const ago = (iso: string) => { const t = Date.parse(iso); if (!t) return ""; const m = Math.round((Date.now() - t) / 60000);
   try { const r = new Intl.RelativeTimeFormat(dateLocale(), { numeric: "auto" }); return m < 60 ? r.format(-m, "minute") : m < 1440 ? r.format(-Math.round(m / 60), "hour") : r.format(-Math.round(m / 1440), "day"); } catch { return new Date(t).toLocaleString(); } };
 const fmtN = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
-const monthsOf = (m: Member, yr: number) => { const a = new Array(12).fill(0); for (const k of m.days || []) if (k.startsWith(yr + "-")) a[Number(k.slice(5, 7)) - 1]++; return a; };
+const monthsOf = (m: Member, yr: number) => { const a = new Array(12).fill(0), h = new Set(m.half || []); for (const k of m.days || []) if (k.startsWith(yr + "-")) a[Number(k.slice(5, 7)) - 1] += h.has(k) ? 0.5 : 1; return a; };
 
 export default function ApprovalsView({ team, yr, threshold, th, colorOf, onApprove, onRequest, onRevoke, onOneByOne, onTurnOn, apReq = null, onAcceptReq, onDeclineReq, pinResets = [], onResetPin, holOf, sevenDay = false }: {
   team: TeamView & { members: (Member & { role?: string })[] }; yr: number; threshold: number; th: Th; colorOf: (id: string) => Col;
@@ -165,9 +165,10 @@ export default function ApprovalsView({ team, yr, threshold, th, colorOf, onAppr
             {(() => {
               const allow = (m.pto || 0) + (m.carry || 0), usedN = used(m, yr), left = allow - usedN;
               const hol = holOf ? holOf(m) : new Set<string>();
-              const rs = ranges((m.days || []).filter(k => k.startsWith(yr + "-")));
+              const mine = new Set(m.days || []);
+              const rs = periods((m.days || []).filter(k => k.startsWith(yr + "-")), sevenDay);
               const isWork = (k: string) => { const g = dateOf(k).getDay(); return (sevenDay || (g !== 0 && g !== 6)) && !hol.has(k); };
-              const holIn = rs.reduce((n, r) => n + span(r).filter(k => hol.has(k)).length, 0);
+              const holIn = rs.reduce((n, r) => n + span(r).filter(k => hol.has(k) && mine.has(k)).length, 0);
               const others = team.members.filter(x => x.id !== m.id);
               const last = ((team.log || []) as { t?: string; a?: string }[]).filter(e => { if (!e || typeof e.a !== "string" || !m.name) return false; const esc = m.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); return new RegExp("(^|[^\\p{L}])" + esc + "([^\\p{L}]|$)", "u").test(e.a); }).slice(-1)[0];
               const crowd = (k: string) => others.filter(x => (x.days || []).includes(k));

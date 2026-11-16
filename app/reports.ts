@@ -154,7 +154,7 @@ function teamReportHtml(team, t, forPrint){
   var perMonth = new Array(12).fill(0); ms.forEach(function(x){ x.list.forEach(function(d){ perMonth[+d.slice(5,7) - 1] += x.half.has(d) ? 0.5 : 1; }); });
   var peak = perMonth.indexOf(Math.max.apply(null, perMonth));
   var cov = avgCoverage(team.members, yr, w7, function(m){ return m.country ? getAllHolidays(m, yr) : []; });
-  var body = heroHtml(team, t.summary || V("rpSummary"), esc(ms.length + " " + (ms.length !== 1 ? t.mbs : t.mb)) + " · " + esc(V("psPeak", { m: MO[peak] })), '<div class="yr">' + yr + "</div>");
+  var body = heroHtml(team, t.summary || V("rpSummary"), esc(ms.length + " " + (ms.length !== 1 ? t.mbs : t.mb)) + (total ? " · " + esc(V("psPeak", { m: MO[peak] })) : ""), '<div class="yr">' + yr + "</div>");
   body += kpis([[fmtD(total), V("rpTotal"), "v"], [String(ms.length), V("rpTeam"), ""], [String(overlaps.length), V("rpOverlap"), overlaps.length ? "p" : ""], [cov + "%", V("rpAvgCov"), "g"]]);
 
   // Days off per person per month (heat map) + total and allowance use
@@ -235,7 +235,7 @@ export function generateApprovedPDF(team, t) {
       + '</td><td><div class="chips">' + periodsOf(x.list, w7).map(function(p){ return '<span class="chip" style="background:' + x.soft + ";color:" + x.c + '">' + esc(p) + "</span>"; }).join("") + "</div></td></tr>";
   });
   body += "</tbody></table></div>";
-  body += '<div class="sec">' + esc((t.cal || "Calendar") + " " + yr) + "</div>" + calendarHtml(yr, t, ms, hol, w7, 6) + legendHtml(ms);
+  body += '<div class="sec">' + esc((t.cal || "Calendar") + " " + yr) + "</div>" + calendarHtml(yr, t, ms, hol, w7, 4) + legendHtml(ms);
   body += '<div class="sigs"><div class="sig"><b>' + esc(t.approverLabel || "Approver") + "</b><span>" + esc(apr ? apr.name : "") + '</span><div class="ln"><div>' + esc(V("yeSig")) + "</div><div>" + esc(V("yeDate")) + '</div></div></div><div class="sig"><b>' + esc(t.mb || V("rpMember")) + '</b><span></span><div class="ln"><div>' + esc(V("yeSig")) + "</div><div>" + esc(V("yeDate")) + "</div></div></div></div>";
   return pdfOrHtml(docHtml((team.name || "") + " · " + title + " " + yr, body), fileBase(team.name) + "_" + yr + "_approved.pdf");
 }
@@ -344,7 +344,7 @@ export function exportXLSLegacy(team, t) {
       while(ri+1<sorted.length){if(nextLeaveDay(sorted[ri],sorted[ri+1],!!team.w7)){ri++;end=sorted[ri];}else break;}
       if(start===end)ranges.push(start.slice(5));else ranges.push(start.slice(5)+' to '+end.slice(5));ri++;
     }
-    xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+esc(m.name)+'</Data></Cell><Cell><Data ss:Type="String">'+(co?co.n:'')+'</Data></Cell><Cell><Data ss:Type="Number">'+usedOf(m)+'</Data></Cell><Cell><Data ss:Type="String">'+ranges.join(', ')+'</Data></Cell></Row>\n';
+    xml += '<Row><Cell ss:StyleID="bold"><Data ss:Type="String">'+esc(m.name)+'</Data></Cell><Cell><Data ss:Type="String">'+esc(co?co.n:'')+'</Data></Cell><Cell><Data ss:Type="Number">'+usedOf(m)+'</Data></Cell><Cell><Data ss:Type="String">'+ranges.join(', ')+'</Data></Cell></Row>\n';
   });
   // Overlaps
   if(overlaps.length){
@@ -366,10 +366,10 @@ export function exportXLSLegacy(team, t) {
     var daysInMo = dim(yr,mo);
     var first = fdm(yr,mo);
     // Month title
-    xml += '<Row ss:Height="22"><Cell ss:StyleID="sect"><Data ss:Type="String">'+months[mo]+' '+yr+'</Data></Cell></Row>\n';
+    xml += '<Row ss:Height="22"><Cell ss:StyleID="sect"><Data ss:Type="String">'+esc(months[mo])+' '+yr+'</Data></Cell></Row>\n';
     // Day headers
     xml += '<Row><Cell></Cell>';
-    for(var dl=0;dl<7;dl++) xml += '<Cell ss:StyleID="day-hdr"><Data ss:Type="String">'+dayL[dl]+'</Data></Cell>';
+    for(var dl=0;dl<7;dl++) xml += '<Cell ss:StyleID="day-hdr"><Data ss:Type="String">'+esc(dayL[dl])+'</Data></Cell>';
     xml += '</Row>\n';
     // Calendar rows — each member gets a row per week
     // First, build the team combined calendar
@@ -414,7 +414,7 @@ export function exportXLSLegacy(team, t) {
     team.members.forEach(function(m){(m.days||[]).forEach(function(d){var p=pk(d);if(p.m===mo2)hasActivity=true;});});
     if(!hasActivity) continue;
 
-    xml += '<Row ss:Height="20"><Cell ss:StyleID="sect"><Data ss:Type="String">'+months[mo2]+'</Data></Cell></Row>\n';
+    xml += '<Row ss:Height="20"><Cell ss:StyleID="sect"><Data ss:Type="String">'+esc(months[mo2])+'</Data></Cell></Row>\n';
     // Day number header
     xml += '<Row><Cell ss:StyleID="day-hdr"><Data ss:Type="String">'+esc(V("rpName"))+'</Data></Cell>';
     for(var d2=1;d2<=daysInMo2;d2++) xml += '<Cell ss:StyleID="day-hdr"><Data ss:Type="Number">'+d2+'</Data></Cell>';
@@ -440,7 +440,7 @@ export function exportXLSLegacy(team, t) {
   var blob = new Blob([xml], { type: "application/vnd.ms-excel" });
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a"); a.href = url; a.download = fileBase(team.name)+"_"+yr+".xls"; a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
 }
 
 
@@ -566,7 +566,7 @@ export function wallPoster(team, t){
     + '<div class="ttl"><h1>' + esc(team.name || "") + ' <span class="yr">' + yr + '</span></h1><p>' + esc(V("psSub")) + "</p></div>"
     + '<div class="legend">' + legend + "</div></div>"
     + '<div class="grid">' + [0,1,2,3,4,5,6,7,8,9,10,11].map(month).join("") + "</div>"
-    + '<div class="foot"><div class="chips"><span class="chip">' + esc(V("psTotal", { n: Math.round(total*10)/10 })) + '</span><span class="chip">' + esc(V("psPeak", { m: MO[peak] })) + '</span><span class="chip">' + esc(V("psPeople", { n: ms.length })) + "</span>"
+    + '<div class="foot"><div class="chips"><span class="chip">' + esc(V("psTotal", { n: Math.round(total*10)/10 })) + '</span>' + (total ? '<span class="chip">' + esc(V("psPeak", { m: MO[peak] })) + '</span>' : '') + '<span class="chip">' + esc(V("psPeople", { n: ms.length })) + "</span>"
     + '<span class="key"><i style="background:linear-gradient(135deg,#FEF3C7,#FDE68A)"></i>' + esc(V("hmHol")) + '</span><span class="key"><i style="background:#F1EFF8"></i>' + esc(V("hmWe")) + "</span></div>"
     + "<span>vacationplanner.team</span></div></body></html>";
   return pdfOrHtml(html, fileBase(team.name) + "_" + yr + "_wall-planner.pdf", { format: "a3", onePage: true });

@@ -37,6 +37,17 @@ export function awayCount(members: Member[]): Map<string, number> {
 }
 
 // Consecutive date ranges from a list of keys: [["2026-03-02","2026-03-06"], ...]
+// Leave periods as people count them: a Mon–Fri week followed by the next Mon–Fri is one period (weekends in
+// between are not leave days on a 5-day team). Days inside a period that are not booked are never counted from it.
+export function periods(keys: string[], sevenDay: boolean): [string, string][] {
+  const s = [...new Set(keys)].sort();
+  const out: [string, string][] = [];
+  for (const k of s) {
+    const last = out[out.length - 1];
+    if (last && nextLeaveDay(last[1], k, sevenDay)) last[1] = k; else out.push([k, k]);
+  }
+  return out;
+}
 export function ranges(keys: string[]): [string, string][] {
   const s = [...new Set(keys)].sort();
   const out: [string, string][] = [];
@@ -61,12 +72,12 @@ export function pendingApprovals(team: TeamView, yr: number, threshold: number):
       const overDays = ks.filter(k => k >= today && (counts.get(k) || 0) >= lim);
       let worst: Pending["worst"] = null;
       for (const k of overDays) { const a = counts.get(k) || 0; if (!worst || a > worst.away) worst = { day: k, away: a }; }
-      return { member: m, days: used(m, yr), ranges: ranges(ks), overDays, worst };
+      return { member: m, days: used(m, yr), ranges: periods(ks, !!team.w7), overDays, worst };
     });
 }
 
 // ─── Time travel: what changed between a past version and now (one year view) ───
-export type MemberDiff = { id: string; name: string; added: string[]; removed: string[]; renamedFrom?: string; approval?: boolean };
+export type MemberDiff = { id: string; name: string; added: string[]; removed: string[]; renamedFrom?: string; approval?: boolean; half?: number };
 export type TeamDiff = { membersAdded: string[]; membersRemoved: string[]; changed: MemberDiff[]; renamed?: { from: string; to: string }; logoChanged: boolean; total: number };
 export function diffTeams(past: TeamView, now: TeamView): TeamDiff {
   const pm = new Map(past.members.map(m => [m.id, m]));
@@ -83,11 +94,15 @@ export function diffTeams(past: TeamView, now: TeamView): TeamDiff {
     const d: MemberDiff = { id: m.id, name: m.name || "?", added, removed };
     if ((p.name || "") !== (m.name || "")) d.renamedFrom = p.name || "?";
     if (!!p.approved !== !!m.approved) d.approval = !!m.approved;
-    if (added.length || removed.length || d.renamedFrom || d.approval !== undefined) changed.push(d);
+    // Half days that became whole days or the other way round (on days booked in both versions)
+    const ha = new Set(p.half || []), hb = new Set(m.half || []);
+    const hd = [...b].filter(k => a.has(k) && ha.has(k) !== hb.has(k)).length;
+    if (hd) d.half = hd;
+    if (added.length || removed.length || d.renamedFrom || d.approval !== undefined || hd) changed.push(d);
   }
   const renamed = (past.name || "") !== (now.name || "") ? { from: past.name || "", to: now.name || "" } : undefined;
   const logoChanged = (past.logo || "") !== (now.logo || "");
-  const total = membersAdded.length + membersRemoved.length + changed.reduce((n, c) => n + c.added.length + c.removed.length + (c.renamedFrom ? 1 : 0) + (c.approval !== undefined ? 1 : 0), 0) + (renamed ? 1 : 0) + (logoChanged ? 1 : 0);
+  const total = membersAdded.length + membersRemoved.length + changed.reduce((n, c) => n + c.added.length + c.removed.length + (c.renamedFrom ? 1 : 0) + (c.approval !== undefined ? 1 : 0) + (c.half || 0), 0) + (renamed ? 1 : 0) + (logoChanged ? 1 : 0);
   return { membersAdded, membersRemoved, changed, renamed, logoChanged, total };
 }
 

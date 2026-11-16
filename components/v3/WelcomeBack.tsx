@@ -28,13 +28,15 @@ export function backToday(team: TeamView, today: string, holOf: (m: Member) => S
   return out;
 }
 
-export default function WelcomeBack({ team, teamId, yr, today, holOf, w7, meId, colorOf }: {
-  team: TeamView; teamId: string; yr: number; today: string; holOf: (m: Member) => Set<string>; w7: boolean; meId: string | null; colorOf: (id: string) => { d: string };
+// team = this year's view; spanTeam = the same people with days of every year (a break may run over New Year);
+// holOf must cover the years around today; toView turns a stored copy into this year's view (as on screen)
+export default function WelcomeBack({ team, spanTeam, toView, teamId, yr, today, holOf, w7, meId, colorOf }: {
+  team: TeamView; spanTeam: TeamView; toView: (raw: TeamView) => TeamView; teamId: string; yr: number; today: string; holOf: (m: Member) => Set<string>; w7: boolean; meId: string | null; colorOf: (id: string) => { d: string };
 }) {
   const [diff, setDiff] = useState<TeamDiff | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "none" | "done">("idle");
   if (!today.startsWith(yr + "-")) return null;
-  const back = backToday(team, today, holOf, w7);
+  const back = backToday(spanTeam, today, holOf, w7);
   if (!back.length) return null;
   const me = back.find(b => b.m.id === meId) || null;
   const others = back.filter(b => b !== me);
@@ -49,9 +51,8 @@ export default function WelcomeBack({ team, teamId, yr, today, holOf, w7, meId, 
       if (!pick) { setState("none"); return; }
       const past = await fetch("/api/team/versions?id=" + encodeURIComponent(teamId) + "&vid=" + pick.vid).then(r => r.json());
       const doc = past && past.data;
-      if (!doc) { setState("none"); return; }
-      const inYr = (m: Member) => ({ ...m, days: (m.days || []).filter(d => d.startsWith(yr + "-")) });
-      const d = diffTeams({ ...doc, members: (doc.members || []).map(inYr) }, { ...team, members: team.members.map(inYr) });
+      if (!doc || !Array.isArray(doc.members)) { setState("none"); return; }
+      const d = diffTeams(toView(doc), team);
       d.changed = d.changed.filter(c => c.id !== me.m.id);
       const any = d.membersAdded.length || d.membersRemoved.length || d.changed.length || d.renamed;
       setDiff(d); setState(any ? "done" : "none");
@@ -70,7 +71,8 @@ export default function WelcomeBack({ team, teamId, yr, today, holOf, w7, meId, 
       {state === "done" && diff && <ul className="tvp-wb-list">
         {diff.membersAdded.map(n => <li key={"a" + n}>➕ {V("wbJoined", { n })}</li>)}
         {diff.membersRemoved.map(n => <li key={"r" + n}>➖ {V("wbLeft", { n })}</li>)}
-        {diff.changed.map(c => <li key={c.id}>🗓️ {c.name}: {[c.added.length ? "+" + c.added.length : "", c.removed.length ? "−" + c.removed.length : ""].filter(Boolean).join(" / ")}{c.approval !== undefined ? " · " + (c.approval ? "✓" : "↺") : ""}</li>)}
+        {diff.changed.map(c => { const parts = [c.added.length ? "+" + c.added.length : "", c.removed.length ? "−" + c.removed.length : "", c.half ? "½×" + c.half : "", c.approval !== undefined ? (c.approval ? "✓" : "↺") : ""].filter(Boolean);
+          return <li key={c.id}>{c.renamedFrom ? "✏️ " + c.renamedFrom + " → " + c.name : "🗓️ " + c.name}{parts.length ? ": " + parts.join(" · ") : ""}</li>; })}
         {diff.renamed && <li>✏️ {diff.renamed.from} → {diff.renamed.to}</li>}
       </ul>}
     </div>}

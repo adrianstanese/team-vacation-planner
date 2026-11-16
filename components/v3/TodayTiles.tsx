@@ -13,7 +13,8 @@ type HolInfo = { cc: string; local: string; en?: string; who: string[] }[];
 const day = (k: string) => { try { return dateOf(k).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" }); } catch { return k; } };
 const fmtN = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
-export default function TodayTiles({ team, yr, th, colorOf, holOf, holInfo, active, threshold, onWrapped, showWrapped, onPick }: {
+export default function TodayTiles({ team, spanTeam, holAll, yr, th, colorOf, holOf, holInfo, active, threshold, onWrapped, showWrapped, onPick }: {
+  spanTeam?: TeamView; holAll?: (m: Member) => Set<string>;
   team: TeamView; yr: number; th: Th; colorOf: (id: string) => Col; holOf: (m: Member) => Set<string>; holInfo: (k: string) => HolInfo;
   active: Member | null; threshold: number; onWrapped: () => void; showWrapped: boolean; onPick: (id: string) => void;
 }) {
@@ -21,7 +22,8 @@ export default function TodayTiles({ team, yr, th, colorOf, holOf, holInfo, acti
   const today = keyOf(new Date());
   if (!today.startsWith(yr + "-")) return null;
   const out = outOn(team, today);
-  const back = new Map(backSoon(team, today, holOf).map(b => [b.id, b.back]));
+  // Back-to-work dates may fall in next year: use every year's days and the holidays around today
+  const back = new Map(backSoon(spanTeam || team, today, holAll || holOf).map(b => [b.id, b.back]));
   // Next public holiday for anyone in the team (from tomorrow if today is one too, today counts)
   let nextHol: { k: string; info: HolInfo } | null = null;
   const sets = team.members.filter(m => m.country).map(m => holOf(m));
