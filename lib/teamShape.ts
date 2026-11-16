@@ -28,6 +28,8 @@ export function cleanTeam(input: Obj): Obj {
       if ("country" in m && m.country != null) { const c = str(m.country, 2).toUpperCase(); if (/^[A-Z]{2}$/.test(c)) m.country = c; else m.country = null; }
       if ("region" in m && m.region != null) m.region = str(m.region, 24);
       if ("group" in m) { const g = str(m.group, 24).trim(); if (g) m.group = g; else delete m.group; }
+      // Profile photo: a small square image the browser made (about 112 px); anything else is dropped
+      if ("photo" in m && !(typeof m.photo === "string" && m.photo.length < 16000 && LOGO.test(m.photo))) delete m.photo;
       if ("role" in m) { const r = str(m.role, 40).trim(); if (r) m.role = r; else delete m.role; }
       const d = dates(m.days, 4000); if (d) m.days = d; else if ("days" in m) m.days = [];
       const h = dates(m.half, 4000); if (h) m.half = h; else delete m.half;

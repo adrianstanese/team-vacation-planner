@@ -386,3 +386,15 @@ html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-
 }
 @media (max-width: 420px) { .tvp-three { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .tvp-pp .tvp-two { grid-template-columns: minmax(0, 1fr); } }
 .tvp-pp-facts dt::first-letter { text-transform: uppercase; }
+/* Member photos (list avatar and pop-up) */
+.tvp-av { overflow: visible; }
+.tvp-av-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.tvp-pp-av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.tvp-pp-avb { border: 0; padding: 0; cursor: pointer; }
+.tvp-pp-avb > b { position: absolute; bottom: -2px; inset-inline-end: -4px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
+  background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .25); }
+.tvp-pp-avb:hover > b, .tvp-pp-avb:focus-visible > b { transform: scale(1.1); }
+.tvp-pp-avb:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.tvp-pp-ph { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+.tvp-pp-ph button { padding: 0; border: 0; background: none; color: #fff; font: 600 12px var(--font-body, system-ui), system-ui; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; opacity: .9; }
+.tvp-pp-ph button:hover { opacity: 1; }

@@ -470,6 +470,9 @@
     "away": "{b}人中{a}人が不在"
   },
   "V": {
+    "phAdd": "写真を追加",
+    "phChange": "写真を変更",
+    "phRemove": "写真を削除",
     "pfAria": "{n}：詳細",
     "pfProfile": "プロフィール",
     "pfDays": "休暇日数",

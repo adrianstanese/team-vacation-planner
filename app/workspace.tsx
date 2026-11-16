@@ -22,6 +22,9 @@ import { icsText, icsStamp } from "@/lib/ics";
 import TrapScope from "@/components/TrapScope";
 // Loaded only when first opened (keeps the first page load small)
 import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, INK, onFills, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, sheetCell, syncStateOf, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
+// A member photo as stored: a small data-URL image (cleanTeam caps it at 16,000 characters)
+const PHOTO_RX=/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
+const safePhoto=v=>typeof v==="string"&&v.length<16000&&PHOTO_RX.test(v)?v:null;
 
 const ApprovalInbox=nextDynamic(()=>import("@/components/v3/ApprovalInbox"),{ssr:false});
 
@@ -774,12 +777,15 @@ function ConflictAlerts({team,threshold,th,t}) {
   </div>;
 }
 
-function MRow({pop=false,onClosePop=null,w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null,notes=0,onCarryChange=null}){
+function MRow({pop=false,onClosePop=null,onPhotoChange=null,w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null,notes=0,onCarryChange=null}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const dc=usedOf(m);
   // Days for the year = the yearly allowance plus what was brought from the year before (m.carry, see lib/v3Util carryInfo)
   const allow=(m.pto||0)+(m.carry||0);const cy=m._cy||{auto:0,manual:false,left:null};
   const co=m.country?EU_C.find(x=>x.c===m.country):null;
   useEffect(()=>{setEn(m.name);},[m.name]);
+  // Profile photo: a small square picture stored on the member (see cleanTeam); the initial is shown without one
+  const photo=safePhoto(m.photo);const photoIn=useRef(null);const[phBusy,setPhBusy]=useState(false);
+  const pickPhoto=async function(e){const f=e.target.files&&e.target.files[0];e.target.value="";if(!f||!onPhotoChange)return;setPhBusy(true);try{onPhotoChange(await cropLogo(f,112,0.74));}catch(err){alert(X("logoBad"));}finally{setPhBusy(false);}};
 
   if(isEditing) return <div style={{display:"flex",flexDirection:"column",gap:6,padding:"8px 10px",background:c.b,borderRadius:8,border:`1.5px solid ${c.d}`}}>
     <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -806,7 +812,7 @@ function MRow({pop=false,onClosePop=null,w7=false,member:m,index:i,isActive,onCl
   return <div draggable={!locked} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}
     className={"tvp-mrow"+(isActive?" on":"")+(dim?" tvp-dim":"")} aria-disabled={dim&&!limited?true:undefined} style={{"--mc":c.d,"--mbg":th.bg,opacity:isDragging?0.4:1,borderTop:isDragOver?"2px solid "+th.ac:undefined}}>
     <div className="tvp-mrow-top">
-      <span className="tvp-av" style={{background:c.d,color:c.o}}>{(m.name||"?")[0].toUpperCase()}{isApprover&&<span className="tvp-crown" title={t.approverLabel||"Approver"}>👑</span>}</span>
+      <span className="tvp-av" style={{background:c.d,color:c.o}}>{photo?<img src={photo} alt="" className="tvp-av-img"/>:(m.name||"?")[0].toUpperCase()}{isApprover&&<span className="tvp-crown" title={t.approverLabel||"Approver"}>👑</span>}</span>
       <div role="button" tabIndex={0} aria-pressed={isActive} aria-label={m.name+" · "+(dc===0?t.nd:fmtDays(dc)+" "+(dc!==1?t.dys:t.dy))} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick();}}} className="tvp-mrow-nm">
         <b style={{color:isActive?c.t:th.tx}}>{m.name}{hasPin&&<span className="tvp-lock" aria-label="PIN" title="PIN">🔒</span>}</b>
         <small style={{color:th.t3}}>{co?co.f+" ":""}{m.role||m.group||(co?co.n:"")}</small>
@@ -829,8 +835,12 @@ function MRow({pop=false,onClosePop=null,w7=false,member:m,index:i,isActive,onCl
         <button type="button" className="tvp-pp-x" onClick={onClosePop} aria-label={t.close||"Close"}>✕</button>
         <div className="tvp-pp-l">
           <div className="tvp-pp-who">
-            <span className="tvp-pp-av" style={{background:c.d,color:c.o}}>{(m.name||"?")[0].toUpperCase()}{isApprover&&<i aria-hidden="true">👑</i>}</span>
-            <div><b>{m.name}{hasPin&&<span aria-label="PIN" title="PIN"> 🔒</span>}</b><small>{co?co.f+" "+co.n:""}{yr?(co?" · ":"")+yr:""}</small></div>
+            {(function(){const canPh=!!onPhotoChange&&!locked&&!limited;const face=<>{photo?<img src={photo} alt=""/>:(m.name||"?")[0].toUpperCase()}{isApprover&&<i aria-hidden="true">👑</i>}</>;
+              return canPh?<button type="button" className="tvp-pp-av tvp-pp-avb" style={{background:c.d,color:c.o}} onClick={function(){photoIn.current&&photoIn.current.click();}} disabled={phBusy} aria-label={photo?V("phChange"):V("phAdd")} title={photo?V("phChange"):V("phAdd")}>{face}<b aria-hidden="true">📷</b></button>
+                :<span className="tvp-pp-av" style={{background:c.d,color:c.o}}>{face}</span>;})()}
+            <input ref={photoIn} type="file" accept="image/*" hidden onChange={pickPhoto}/>
+            <div><b>{m.name}{hasPin&&<span aria-label="PIN" title="PIN"> 🔒</span>}</b><small>{co?co.f+" "+co.n:""}{yr?(co?" · ":"")+yr:""}</small>
+              {!!onPhotoChange&&!locked&&!limited&&<span className="tvp-pp-ph"><button type="button" onClick={function(){photoIn.current&&photoIn.current.click();}} disabled={phBusy}>{photo?V("phChange"):V("phAdd")}</button>{photo&&<button type="button" onClick={function(){onPhotoChange(null);}}>{V("phRemove")}</button>}</span>}</div>
           </div>
           <div className="tvp-pp-ring" role="img" aria-label={fmtDays(dc)+" "+(allow?V("pfOf",{n:fmtDays(allow)}):(dc!==1?t.dys:t.dy))} style={{"--p":(allow?Math.min(100,dc/allow*100):(dc?100:0))+"%"}}><div><b>{fmtDays(dc)}</b><small>{allow?V("pfOf",{n:fmtDays(allow)}):(dc!==1?t.dys:t.dy)}</small></div></div>
           <div className="tvp-pp-months" aria-hidden="true">{pf.months.map(function(n,k){return <span key={k}><i className={n?"on":""} style={{height:(n?Math.max(14,Math.round(n/pf.max*100)):6)+"%"}}/><em>{pf.mi(k)}</em></span>;})}</div>
@@ -1298,7 +1308,7 @@ function YearNav({yr,onYear,th,small=false}){
   </span>;
 }
 
-async function cropLogo(file){
+async function cropLogo(file,px=128,q=0.82){
   if(!file||!/^image\//.test(file.type))throw new Error("not an image");
   if(file.size>15*1024*1024)throw new Error("too big");
   const url=URL.createObjectURL(file);
@@ -1306,9 +1316,9 @@ async function cropLogo(file){
     const img=new Image();img.decoding="async";img.src=url;await img.decode();
     const side=Math.min(img.naturalWidth,img.naturalHeight);if(!side)throw new Error("empty");
     const sx=(img.naturalWidth-side)/2,sy=(img.naturalHeight-side)/2;
-    const c=document.createElement("canvas");c.width=c.height=128;const g=c.getContext("2d");
-    g.imageSmoothingQuality="high";g.fillStyle="#fff";g.fillRect(0,0,128,128);g.drawImage(img,sx,sy,side,side,0,0,128,128);
-    let out=c.toDataURL("image/webp",0.82);if(!out.startsWith("data:image/webp"))out=c.toDataURL("image/jpeg",0.85);
+    const c=document.createElement("canvas");c.width=c.height=px;const g=c.getContext("2d");
+    g.imageSmoothingQuality="high";g.fillStyle="#fff";g.fillRect(0,0,px,px);g.drawImage(img,sx,sy,side,side,0,0,px,px);
+    let out=c.toDataURL("image/webp",q);if(!out.startsWith("data:image/webp"))out=c.toDataURL("image/jpeg",q);
     if(!safeLogo(out))throw new Error("encode");
     return out;
   }finally{URL.revokeObjectURL(url);}
@@ -1668,6 +1678,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   // Job titles: the owner browser, or the creator signed in on any device (teams without a creator: as before)
   const canEditRoles=!!getOwner(team.id)||(team.creatorId?unlockedId===team.creatorId:!team.hasOwner);
   const setRole=(id,val)=>{const cur=teamRef.current;updateWithHistory({...cur,members:cur.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.role=String(val).slice(0,40);else delete nx.role;return nx;})});};
+  const setPhoto=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.photo=val;else delete nx.photo;return nx;}),log:addLogEntry(team,(val?"Photo updated: ":"Photo removed: ")+((team.members.find(x=>x.id===id)||{}).name||""))});};
   const setGroup=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.group=val.slice(0,24);else delete nx.group;return nx;})});};
   const setRegion=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
   const tog=(y,m,d)=>{
@@ -2009,7 +2020,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
               const meIsAppr=meUnlocked&&(meUnlocked.isApprover||team.approver===meUnlocked.id);
               if(hasPinOf(m)&&unlockedId!==m.id&&!meIsAppr){popAfterPin.current=m.id;setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
               setAId(m.id);setPopId(m.id);
-            }} pop={m.id===popId&&m.id===aId} onClosePop={closePop} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onCarryChange={v=>setCarry(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>{setPopId(null);setShowOptimizer(m.id);}} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>{closePop();setView("approvals");}:null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} onSwitchTo={()=>{setPopId(null);switchTo(m);}} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
+            }} pop={m.id===popId&&m.id===aId} onClosePop={closePop} onPhotoChange={v=>setPhoto(m.id,v)} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onCarryChange={v=>setCarry(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>{setPopId(null);setShowOptimizer(m.id);}} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>{closePop();setView("approvals");}:null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} onSwitchTo={()=>{setPopId(null);switchTo(m);}} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}

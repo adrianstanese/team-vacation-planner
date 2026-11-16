@@ -470,6 +470,9 @@
     "away": "{b}人中{a}人不在岗"
   },
   "V": {
+    "phAdd": "添加照片",
+    "phChange": "更换照片",
+    "phRemove": "移除照片",
     "pfAria": "{n}：详细信息",
     "pfProfile": "个人资料",
     "pfDays": "休假天数",
