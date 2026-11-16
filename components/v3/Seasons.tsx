@@ -1,9 +1,10 @@
 "use client";
 // Seasonal decorations: a light, slow particle layer over the planner that follows the season (snow in winter,
 // blossom in spring, warm sun motes in summer, leaves in autumn) or, around Diwali when someone in the team is in
-// India, floating lamp glows. Never catches clicks, stays faint, pauses off screen and with reduced motion.
+// India, floating lamp glows. It plays once each time the team opens: every particle crosses the screen a single
+// time, then the layer stops and goes away. Never catches clicks, stays faint, skipped with reduced motion.
 // Switched off in Settings (remembered in this browser).
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type Skin = "snow" | "blossom" | "sun" | "leaves" | "lamps";
 
@@ -18,6 +19,7 @@ type P = { x: number; y: number; vx: number; vy: number; r: number; a: number; s
 
 export default function Seasons({ skin }: { skin: Skin }) {
   const ref = useRef<HTMLCanvasElement | null>(null);
+  const [done, setDone] = useState(false);
   useEffect(() => {
     const cv = ref.current; if (!cv) return;
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -29,11 +31,13 @@ export default function Seasons({ skin }: { skin: Skin }) {
       const r = skin === "snow" ? 1.5 + Math.random() * 2.6 : skin === "sun" ? 1.4 + Math.random() * 2.4 : skin === "lamps" ? 3 + Math.random() * 3 : 4 + Math.random() * 4;
       const up = skin === "sun" || skin === "lamps";
       return { x: Math.random() * w, y: top ? (up ? h + 20 : -20) : Math.random() * h, vx: (Math.random() - 0.5) * (skin === "leaves" ? 26 : 12),
-        vy: up ? -(8 + Math.random() * 14) : 14 + Math.random() * (skin === "snow" ? 22 : 26), r, a: 0.35 + Math.random() * 0.45,
+        vy: up ? -(55 + Math.random() * 45) : 60 + Math.random() * (skin === "snow" ? 50 : 60), r, a: 0.35 + Math.random() * 0.45,
         spin: (Math.random() - 0.5) * 2, rot: Math.random() * 6.3, hue: Math.random(), ph: Math.random() * 6.3 };
     };
     const fit = () => { dpr = Math.min(2, devicePixelRatio || 1); w = innerWidth; h = innerHeight; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); };
-    fit(); for (let i = 0; i < N; i++) ps.push(spawn(false));
+    fit();
+    for (let i = 0; i < N; i++) { const p = spawn(true); const up = p.vy < 0; p.y = up ? h + 20 + Math.random() * h * 0.35 : -20 - Math.random() * h * 0.35; ps.push(p); }
+    let left = N; const gone = new Array(N).fill(false);
     addEventListener("resize", fit);
     const leaf = ["#F59E0B", "#EA580C", "#B45309", "#DC2626"], petal = ["#FBCFE8", "#F9A8D4", "#FCE7F3"];
     function frame(t: number) {
@@ -42,7 +46,8 @@ export default function Seasons({ skin }: { skin: Skin }) {
       for (let i = 0; i < ps.length; i++) {
         const p = ps[i];
         p.ph += dt; p.x += (p.vx + Math.sin(p.ph * 1.3) * 10) * dt; p.y += p.vy * dt; p.rot += p.spin * dt;
-        if (p.y > h + 30 || p.y < -30 || p.x < -40 || p.x > w + 40) { ps[i] = spawn(true); continue; }
+        if (gone[i]) continue;
+        if ((p.vy > 0 && p.y > h + 30) || (p.vy < 0 && p.y < -30) || p.x < -60 || p.x > w + 60) { gone[i] = true; left--; continue; }
         c!.save(); c!.translate(p.x, p.y); c!.rotate(p.rot); c!.globalAlpha = p.a;
         if (skin === "snow") { c!.fillStyle = "#fff"; c!.shadowColor = "rgba(186,230,253,.9)"; c!.shadowBlur = 6; c!.beginPath(); c!.arc(0, 0, p.r, 0, 6.3); c!.fill(); }
         else if (skin === "blossom") { c!.fillStyle = petal[Math.floor(p.hue * petal.length)]; c!.beginPath(); c!.ellipse(0, 0, p.r, p.r * 0.6, 0, 0, 6.3); c!.fill(); }
@@ -52,6 +57,7 @@ export default function Seasons({ skin }: { skin: Skin }) {
           c!.globalAlpha = p.a * (0.6 + 0.4 * Math.sin(p.ph * 2)); c!.fillStyle = g; c!.beginPath(); c!.arc(0, 0, p.r * (skin === "lamps" ? 3.2 : 2.6), 0, 6.3); c!.fill(); }
         c!.restore();
       }
+      if (left <= 0) { dead = true; c!.clearRect(0, 0, w, h); setDone(true); return; }
       if (!dead && !document.hidden) raf = requestAnimationFrame(frame);
     }
     raf = requestAnimationFrame(frame);
@@ -59,5 +65,6 @@ export default function Seasons({ skin }: { skin: Skin }) {
     document.addEventListener("visibilitychange", vis);
     return () => { dead = true; cancelAnimationFrame(raf); removeEventListener("resize", fit); document.removeEventListener("visibilitychange", vis); };
   }, [skin]);
+  if (done) return null;
   return <canvas ref={ref} className="tvp-seasons" aria-hidden="true" />;
 }
