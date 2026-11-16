@@ -1905,12 +1905,13 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
     <TrapScope onClose={null}/>
     <div className="tvp-gate-card" style={{background:th.bg,color:th.tx}}>
       <div className="tvp-gate-top"><TeamLogo team={team} th={th} size={36}/><div><h2 id="tvp-gate-t">{V("gtTitle",{n:team.name})}</h2><p style={{color:th.t3}}>{gStep==="choose"?V("gtSub"):gStep==="pick"?V("gtPick"):gStep==="new"?V("gtNewSub"):gM?gM.name:""}</p></div></div>
+      {team.id==="demo"&&<div className="tvp-gate-demo">🧪 {V("dmBanner",{pin:"123456"})}</div>}
       {gStep==="choose"&&<div className="tvp-gate-opts">
         <button type="button" className="tvp-gopt" style={{borderColor:th.gbd,background:th.sf}} onClick={()=>{gReset();setGStep("new");}}><span aria-hidden="true">🙋</span><b style={{color:th.tx}}>{V("gtNew")}</b><small style={{color:th.t3}}>{V("gtNewSub")}</small></button>
         <button type="button" className="tvp-gopt" style={{borderColor:th.gbd,background:th.sf}} onClick={()=>{gReset();setGStep("pick");}}><span aria-hidden="true">👤</span><b style={{color:th.tx}}>{V("gtOld")}</b><small style={{color:th.t3}}>{V("gtOldSub")}</small></button>
       </div>}
       {gStep==="pick"&&<div className="tvp-gate-list">
-        {team.members.map(m=>{const c=colorOf(m.id);const co=m.country?EU_C.find(x=>x.c===m.country):null;return <button type="button" key={m.id} className="tvp-gwho" style={{borderColor:th.gbd,background:th.sf}} onClick={()=>{gReset();setGMid(m.id);setGStep(hasPinOf(m)?"pin":"setpin");}}>
+        {team.members.map(m=>{const c=colorOf(m.id);const co=m.country?EU_C.find(x=>x.c===m.country):null;return <button type="button" key={m.id} className="tvp-gwho" style={{borderColor:th.gbd,background:th.sf}} onClick={()=>{gReset();setGMid(m.id);setGStep(hasPinOf(m)?"pin":"setpin");if(team.id==="demo"&&hasPinOf(m))setGPin("123456");}}>
           <span className="tvp-av" style={{background:c.d}}>{(m.name||"?")[0].toUpperCase()}</span><b style={{color:th.tx}}>{m.name}</b><small style={{color:th.t3}}>{co?<><Flag cc={co.c} size={13}/>{co.n}</>:""}{m.role?" · "+m.role:""}</small>{hasPinOf(m)&&<span aria-label="PIN">🔒</span>}</button>;})}
       </div>}
       {gStep==="pin"&&gM&&<div className="tvp-gate-form">

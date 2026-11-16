@@ -534,3 +534,5 @@ html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-
 .tvp-rib-ib:hover { transform: rotate(-12deg); }
 .tvp-rib-ib:focus-visible, .tvp-rib-code:focus-visible { outline: 2px solid #7C3AED; outline-offset: 2px; }
 @media (max-width: 767px) { .tvp-rib { gap: 4px 12px; padding-inline: 12px 10px; font-size: 11.5px; } .tvp-rib-bar { width: 52px; } }
+.tvp-gate-demo { margin: 4px 0 12px; padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; line-height: 1.4;
+  background: linear-gradient(90deg, rgba(124, 58, 237, .14), rgba(8, 145, 178, .14)); border: 1px solid rgba(124, 58, 237, .3); }
