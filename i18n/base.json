@@ -1,7 +1,7 @@
 {
  "about": "Base translation file for Team Vacation Planner. To add a language: copy the shape into i18n/<code>.json (same groups and keys, values = translated text, plus the _lang block), then run check.mjs and apply.mjs. See i18n/README.md.",
  "source": "en",
- "strings": 733,
+ "strings": 785,
  "rules": [
   "Translate meaning, not words: short, natural interface language a colleague would use at work.",
   "Keep every {placeholder} exactly as written (same letters, same braces); move it where the grammar needs it.",
@@ -1755,6 +1755,246 @@
    "where": "Newer features: approvals, 'Who are you?' gate, PIN reset, time travel (version history), Team Wrapped (year-in-review story), Today tiles, printed/PDF reports (keys starting rp).",
    "file": "lib/v3Text.ts",
    "strings": {
+    "cdLbl": {
+     "en": "Next break in",
+     "max": 25
+    },
+    "cdOn": {
+     "en": "On a break now",
+     "max": 27
+    },
+    "rbLbl": {
+     "en": "Year at a glance",
+     "max": 31
+    },
+    "rbOff": {
+     "en": "Day off",
+     "max": 15
+    },
+    "rbAlso": {
+     "en": "Also away: {names}",
+     "ph": [
+      "{names}"
+     ]
+    },
+    "rbAlone": {
+     "en": "Nobody else away",
+     "max": 31
+    },
+    "psLbl": {
+     "en": "Vacation style",
+     "max": 27
+    },
+    "pBridge": {
+     "en": "Bridge-day hacker",
+     "note": "Playful persona name: someone who books days next to public holidays to get long breaks."
+    },
+    "pEven": {
+     "en": "Spreads it evenly"
+    },
+    "pLong": {
+     "en": "Long-haul traveller"
+    },
+    "pFresh": {
+     "en": "Fresh slate",
+     "max": 22
+    },
+    "dSummer": {
+     "en": "Most days off fall in June to August"
+    },
+    "dWinter": {
+     "en": "Most days off fall in December to February"
+    },
+    "dSpring": {
+     "en": "Most days off fall in March to May"
+    },
+    "dSteady": {
+     "en": "A balanced plan across the year"
+    },
+    "dBridge": {
+     "en": "Spends {a} days, gets {b} days off",
+     "ph": [
+      "{a}",
+      "{b}"
+     ]
+    },
+    "dEven": {
+     "en": "Days off in {n} different months",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "dLong": {
+     "en": "{n} days off in a row",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "dFresh": {
+     "en": "No days booked yet"
+    },
+    "lwTitle": {
+     "en": "Make me a long weekend"
+    },
+    "lwSpend": {
+     "en": "Days to spend: {n}",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "lwGet": {
+     "en": "Spend {a}, get {b} off",
+     "ph": [
+      "{a}",
+      "{b}"
+     ]
+    },
+    "lwBook": {
+     "en": "Book",
+     "max": 10
+    },
+    "lwNone": {
+     "en": "No stretch fits that many days. Try another number."
+    },
+    "lwBooked": {
+     "en": "Booked: {d}",
+     "ph": [
+      "{d}"
+     ],
+     "max": 22
+    },
+    "olN": {
+     "en": "{n} days overlap with colleagues",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "olNone": {
+     "en": "No overlaps with colleagues"
+    },
+    "rcLbl": {
+     "en": "Recharge",
+     "max": 16,
+     "note": "A private 'battery' meter showing how rested the person is."
+    },
+    "rcFull": {
+     "en": "Fully recharged",
+     "max": 29
+    },
+    "rcOn": {
+     "en": "Recharging now",
+     "max": 27
+    },
+    "rcWeeks": {
+     "en": "{n} weeks since the last break",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "rcLow": {
+     "en": "Time for a break? Try the long-weekend finder."
+    },
+    "rcPriv": {
+     "en": "Only you see this"
+    },
+    "ooTitle": {
+     "en": "Out-of-office message"
+    },
+    "ooFor": {
+     "en": "Break",
+     "max": 11
+    },
+    "ooWho": {
+     "en": "Who covers (optional)"
+    },
+    "ooNobody": {
+     "en": "Nobody",
+     "max": 13
+    },
+    "ooTpl": {
+     "en": "Thank you for your message. I am out of the office from {from} to {to} and will be back on {back}.",
+     "ph": [
+      "{from}",
+      "{to}",
+      "{back}"
+     ],
+     "note": "First sentence of an out-of-office e-mail auto-reply; {from}/{to}/{back} are long dates like 'Monday 14 December'. Formal business register."
+    },
+    "ooUrgent": {
+     "en": "For anything urgent, please contact {who}.",
+     "ph": [
+      "{who}"
+     ],
+     "note": "Optional sentence of the auto-reply naming the colleague who covers."
+    },
+    "ooBye": {
+     "en": "Kind regards,",
+     "max": 25
+    },
+    "ooCopy": {
+     "en": "Copy text",
+     "max": 18
+    },
+    "ooNone": {
+     "en": "Book a break first, then the message writes itself."
+    },
+    "ruHow": {
+     "en": "How is this counted?"
+    },
+    "ruAllow": {
+     "en": "{n} yearly allowance",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "ruCarry": {
+     "en": "+ {n} brought from {y}",
+     "ph": [
+      "{n}",
+      "{y}"
+     ],
+     "note": "Line of a sum; keep the leading + sign."
+    },
+    "ruBooked": {
+     "en": "− {n} booked",
+     "ph": [
+      "{n}"
+     ],
+     "max": 24,
+     "note": "Line of a sum; keep the leading − sign."
+    },
+    "ruLeft": {
+     "en": "= {n} left",
+     "ph": [
+      "{n}"
+     ],
+     "max": 20,
+     "note": "Result line of a sum; keep the leading = sign."
+    },
+    "ruOver": {
+     "en": "= {n} over the allowance",
+     "ph": [
+      "{n}"
+     ]
+    },
+    "ruHol": {
+     "en": "Weekends and public holidays never count: {n} public holidays in {c} this year.",
+     "ph": [
+      "{n}",
+      "{c}"
+     ]
+    },
+    "ruHalf": {
+     "en": "A half day counts as 0.5."
+    },
+    "ooCopied": {
+     "en": "Copied",
+     "max": 13
+    },
+    "wkLbl": {
+     "en": "Working day",
+     "max": 22
+    },
     "phAdd": {
      "en": "Add photo",
      "max": 18

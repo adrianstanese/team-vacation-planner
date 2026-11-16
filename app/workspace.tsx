@@ -8,6 +8,7 @@ import BottomDuo from "@/components/WorkoseniePromo";
 import CoffeeButton from "@/components/CoffeeButton";
 import nextDynamic from "next/dynamic";
 import TodayTiles from "@/components/v3/TodayTiles";
+import { popData, usePhotoTint, paneStyle, Countdown, YearRing, Ribbon, StyleBadge, Recharge, LongWeekend, AwayMessage, CountHelp } from "@/components/v3/PersonPop";
 import { V } from "@/lib/v3Text";
 import { nextLeaveDay, pendingApprovals, streaksOf, avgCoverage, addDays, dateOf, yearEndPrompt, keyOf, ranges as dayRanges } from "@/lib/v3Util";
 import { withTransition, celebrate, buzz } from "@/lib/motion";
@@ -777,7 +778,7 @@ function ConflictAlerts({team,threshold,th,t}) {
   </div>;
 }
 
-function MRow({pop=false,onClosePop=null,onPhotoChange=null,w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null,notes=0,onCarryChange=null}){
+function MRow({pop=false,onClosePop=null,onPhotoChange=null,onBookDays=null,w7=false,member:m,index:i,isActive,onClick,onDelete,onStartRename,isEditing,onFinishRename,onCountryChange,onPtoChange,onRegionChange,onGroupChange=null,yr,onExportICS,onOptimize,th,t,locked,approvalMode,isApprover,onSetApprover,allMembers,onToggleMemberApproval,onApproveAllMembers,dragIdx,onDragStart,onDragOver,onDrop,onDragEnd,isDragOver,isDragging,canEditRole=false,onRoleChange=null,hasPin=false,onSetPin=null,onOpenApprovals=null,pendN=0,creatorMode=false,isSelf=false,reqMine=false,reqOther=false,onAskApprover=null,onCancelAsk=null,dim=false,limited=false,onSwitchTo=null,notes=0,onCarryChange=null}){
   const c=MC[i%MC.length];const[en,setEn]=useState(m.name);const dc=usedOf(m);
   // Days for the year = the yearly allowance plus what was brought from the year before (m.carry, see lib/v3Util carryInfo)
   const allow=(m.pto||0)+(m.carry||0);const cy=m._cy||{auto:0,manual:false,left:null};
@@ -785,6 +786,7 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,w7=false,member:m,in
   useEffect(()=>{setEn(m.name);},[m.name]);
   // Profile photo: a small square picture stored on the member (see cleanTeam); the initial is shown without one
   const photo=safePhoto(m.photo);const photoIn=useRef(null);const[phBusy,setPhBusy]=useState(false);
+  const[hl,setHl]=useState(null);const[pick,setPick]=useState(null);const tint=usePhotoTint(photo,pop&&isActive);
   const pickPhoto=async function(e){const f=e.target.files&&e.target.files[0];e.target.value="";if(!f||!onPhotoChange)return;setPhBusy(true);try{onPhotoChange(await cropLogo(f,112,0.74));}catch(err){alert(X("logoBad"));}finally{setPhBusy(false);}};
 
   if(isEditing) return <div style={{display:"flex",flexDirection:"column",gap:6,padding:"8px 10px",background:c.b,borderRadius:8,border:`1.5px solid ${c.d}`}}>
@@ -799,6 +801,7 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,w7=false,member:m,in
   // Option A: slim row; the selected person glows (in their colour) and opens a drawer with labelled fields
   const allowTxt=allow?fmtDays(dc)+" / "+fmtDays(allow):(dc===0?"—":fmtDays(dc));
   // The pop-up's summary: days per month this year, the next stretch away, and where the plan stands
+  const pd=pop&&isActive&&!isEditing&&yr?popData(m,yr,m.country?getAllHolidays(m,yr):[],allMembers||[],!!w7):null;
   const pf=(function(){if(!pop||!isActive)return null;const hf=new Set(m.half||[]);const ys=String(yr||"");const ds=(m.days||[]).filter(function(d){return !ys||String(d).startsWith(ys);});
     const months=Array(12).fill(0);ds.forEach(function(d){const k=parseInt(String(d).slice(5,7),10)-1;if(k>=0&&k<12)months[k]+=hf.has(d)?0.5:1;});
     const fd=function(k){try{return dateOf(k).toLocaleDateString(dateLocale(),{day:"numeric",month:"short"});}catch(e){return k;}};
@@ -833,7 +836,7 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,w7=false,member:m,in
       <div role="dialog" aria-modal="true" aria-label={V("pfAria",{n:m.name||""})} className={"tvp-pp"+(th.dk?" dk":"")} dir={isRtl()?"rtl":"ltr"} onClick={function(e){e.stopPropagation();}} style={{background:th.dk?"#1A1530":(String(th.bg).startsWith("linear")?"#FFFFFF":th.bg),color:th.tx,fontFamily:F,"--mc":c.d}}>
         <TrapScope onClose={onClosePop}/>
         <button type="button" className="tvp-pp-x" onClick={onClosePop} aria-label={t.close||"Close"}>✕</button>
-        <div className="tvp-pp-l">
+        <div className="tvp-pp-l" style={pd?paneStyle(pd.season,tint,c.d):undefined}>
           <div className="tvp-pp-who">
             {(function(){const canPh=!!onPhotoChange&&!locked&&!limited;const face=<>{photo?<img src={photo} alt=""/>:(m.name||"?")[0].toUpperCase()}{isApprover&&<i aria-hidden="true">👑</i>}</>;
               return canPh?<button type="button" className="tvp-pp-av tvp-pp-avb" style={{background:c.d,color:c.o}} onClick={function(){photoIn.current&&photoIn.current.click();}} disabled={phBusy} aria-label={photo?V("phChange"):V("phAdd")} title={photo?V("phChange"):V("phAdd")}>{face}<b aria-hidden="true">📷</b></button>
@@ -842,8 +845,11 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,w7=false,member:m,in
             <div><b>{m.name}{hasPin&&<span aria-label="PIN" title="PIN"> 🔒</span>}</b><small>{co?co.f+" "+co.n:""}{yr?(co?" · ":"")+yr:""}</small>
               {!!onPhotoChange&&!locked&&!limited&&<span className="tvp-pp-ph"><button type="button" onClick={function(){photoIn.current&&photoIn.current.click();}} disabled={phBusy}>{photo?V("phChange"):V("phAdd")}</button>{photo&&<button type="button" onClick={function(){onPhotoChange(null);}}>{V("phRemove")}</button>}</span>}</div>
           </div>
-          <div className="tvp-pp-ring" role="img" aria-label={fmtDays(dc)+" "+(allow?V("pfOf",{n:fmtDays(allow)}):(dc!==1?t.dys:t.dy))} style={{"--p":(allow?Math.min(100,dc/allow*100):(dc?100:0))+"%"}}><div><b>{fmtDays(dc)}</b><small>{allow?V("pfOf",{n:fmtDays(allow)}):(dc!==1?t.dys:t.dy)}</small></div></div>
-          <div className="tvp-pp-months" aria-hidden="true">{pf.months.map(function(n,k){return <span key={k}><i className={n?"on":""} style={{height:(n?Math.max(14,Math.round(n/pf.max*100)):6)+"%"}}/><em>{pf.mi(k)}</em></span>;})}</div>
+          {pd&&<Countdown d={pd}/>}
+          {pd&&<YearRing d={pd} used={dc} allow={allow} unit={allow?V("pfOf",{n:fmtDays(allow)}):(dc!==1?t.dys:t.dy)} onPick={setPick}/>}
+          {pd&&<Ribbon d={pd} yr={yr} w7={!!w7} hl={hl} pick={pick} onPick={setPick}/>}
+          {pd&&<StyleBadge d={pd} used={dc}/>}
+          {pd&&isSelf&&<Recharge d={pd} yr={yr} onLow={function(){const el=document.getElementById("tvp-lw-"+m.id);if(el)el.scrollIntoView({behavior:"smooth",block:"center"});}}/>}
           <dl className="tvp-pp-facts">
             <div><dt>{V("pfNext")}</dt><dd>{pf.next||V("pfNone")}</dd></div>
             {pf.status&&<div><dt>{V("pfStatus")}</dt><dd>{pf.status}</dd></div>}
@@ -895,7 +901,10 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,w7=false,member:m,in
       {allow?<div className="tvp-mbar" style={{background:th.sh}}><i style={{width:pct+"%",background:barCol}}/></div>:null}
       {m.carry?<div className="tvp-meta" style={{color:th.t3}}>{V("cyLeft",{y:yr-1,a:fmtDays(Math.max(0,Math.round((m.carry-dc)*10)/10)),b:fmtDays(m.carry)})}{cy.manual&&cy.auto&&cy.auto!==m.carry?" · "+V("cyAuto",{n:fmtDays(cy.auto)}):""}</div>:null}
       {yr&&m.country&&<div className="tvp-meta" style={{color:th.t3}}>{workingDaysRemaining(m,yr,w7)} {t.workDaysLeft||"work days left"} · {getAllHolidays(m,yr).length} {t.holCount||"holidays"}</div>}
+              {yr&&<CountHelp pto={m.pto||0} carry={m.carry||0} used={dc} yr={yr} holN={m.country?getAllHolidays(m,yr).length:0} country={co?co.n:""} half={(m.half||[]).some(function(k){return String(k).startsWith(String(yr));})}/>}
             </section>
+            {pd&&m.country&&<LongWeekend m={m} yr={yr} d={pd} w7={!!w7} holidays={getAllHolidays(m,yr)} onHover={setHl} onBook={function(ds){if(onBookDays)onBookDays(ds);}} blocked={locked?(t.locked||"Locked"):""}/>}
+            {pd&&<AwayMessage m={m} d={pd} others={allMembers||[]}/>}
             <section className="tvp-pp-sec"><h3>{V("pfAccess")}</h3>
       {!creatorMode&&<button type="button" role="switch" aria-checked={!!isApprover} className="tvp-switch" onClick={function(){onSetApprover();}} style={{borderColor:th.gbd,background:th.sf}}>
         <span><b style={{color:th.tx}}>{t.approverLabel||"Approver"}</b><small style={{color:th.t3}}>{V("apSwitchSub")}</small></span><i className={isApprover?"":"off"}/>
@@ -1678,6 +1687,9 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
   // Job titles: the owner browser, or the creator signed in on any device (teams without a creator: as before)
   const canEditRoles=!!getOwner(team.id)||(team.creatorId?unlockedId===team.creatorId:!team.hasOwner);
   const setRole=(id,val)=>{const cur=teamRef.current;updateWithHistory({...cur,members:cur.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.role=String(val).slice(0,40);else delete nx.role;return nx;})});};
+  // Long-weekend finder in the person pop-up: books the suggested days (same rules as the best-days window)
+  const bookDays=(id,take)=>{if(locked){flash(t.locked);return;}if(isPinLocked(id)){flash(X("pinEnter"));return;}const mem=team.members.find(x=>x.id===id);if(!mem)return;const add=take.filter(d=>!(mem.days||[]).includes(d));if(!add.length)return;
+    updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,days:[...(x.days||[]),...add]}:x),log:addLogEntry(team,(mem.name||"Member")+" added "+add[0]+(add.length>1?" → "+add[add.length-1]:""))});flash(V("lwBooked",{d:add.length===1?add[0]:add[0]+" – "+add[add.length-1]}));};
   const setPhoto=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.photo=val;else delete nx.photo;return nx;}),log:addLogEntry(team,(val?"Photo updated: ":"Photo removed: ")+((team.members.find(x=>x.id===id)||{}).name||""))});};
   const setGroup=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>{if(x.id!==id)return x;const nx={...x};if(val)nx.group=val.slice(0,24);else delete nx.group;return nx;})});};
   const setRegion=(id,val)=>{if(isPinLocked(id)){flash(X("pinEnter"));return;}updateWithHistory({...team,members:team.members.map(x=>x.id===id?{...x,region:val||null}:x)});};
@@ -2020,7 +2032,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
               const meIsAppr=meUnlocked&&(meUnlocked.isApprover||team.approver===meUnlocked.id);
               if(hasPinOf(m)&&unlockedId!==m.id&&!meIsAppr){popAfterPin.current=m.id;setPinPrompt(m.id);setPinInput("");setPinErr(false);return;}
               setAId(m.id);setPopId(m.id);
-            }} pop={m.id===popId&&m.id===aId} onClosePop={closePop} onPhotoChange={v=>setPhoto(m.id,v)} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onCarryChange={v=>setCarry(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>{setPopId(null);setShowOptimizer(m.id);}} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>{closePop();setView("approvals");}:null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} onSwitchTo={()=>{setPopId(null);switchTo(m);}} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
+            }} pop={m.id===popId&&m.id===aId} onClosePop={closePop} onPhotoChange={v=>setPhoto(m.id,v)} onBookDays={ds=>bookDays(m.id,ds)} onDelete={()=>del(m.id)} onStartRename={()=>setEId(m.id)} onFinishRename={n=>ren(m.id,n)} onCountryChange={cc=>setCo(m.id,cc)} onPtoChange={v=>setPto(m.id,v)} onCarryChange={v=>setCarry(m.id,v)} onRegionChange={v=>setRegion(m.id,v)} onGroupChange={v=>setGroup(m.id,v)} yr={yr} onExportICS={()=>downloadICS(m,team.name)} onOptimize={()=>{setPopId(null);setShowOptimizer(m.id);}} approvalMode={approvalMode} isApprover={team.approver===m.id} onSetApprover={()=>setApprover(m.id===team.approver?null:m.id)} allMembers={team.members} onToggleMemberApproval={toggleMemberApproval} onApproveAllMembers={approveAll} canEditRole={canEditRoles} onRoleChange={v=>setRole(m.id,v)} hasPin={hasPinOf(m)} onSetPin={()=>{setSetPinFor(m.id);setNewPinInput("");setConfirmPinInput("");}} onOpenApprovals={canApprove?()=>{closePop();setView("approvals");}:null} pendN={pendN} creatorMode={!!team.creatorId} isSelf={unlockedId===m.id} reqMine={!!team.approverReq&&team.approverReq.id===m.id} reqOther={!!team.approverReq&&team.approverReq.id!==m.id&&team.members.some(x=>x.id===team.approverReq.id)} onAskApprover={()=>askApprover(m.id)} onCancelAsk={cancelAsk} dim={!ownerMode&&!!unlockedId&&m.id!==unlockedId} onSwitchTo={()=>{setPopId(null);switchTo(m);}} limited={!ownerMode&&!!unlockedId&&m.id!==unlockedId&&canEditRoles}/>)}
           {team.members.length===0&&!adding&&<div style={{textAlign:"center",padding:"20px 12px",color:th.t3,fontSize:13}}><div style={{fontSize:28,marginBottom:6}}>🏖️</div>{t.es2}</div>}
         </div>
       </aside>}

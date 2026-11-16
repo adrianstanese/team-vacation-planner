@@ -106,7 +106,14 @@
     "pfPlan": "Button that closes the person pop-up and returns to the calendar to mark this person's vacation days.",
     "pfNext": "Label: the next date range this person is away.",
     "pfIcs": "Button: download this person's days as a calendar file (.ics).",
-    "pfBest": "Button: suggest the best days to take off (bridge days)."
+    "pfBest": "Button: suggest the best days to take off (bridge days).",
+    "ooTpl": "First sentence of an out-of-office e-mail auto-reply; {from}/{to}/{back} are long dates like 'Monday 14 December'. Formal business register.",
+    "ooUrgent": "Optional sentence of the auto-reply naming the colleague who covers.",
+    "pBridge": "Playful persona name: someone who books days next to public holidays to get long breaks.",
+    "ruCarry": "Line of a sum; keep the leading + sign.",
+    "ruBooked": "Line of a sum; keep the leading − sign.",
+    "ruLeft": "Result line of a sum; keep the leading = sign.",
+    "rcLbl": "A private 'battery' meter showing how rested the person is."
   },
   "PROMO": {
     "feats": "Exactly 4 short feature chips, in order.",
