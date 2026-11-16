@@ -826,7 +826,7 @@ export function wallPoster(team, t){
   };
   var legend = ms.map(function(m){ return '<span class="lg"><i style="background:' + m.c + '"></i>' + esc(m.name) + "</span>"; }).join("");
   var html = '<!doctype html><html><head><meta charset="utf-8"><style>'
-    + '*{box-sizing:border-box}body{margin:0;width:1587px;height:1123px;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1B1440;background:linear-gradient(135deg,#F5F3FF 0%,#FFFFFF 45%,#ECFEFF 100%);padding:34px 40px 26px}'
+    + '*{box-sizing:border-box}body{margin:0;width:1587px;min-height:1123px;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1B1440;background:linear-gradient(135deg,#F5F3FF 0%,#FFFFFF 45%,#ECFEFF 100%);padding:34px 40px 26px}'
     + '.hdr{display:flex;align-items:center;gap:22px;margin-bottom:22px}.logo{width:76px;height:76px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;color:#fff;background:linear-gradient(135deg,#7C3AED,#2563EB);box-shadow:0 14px 30px -14px rgba(76,29,149,.7);overflow:hidden}.logo img{width:100%;height:100%;object-fit:cover}'
     + '.ttl{flex:0 0 auto}.ttl h1{margin:0;font-size:42px;letter-spacing:-.02em;line-height:1.05}.ttl p{margin:4px 0 0;font-size:16px;color:#6B6592}.yr{color:#7C3AED;margin-left:6px}'
     + '.legend{flex:1;display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:flex-end;max-height:84px;overflow:hidden}.lg{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}.lg i{width:12px;height:12px;border-radius:4px}'
@@ -846,5 +846,5 @@ export function wallPoster(team, t){
     + '<div class="foot"><div class="chips"><span class="chip">' + esc(V("psTotal", { n: Math.round(total*10)/10 })) + '</span><span class="chip">' + esc(V("psPeak", { m: MO[peak] })) + '</span><span class="chip">' + esc(V("psPeople", { n: ms.length })) + "</span>"
     + '<span class="key"><i style="background:linear-gradient(135deg,#FEF3C7,#FDE68A)"></i>' + esc(V("hmHol")) + '</span><span class="key"><i style="background:#F1EFF8"></i>' + esc(V("hmWe")) + "</span></div>"
     + "<span>vacationplanner.team</span></div></body></html>";
-  return pdfOrHtml(html, fileBase(team.name) + "_" + yr + "_wall-planner.pdf", { format: "a3" });
+  return pdfOrHtml(html, fileBase(team.name) + "_" + yr + "_wall-planner.pdf", { format: "a3", onePage: true });
 }

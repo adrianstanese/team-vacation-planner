@@ -5,7 +5,7 @@
 
 const AVOID = "tr, .cal-month, .stat, .tl-row, .hdr, .legend, .tl-title, .cal-title, h1, h2, .s, .card, .row, table thead";
 
-export async function downloadHtmlAsPdf(html: string, filename: string, opts: { format?: "a4" | "a3" } = {}): Promise<void> {
+export async function downloadHtmlAsPdf(html: string, filename: string, opts: { format?: "a4" | "a3"; onePage?: boolean } = {}): Promise<void> {
   const a3 = opts.format === "a3", pageW = a3 ? 1587 : 1123, pageH = a3 ? 1123 : 794;
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
   const frame = document.createElement("iframe");
@@ -40,6 +40,18 @@ export async function downloadHtmlAsPdf(html: string, filename: string, opts: { 
       .map(el => Math.round((el as HTMLElement).getBoundingClientRect().bottom - top))
       .filter(y => y > 0 && y < height).sort((a, b) => a - b);
 
+    // One-page documents (the wall planner): capture everything at once and scale it to fit the sheet
+    if (opts.onePage) {
+      const canvas = await html2canvas(body, { backgroundColor: "#ffffff", scale: 2, logging: false, useCORS: true,
+        x: 0, y: 0, width, height, windowWidth: width, windowHeight: height, scrollX: 0, scrollY: 0 });
+      const k = Math.min(pw / width, ph / height), w = width * k, h = height * k;
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", (pw - w) / 2, (ph - h) / 2, w, h, undefined, "FAST");
+      const blob1 = pdf.output("blob"), url1 = URL.createObjectURL(blob1);
+      const a1 = document.createElement("a"); a1.href = url1; a1.download = filename; a1.rel = "noopener"; a1.style.display = "none";
+      document.body.appendChild(a1); a1.click(); a1.remove();
+      setTimeout(() => URL.revokeObjectURL(url1), 60000);
+      return;
+    }
     const slices: [number, number][] = [];
     let y0 = 0;
     while (y0 < height - 2) {
