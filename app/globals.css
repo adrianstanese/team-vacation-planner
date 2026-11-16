@@ -498,3 +498,5 @@ html[data-vt="prev"]::view-transition-new(tvp-main) { animation-name: tvp-vt-in-
     background: linear-gradient(100deg, transparent 30%, rgba(34, 211, 238, .28) 50%, transparent 70%); background-size: 220% 100%; animation: tvp-sweep 3.2s linear infinite; }
 }
 @keyframes tvp-sweep { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+/* Round flag images (public/flags) */
+.tvp-flag { display: inline-block; vertical-align: -0.18em; border-radius: 50%; object-fit: cover; margin-inline-end: 5px; flex: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, .1); background: #eee; }

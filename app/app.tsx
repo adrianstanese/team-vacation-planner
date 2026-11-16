@@ -391,6 +391,9 @@ export const defaultRegionName=cc=>{const g=DEF[cc];if(!g)return null;const r=(R
 
 // ─── Country Data ────────────────────────────────────────────────
 export const EU_C:{c:string;n:string;f:string;ne?:string}[]=[{c:"AL",n:"Albania",f:"🇦🇱"},{c:"AD",n:"Andorra",f:"🇦🇩"},{c:"AT",n:"Austria",f:"🇦🇹"},{c:"BY",n:"Belarus",f:"🇧🇾"},{c:"BE",n:"Belgium",f:"🇧🇪"},{c:"BA",n:"Bosnia & Herz.",f:"🇧🇦"},{c:"BG",n:"Bulgaria",f:"🇧🇬"},{c:"HR",n:"Croatia",f:"🇭🇷"},{c:"CY",n:"Cyprus",f:"🇨🇾"},{c:"CZ",n:"Czechia",f:"🇨🇿"},{c:"DK",n:"Denmark",f:"🇩🇰"},{c:"EE",n:"Estonia",f:"🇪🇪"},{c:"FI",n:"Finland",f:"🇫🇮"},{c:"FR",n:"France",f:"🇫🇷"},{c:"DE",n:"Germany",f:"🇩🇪"},{c:"GR",n:"Greece",f:"🇬🇷"},{c:"HU",n:"Hungary",f:"🇭🇺"},{c:"IS",n:"Iceland",f:"🇮🇸"},{c:"IE",n:"Ireland",f:"🇮🇪"},{c:"IT",n:"Italy",f:"🇮🇹"},{c:"XK",n:"Kosovo",f:"🇽🇰"},{c:"LV",n:"Latvia",f:"🇱🇻"},{c:"LI",n:"Liechtenstein",f:"🇱🇮"},{c:"LT",n:"Lithuania",f:"🇱🇹"},{c:"LU",n:"Luxembourg",f:"🇱🇺"},{c:"MK",n:"N. Macedonia",f:"🇲🇰"},{c:"MT",n:"Malta",f:"🇲🇹"},{c:"MD",n:"Moldova",f:"🇲🇩"},{c:"MC",n:"Monaco",f:"🇲🇨"},{c:"ME",n:"Montenegro",f:"🇲🇪"},{c:"NL",n:"Netherlands",f:"🇳🇱"},{c:"NO",n:"Norway",f:"🇳🇴"},{c:"PL",n:"Poland",f:"🇵🇱"},{c:"PT",n:"Portugal",f:"🇵🇹"},{c:"RO",n:"Romania",f:"🇷🇴"},{c:"RS",n:"Serbia",f:"🇷🇸"},{c:"SK",n:"Slovakia",f:"🇸🇰"},{c:"SI",n:"Slovenia",f:"🇸🇮"},{c:"SM",n:"San Marino",f:"🇸🇲"},{c:"ES",n:"Spain",f:"🇪🇸"},{c:"SE",n:"Sweden",f:"🇸🇪"},{c:"CH",n:"Switzerland",f:"🇨🇭"},{c:"TR",n:"Turkey",f:"🇹🇷"},{c:"UA",n:"Ukraine",f:"🇺🇦"},{c:"GB",n:"United Kingdom",f:"🇬🇧"},{c:"SA",n:"Saudi Arabia",f:"🇸🇦"},{c:"AE",n:"UAE",f:"🇦🇪"},{c:"CL",n:"Chile",f:"🇨🇱"},{c:"BR",n:"Brazil",f:"🇧🇷"},{c:"MA",n:"Morocco",f:"🇲🇦"},{c:"KZ",n:"Kazakhstan",f:"🇰🇿"},{c:"BH",n:"Bahrain",f:"🇧🇭"},{c:"US",n:"United States",f:"🇺🇸"},{c:"CA",n:"Canada",f:"🇨🇦"},{c:"AU",n:"Australia",f:"🇦🇺"},{c:"CN",n:"China",f:"🇨🇳"},{c:"IN",n:"India",f:"🇮🇳"},{c:"BD",n:"Bangladesh",f:"🇧🇩"},{c:"RU",n:"Russia",f:"🇷🇺"},{c:"PK",n:"Pakistan",f:"🇵🇰"},{c:"JP",n:"Japan",f:"🇯🇵"}].sort((a,b)=>a.n.localeCompare(b.n));
+// Round flag images (public/flags, from country-flag-icons, MIT): emoji flags show as letters on Windows
+const FLAG_CC=new Set(EU_C.map(c=>c.c));
+export const Flag=({cc,size=16})=>cc&&FLAG_CC.has(cc)?<img src={"/flags/"+cc+".svg"} alt="" width={size} height={size} className="tvp-flag" loading="lazy" decoding="async"/>:null;
 // Country names in the UI language (Intl.DisplayNames); the English name stays in .ne so searching in English still works
 // The list is then put in that language's alphabetical order: it used to stay in the order the countries were added
 // (Europe A–Z, then sixteen more in no order), so "A-Z" in the holiday browser was not, and pickers were hard to scan.
@@ -857,7 +860,7 @@ function PrintView({ team, th, t }) {
         const co = m.country ? EU_C.find(x => x.c === m.country) : null;
         return <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 500 }}>
           <div style={{ width: 10, height: 10, borderRadius: "50%", background: c.d }} />
-          {co ? co.f + " " : ""}{m.name} ({Math.round(usedOf(m) * 10) / 10}{t.d || "d"})
+          {co ? <Flag cc={co.c}/> : null}{m.name} ({Math.round(usedOf(m) * 10) / 10}{t.d || "d"})
         </div>;
       })}
       <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#DC2626" }}>
@@ -932,7 +935,7 @@ function PrintView({ team, th, t }) {
             }
             return <tr key={m.id} style={{ borderBottom: "1px solid #e8e6e1" }}>
               <td style={{ padding: "5px 8px" }}><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: c.d, marginInlineEnd: 6, verticalAlign: "middle" }} />{m.name}</td>
-              <td style={{ padding: "5px 8px" }}>{co ? co.f + " " + co.n : "—"}</td>
+              <td style={{ padding: "5px 8px" }}>{co ? <><Flag cc={co.c}/>{co.n}</> : "—"}</td>
               <td style={{ padding: "5px 8px", textAlign: "center", fontWeight: 700 }}>{Math.round(usedOf(m) * 10) / 10}</td>
               <td style={{ padding: "5px 8px", fontSize: 10, color: "#6b6b6b" }}>{periods.join(" · ")}</td>
             </tr>;
@@ -1296,7 +1299,7 @@ export function HolBrowser({onClose,th,t,year}){
       <div style={{padding:"16px 20px",borderBottom:"1px solid "+th.bd,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           {sel&&<button onClick={()=>setSel(null)} aria-label={t.back} title={t.back} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><Ic n="chevL" s={18} c={th.t2}/></button>}
-          <h3 id="tvp-holb-t" style={{margin:0,fontSize:17,fontWeight:700,color:th.tx,fontFamily:F}}>{sel?co.f+" "+co.n:t.ch} {year}</h3>
+          <h3 id="tvp-holb-t" style={{margin:0,fontSize:17,fontWeight:700,color:th.tx,fontFamily:F}}>{sel?<><Flag cc={co.c} size={18}/>{co.n}</>:t.ch} {year}</h3>
         </div>
         <button onClick={onClose} aria-label={X("close")} title={X("close")} style={{background:th.sh,border:"none",borderRadius:"50%",width:30,height:30,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><Ic n="x" s={15} c={th.t2}/></button>
       </div>

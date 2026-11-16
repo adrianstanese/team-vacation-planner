@@ -22,7 +22,7 @@ import { X, textLang, dateLocale, isRtl, monthShort } from "@/lib/extraText";
 import { icsText, icsStamp } from "@/lib/ics";
 import TrapScope from "@/components/TrapScope";
 // Loaded only when first opened (keeps the first page load small)
-import { AnimNum, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, INK, onFills, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, sheetCell, syncStateOf, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
+import { AnimNum, Flag, Btn, CD, CM, CY, EU_C, F, FIXED, FM, G, HolBrowser, Ic, INK, onFills, LUNAR_EXTRA, LangDrop, MC, R, REGIONS, ThPk, YEAR_MAX, YEAR_MIN, authKey, computeHolidays, dim, dk, fdm, fileBase, generateTSV, sheetCell, syncStateOf, getAllHolidays, getOwner, getTokens, gid, holName, isWe, pk, reportSafe, safeLogo, safeYear, syncReload, teamForYear, useHolidayNames, useVisits, usedOf, waitIdle, withBusy, defaultRegionName, holNameFor, holNameAny } from "./app";
 // A member photo as stored: a small data-URL image (cleanTeam caps it at 16,000 characters)
 const PHOTO_RX=/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
 const safePhoto=v=>typeof v==="string"&&v.length<16000&&PHOTO_RX.test(v)?v:null;
@@ -278,7 +278,7 @@ function VisitCounter({ th }) {
       {sorted.map(([cc, count]) => <div key={cc} style={{
         display: "flex", alignItems: "center", gap: 4, padding: "3px 10px",
         background: th.sh, borderRadius: 20, fontSize: 11, fontWeight: 600, color: th.t2,
-      }}>{flagMap[cc] || "🏳️"} {cc} <span style={{ color: th.ac, fontFamily: FM }}>{count}</span></div>)}
+      }}>{EU_C.some(x=>x.c===cc)?<Flag cc={cc} size={13}/>:(flagMap[cc] || "🏳️")} {cc} <span style={{ color: th.ac, fontFamily: FM }}>{count}</span></div>)}
     </div>
   </div>;
 }
@@ -338,12 +338,12 @@ function CountrySelect({value,onChange,th,t}) {
   const filtered=EU_C.filter(c=>c.n.toLowerCase().includes(search.toLowerCase())||(c.ne||"").toLowerCase().includes(search.toLowerCase()));
   return <div style={{position:"relative"}}>
     <button ref={btn} type="button" aria-haspopup="listbox" aria-expanded={open} onClick={()=>setOpen(!open)} style={{width:"100%",padding:"8px 12px",border:`1.5px solid ${th.bd}`,borderRadius:8,background:th.sf,color:th.tx,fontFamily:F,fontSize:13,fontWeight:500,cursor:"pointer",textAlign:"start",display:"flex",alignItems:"center",gap:6}}>
-      {co?<Fragment><span>{co.f}</span>{co.n}</Fragment>:<span style={{color:th.t3}}>{t.selC}</span>}
+      {co?<Fragment><Flag cc={co.c}/>{co.n}</Fragment>:<span style={{color:th.t3}}>{t.selC}</span>}
     </button>
     {open&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:th.gbg,border:`1px solid ${th.gbd}`,borderRadius:G.rXs,boxShadow:th.sm,zIndex:50,maxHeight:200,backdropFilter:G.blur,WebkitBackdropFilter:G.blur,display:"flex",flexDirection:"column"}}>
       <div style={{padding:6}}><input autoFocus value={search} onChange={e=>setSearch(e.target.value)} placeholder={X("search")} aria-label={X("search")} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(filtered.length)pick(filtered[0].c);}else if(e.key==="Escape"){e.stopPropagation();close();}else if(e.key==="ArrowDown"){e.preventDefault();const f=list.current&&list.current.querySelector("button");if(f)f.focus();}}} style={{width:"100%",padding:"6px 10px",border:`1px solid ${th.bd}`,borderRadius:6,fontSize:13,fontFamily:F,outline:"none",background:th.bg,color:th.tx,boxSizing:"border-box"}}/></div>
       <div ref={list} role="listbox" aria-label={t.selC} onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();close();}else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();const b=[...list.current.querySelectorAll("button")];const i=b.indexOf(document.activeElement);const n=b[i+(e.key==="ArrowDown"?1:-1)];if(n)n.focus();}}} style={{overflowY:"auto",maxHeight:160}}>
-        {filtered.map(c=> <button key={c.c} type="button" role="option" aria-selected={c.c===value} onClick={()=>pick(c.c)} style={{width:"100%",padding:"8px 12px",border:"none",background:c.c===value?th.al:"transparent",color:th.tx,fontFamily:F,fontSize:13,cursor:"pointer",textAlign:"start",display:"flex",alignItems:"center",gap:6}} onMouseEnter={e=>e.currentTarget.style.background=th.sh} onMouseLeave={e=>e.currentTarget.style.background=c.c===value?th.al:"transparent"}><span>{c.f}</span>{c.n}</button>)}
+        {filtered.map(c=> <button key={c.c} type="button" role="option" aria-selected={c.c===value} onClick={()=>pick(c.c)} style={{width:"100%",padding:"8px 12px",border:"none",background:c.c===value?th.al:"transparent",color:th.tx,fontFamily:F,fontSize:13,cursor:"pointer",textAlign:"start",display:"flex",alignItems:"center",gap:6}} onMouseEnter={e=>e.currentTarget.style.background=th.sh} onMouseLeave={e=>e.currentTarget.style.background=c.c===value?th.al:"transparent"}><Flag cc={c.c}/>{c.n}</button>)}
       </div>
     </div>}
   </div>;
@@ -829,7 +829,7 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,onBookDays=null,w7=f
       <b style={{color:isActive&&!th.dk?c.t:th.tx}}>{m.name}{hasPin&&<span className="tvp-lock" aria-label="PIN" title="PIN">🔒</span>}
         {approvalMode&&!isApprover&&dc>0&&(m.approved?<span className="tvp-cap-st ok" title={V("ttApproved")}>✓</span>:<span className="tvp-cap-st wait" title={V("stWait")}>⏳</span>)}
         {notes>0&&<span className="tvp-cap-st" title={V("stNotes",{n:notes})}>💬{notes}</span>}</b>
-      <small style={{color:th.t3}}>{capAway?<span className="tvp-cap-away" title={V("capAway",{d:capAway})}>● {V("tdBack",{d:capAway})}</span>:<>{co?co.f+" ":""}{m.role||m.group||(co?co.n:"")}</>}</small>
+      <small style={{color:th.t3}}>{capAway?<span className="tvp-cap-away" title={V("capAway",{d:capAway})}>● {V("tdBack",{d:capAway})}</span>:<>{co?<Flag cc={co.c} size={13}/>:null}{m.role||m.group||(co?co.n:"")}</>}</small>
     </div>
     <span className="tvp-mrow-cnt" style={{color:capOver?capRed:th.tx}}>{allow?<>{fmtDays(dc)}<span className="of">/{fmtDays(allow)}</span></>:fmtDays(dc)}
       <small style={{color:capOver?capRed:th.t3}}>{capLeft===null?(dc!==1?t.dys:t.dy):capOver?V("stOver",{n:fmtDays(-capLeft)}):V("stLeft",{n:fmtDays(capLeft)})}</small></span>
@@ -845,7 +845,7 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,onBookDays=null,w7=f
               return canPh?<button type="button" className="tvp-pp-av tvp-pp-avb" style={{background:c.d,color:c.o}} onClick={function(){photoIn.current&&photoIn.current.click();}} disabled={phBusy} aria-label={photo?V("phChange"):V("phAdd")} title={photo?V("phChange"):V("phAdd")}>{face}<b aria-hidden="true">📷</b></button>
                 :<span className="tvp-pp-av" style={{background:c.d,color:c.o}}>{face}</span>;})()}
             <input ref={photoIn} type="file" accept="image/*" hidden onChange={pickPhoto}/>
-            <div><b>{m.name}{hasPin&&<span aria-label="PIN" title="PIN"> 🔒</span>}</b><small>{co?co.f+" "+co.n:""}{yr?(co?" · ":"")+yr:""}</small>
+            <div><b>{m.name}{hasPin&&<span aria-label="PIN" title="PIN"> 🔒</span>}</b><small>{co?<><Flag cc={co.c} size={14}/>{co.n}</>:""}{yr?(co?" · ":"")+yr:""}</small>
               {!!onPhotoChange&&!locked&&!limited&&<span className="tvp-pp-ph"><button type="button" onClick={function(){photoIn.current&&photoIn.current.click();}} disabled={phBusy}>{photo?V("phChange"):V("phAdd")}</button>{photo&&<button type="button" onClick={function(){onPhotoChange(null);}}>{V("phRemove")}</button>}</span>}</div>
           </div>
           {pd&&<Countdown d={pd}/>}
@@ -879,7 +879,7 @@ function MRow({pop=false,onClosePop=null,onPhotoChange=null,onBookDays=null,w7=f
               </div>
               <div className="tvp-two">
                 <div className="tvp-fld"><span style={{color:th.t3}}>{t.co||"Country"}</span>
-                  {!locked?<CountrySelect value={m.country} onChange={onCountryChange} th={th} t={t}/>:<em style={{color:th.tx}}>{co?co.f+" "+co.n:"—"}</em>}</div>
+                  {!locked?<CountrySelect value={m.country} onChange={onCountryChange} th={th} t={t}/>:<em style={{color:th.tx}}>{co?<><Flag cc={co.c}/>{co.n}</>:"—"}</em>}</div>
                 {m.country&&REGIONS[m.country]&&<label className="tvp-fld"><span style={{color:th.t3}}>{t.region||"Region"}</span>
         <select value={m.region||""} onChange={function(e){onRegionChange(e.target.value||null);}} style={{borderColor:th.gbd,background:th.sf,color:th.tx}}>
           <option value="">{defaultRegionName(m.country)?V("regDefault",{r:defaultRegionName(m.country)}):(t.natOnly||"National only")}</option>
@@ -1011,7 +1011,7 @@ function TeamWorldMap({team,th,t}) {
         var co=EU_C.find(function(x){return x.c===cc;});
         var pct=Math.round(cnt/max*100);
         return <div key={cc} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:10,background:th.sf,border:"1px solid "+th.gbd,flex:"1 1 140px",minWidth:120}}>
-          <span style={{fontSize:18}}>{co?co.f:"🏳️"}</span>
+          <span style={{fontSize:18,display:"inline-flex"}}>{co?<Flag cc={co.c} size={20}/>:"🏳️"}</span>
           <div style={{flex:1}}>
             <div style={{fontSize:11,fontWeight:600,color:th.tx}}>{co?co.n:cc}</div>
             <div style={{height:4,borderRadius:2,background:th.sh,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",borderRadius:2,background:"#8B5CF6",width:pct+"%",transition:"width .5s"}}/></div>
@@ -1903,7 +1903,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
       </div>}
       {gStep==="pick"&&<div className="tvp-gate-list">
         {team.members.map(m=>{const c=colorOf(m.id);const co=m.country?EU_C.find(x=>x.c===m.country):null;return <button type="button" key={m.id} className="tvp-gwho" style={{borderColor:th.gbd,background:th.sf}} onClick={()=>{gReset();setGMid(m.id);setGStep(hasPinOf(m)?"pin":"setpin");}}>
-          <span className="tvp-av" style={{background:c.d}}>{(m.name||"?")[0].toUpperCase()}</span><b style={{color:th.tx}}>{m.name}</b><small style={{color:th.t3}}>{co?co.f+" "+co.n:""}{m.role?" · "+m.role:""}</small>{hasPinOf(m)&&<span aria-label="PIN">🔒</span>}</button>;})}
+          <span className="tvp-av" style={{background:c.d}}>{(m.name||"?")[0].toUpperCase()}</span><b style={{color:th.tx}}>{m.name}</b><small style={{color:th.t3}}>{co?<><Flag cc={co.c} size={13}/>{co.n}</>:""}{m.role?" · "+m.role:""}</small>{hasPinOf(m)&&<span aria-label="PIN">🔒</span>}</button>;})}
       </div>}
       {gStep==="pin"&&gM&&<div className="tvp-gate-form">
         <label>{X("pinTitle")}</label>{pinBox(gPin,setGPin,"______",gUnlock,true)}
@@ -2067,7 +2067,7 @@ export default function WS({team,rawTeam=null,onYear=null,onUpdate,onGoHome,onDe
         {team.members.length>0&&view==="cal"&&<div style={{marginBottom:10,padding:"8px 12px",background:th.gbg,borderRadius:G.rXs,border:`1px solid ${th.gbd}`,backdropFilter:G.blur,WebkitBackdropFilter:G.blur}}>
           <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
             {team.members.map((m,i)=>{const c=MC[i%MC.length];const co=m.country?EU_C.find(x=>x.c===m.country):null;
-              return <div key={m.id} onClick={()=>setAId(m.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",background:aId===m.id?c.b:th.sh,borderRadius:14,fontSize:10,fontWeight:500,color:aId!==m.id&&th.dk?c.b:c.t,cursor:"pointer",border:aId===m.id?`1.5px solid ${c.d}40`:"1.5px solid transparent"}}><div style={{width:6,height:6,borderRadius:"50%",background:c.d}}/>{co?co.f+" ":""}{m.name} ({fmtDays(usedOf(m))})</div>;})}
+              return <div key={m.id} onClick={()=>setAId(m.id)} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 7px",background:aId===m.id?c.b:th.sh,borderRadius:14,fontSize:10,fontWeight:500,color:aId!==m.id&&th.dk?c.b:c.t,cursor:"pointer",border:aId===m.id?`1.5px solid ${c.d}40`:"1.5px solid transparent"}}><div style={{width:6,height:6,borderRadius:"50%",background:c.d}}/>{co?<Flag cc={co.c} size={13}/>:null}{m.name} ({fmtDays(usedOf(m))})</div>;})}
             <div style={{display:"flex",alignItems:"center",gap:3,padding:"2px 7px",borderRadius:14,fontSize:10,color:th.ht,background:th.hc}}><div style={{width:6,height:6,borderRadius:3,background:th.ht}}/> {t.holiday}</div>
           </div>
         </div>}
